@@ -144,6 +144,6 @@ cmsenv
     source run_example.sh
     ```
 
-The example performs counting for extracting efficiencies from MC, as well as for trigger efficiencies in data. Fitting is performed for measuring the muon selection efficiency in data. It takes about 20-30 mins to complete all the fits.
+  The example performs counting for extracting efficiencies from MC, as well as for trigger efficiencies in data. Fitting is performed for measuring the muon selection efficiency in data. It takes about 20-30 mins to complete all the fits.
 
 4. Look at the output. There should be 4 directories created with the outputs from the efficiency extraction. Start browsing though the summary plots from `plots.html`.

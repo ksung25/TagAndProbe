@@ -117,6 +117,7 @@ cmsenv
 
 2. Copy tutorial files and ntuples. The ntuples correspond to Run-1 data and MC.
   * The run script, binning files, and pileup reweighting file
+
         ```
         eos cp /eos/cms/store/user/ksung/TagAndProbeExample/run_example.sh ./
         eos cp /eos/cms/store/user/ksung/TagAndProbeExample/IsoMu24_eta2p1.bins ./
@@ -124,17 +125,20 @@ cmsenv
         eos cp /eos/cms/store/user/ksung/TagAndProbeExample/PUWeights_2012.root ./
         ```
   * Probes ntuples for measuring efficiency of `HLT_IsoMu24_eta2p1` trigger
+
         ```
         eos cp /eos/cms/store/user/ksung/TagAndProbeExample/SingleMu_2012-22Jan2013_smubits.root ./
         eos cp /eos/cms/store/user/ksung/TagAndProbeExample/Summer12_DYJetsToLL_M-50_TuneZ2Star_smubits.root ./
         ```
   * Probes ntuples for measuring efficiency of tight muon selection (ID and isolation)
+
         ```
         eos cp /eos/cms/store/user/ksung/TagAndProbeExample/SingleMu_2012-22Jan2013_muselbits.root ./
         eos cp /eos/cms/store/user/ksung/TagAndProbeExample/Summer12_DYJetsToLL_M-50_TuneZ2Star_muselbits.root ./
         ```
 
 3. Execute the run script.
+
     ```
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`pwd`
     source run_example.sh

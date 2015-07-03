@@ -131,7 +131,8 @@ void CEffZFitter::initialize(const std::string conf, const int sigpass, const in
   TLorentzVector *tag=0, *probe=0;        // tag, probe 4-vector
   
   TFile *infile = new TFile(infname.c_str());    assert(infile);
-  TTree *intree = (TTree*)infile->Get("Events"); assert(intree);
+  //TTree *intree = (TTree*)infile->Get("Events"); assert(intree);
+  TTree *intree = (TTree*)infile->FindObjectAny("Events"); assert(intree);
   intree->SetBranchAddress("runNum",   &runNum);
   intree->SetBranchAddress("lumiSec",  &lumiSec);
   intree->SetBranchAddress("evtNum",   &evtNum);

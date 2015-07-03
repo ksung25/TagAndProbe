@@ -58,15 +58,20 @@ Double_t RooVoigtianShape::voigtian(double iX) const {
   Double_t c = 1./(sqrt(2.)*s);
   Double_t a = 0.5*c*w;
   Double_t u = c*arg;
-  RooComplex z(u,a) ;
-  RooComplex v(0.) ;
+  //RooComplex z(u,a) ;
+  //RooComplex v(0.) ;
+  std::complex<double> z(u,a);
+  std::complex<double> v(0.,0.);
 
   if (_doFast) {
-    v = RooMath::FastComplexErrFunc(z);
+    //v = RooMath::FastComplexErrFunc(z); // deprecated
+    v = RooMath::erfc_fast(z);
   } else {
-    v = RooMath::ComplexErrFunc(z);
+    // v = RooMath::ComplexErrFunc(z); // deprecated
+    v = RooMath::erfc(z);
   }
-  return c*_invRootPi*v.re();
+  //return c*_invRootPi*v.re();
+  return c*_invRootPi*v.real();
 }
 
 //_____________________________________________________________________________

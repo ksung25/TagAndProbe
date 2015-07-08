@@ -473,7 +473,6 @@ void CEffZFitter::computeEff()
     plotEffNPV.SetXRange(0.9*(fNPVBinEdgesv[0]),1.1*(fNPVBinEdgesv[NBINS_NPV-1]));
     plotEffNPV.Draw(c,true,"png"); 
   }
-  txtfile.close();
 
 
   gStyle->SetPalette(1);
@@ -534,6 +533,8 @@ void CEffZFitter::computeEff()
     plotErrhEtaPhi.AddHist2D(hErrhEtaPhi,"COLZ");
     plotErrhEtaPhi.Draw(c,true,"png");
   }
+
+  txtfile.close();
 
   
   //

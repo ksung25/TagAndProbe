@@ -37,7 +37,7 @@ void make_tnp_skim(
   int tag_iso           = 6, // tight 
   int probe_id          = 0, // baseline
   int probe_iso         = 0, // baseline
-  int passing_probe_id  = 6, // tight
+  int passing_probe_id  = 6, // tight; use a negative number for a trigger bit
   int passing_probe_iso = 6, // tight
   bool do_electrons = true,
   bool do_muons = false,
@@ -54,7 +54,7 @@ void make_tnp_skim(
   string muon_filename="~dhsu/leptonScaleFactors/root/"+output_basename+"_muonTnP.root";
  
   int min_runNum=99999999, max_runNum=0;
-  
+  int electron_trigger=3, muon_trigger=6; 
   //declare output variables
   unsigned int out_runNum, // event ID
   out_lumiSec,
@@ -288,6 +288,7 @@ void make_tnp_skim(
     for (Long64_t i=0; i<nentries;i++) {
       nbytes += events->GetEntry(i);
       if(real_data && !(
+        
         (runNum == 254231 && ((lumiNum>=1 && lumiNum<=24))) || 
         (runNum == 254232 && ((lumiNum>=1 && lumiNum<=81))) || 
         (runNum == 254790 && ((lumiNum>=90 && lumiNum<=90) || (lumiNum>=93 && lumiNum<=630) || (lumiNum>=633 && lumiNum<=697) || (lumiNum>=701 && lumiNum<=715) || (lumiNum>=719 && lumiNum<=784))) || 
@@ -302,8 +303,6 @@ void make_tnp_skim(
         (runNum == 256675 && ((lumiNum>=1 && lumiNum<=106) || (lumiNum>=111 && lumiNum<=164))) || 
         (runNum == 256676 && ((lumiNum>=1 && lumiNum<=160) || (lumiNum>=162 && lumiNum<=208))) || 
         (runNum == 256677 && ((lumiNum>=1 && lumiNum<=291) || (lumiNum>=293 && lumiNum<=390) || (lumiNum>=392 && lumiNum<=397) || (lumiNum>=400 && lumiNum<=455) || (lumiNum>=457 && lumiNum<=482))) || 
-        (runNum == 256729 && ((lumiNum>=1 && lumiNum<=336) || (lumiNum>=346 && lumiNum<=598) || (lumiNum>=600 && lumiNum<=755) || (lumiNum>=758 && lumiNum<=760) || (lumiNum>=765 && lumiNum<=1165) || (lumiNum>=1167 && lumiNum<=1292) || (lumiNum>=1295 && lumiNum<=1327) || (lumiNum>=1329 && lumiNum<=1732))) || 
-        (runNum == 256734 && ((lumiNum>=1 && lumiNum<=57) || (lumiNum>=60 && lumiNum<=213))) || 
         (runNum == 256801 && ((lumiNum>=73 && lumiNum<=263))) || 
         (runNum == 256842 && ((lumiNum>=131 && lumiNum<=132))) || 
         (runNum == 256843 && ((lumiNum>=1 && lumiNum<=204) || (lumiNum>=207 && lumiNum<=284) || (lumiNum>=286 && lumiNum<=378) || (lumiNum>=380 && lumiNum<=461) || (lumiNum>=463 && lumiNum<=587) || (lumiNum>=598 && lumiNum<=627) || (lumiNum>=630 && lumiNum<=661) || (lumiNum>=1001 && lumiNum<=1034) || (lumiNum>=1036 && lumiNum<=1081) || (lumiNum>=1083 && lumiNum<=1191) || (lumiNum>=1193 && lumiNum<=1193) || (lumiNum>=1195 && lumiNum<=1329) || (lumiNum>=1331 && lumiNum<=1332))) || 
@@ -311,12 +310,63 @@ void make_tnp_skim(
         (runNum == 256867 && ((lumiNum>=1 && lumiNum<=16) || (lumiNum>=19 && lumiNum<=94))) || 
         (runNum == 256868 && ((lumiNum>=5 && lumiNum<=33) || (lumiNum>=35 && lumiNum<=200) || (lumiNum>=202 && lumiNum<=492))) || 
         (runNum == 256869 && ((lumiNum>=1 && lumiNum<=34))) || 
+        (runNum == 256926 && ((lumiNum>=35 && lumiNum<=50) || (lumiNum>=53 && lumiNum<=62) || (lumiNum>=64 && lumiNum<=65))) || 
         (runNum == 256941 && ((lumiNum>=1 && lumiNum<=17) || (lumiNum>=19 && lumiNum<=29) || (lumiNum>=103 && lumiNum<=105) || (lumiNum>=107 && lumiNum<=126) || (lumiNum>=129 && lumiNum<=129) || (lumiNum>=131 && lumiNum<=168) || (lumiNum>=170 && lumiNum<=170) || (lumiNum>=175 && lumiNum<=290) || (lumiNum>=293 && lumiNum<=294))) || 
-        (runNum == 257394 && ((lumiNum>=41 && lumiNum<=72))) || 
-        (runNum == 257395 && ((lumiNum>=1 && lumiNum<=13))) || 
         (runNum == 257461 && ((lumiNum>=44 && lumiNum<=95))) || 
         (runNum == 257531 && ((lumiNum>=5 && lumiNum<=45) || (lumiNum>=50 && lumiNum<=143))) || 
-        (runNum == 257599 && ((lumiNum>=42 && lumiNum<=118)))
+        (runNum == 257599 && ((lumiNum>=42 && lumiNum<=118))) || 
+        (runNum == 257613 && ((lumiNum>=14 && lumiNum<=1307))) || 
+        (runNum == 257614 && ((lumiNum>=1 && lumiNum<=16))) || 
+        (runNum == 257645 && ((lumiNum>=37 && lumiNum<=73) || (lumiNum>=75 && lumiNum<=1096))) || 
+        (runNum == 257682 && ((lumiNum>=66 && lumiNum<=366))) || 
+        (runNum == 257722 && ((lumiNum>=1 && lumiNum<=19))) || 
+        (runNum == 257723 && ((lumiNum>=1 && lumiNum<=1) || (lumiNum>=3 && lumiNum<=108) || (lumiNum>=114 && lumiNum<=148))) || 
+        (runNum == 257735 && ((lumiNum>=1 && lumiNum<=15))) || 
+        (runNum == 257751 && ((lumiNum>=1 && lumiNum<=463))) || 
+        (runNum == 257804 && ((lumiNum>=1 && lumiNum<=17))) || 
+        (runNum == 257805 && ((lumiNum>=1 && lumiNum<=249))) || 
+        (runNum == 257816 && ((lumiNum>=1 && lumiNum<=385))) || 
+        (runNum == 257819 && ((lumiNum>=1 && lumiNum<=248))) || 
+        (runNum == 257968 && ((lumiNum>=69 && lumiNum<=326))) || 
+        (runNum == 257969 && ((lumiNum>=1 && lumiNum<=634))) || 
+        (runNum == 258129 && ((lumiNum>=30 && lumiNum<=124))) || 
+        (runNum == 258136 && ((lumiNum>=1 && lumiNum<=60))) || 
+        (runNum == 258157 && ((lumiNum>=1 && lumiNum<=56))) || 
+        (runNum == 258158 && ((lumiNum>=1 && lumiNum<=1088) || (lumiNum>=1091 && lumiNum<=1786))) || 
+        (runNum == 258159 && ((lumiNum>=1 && lumiNum<=501))) || 
+        (runNum == 258177 && ((lumiNum>=1 && lumiNum<=342) || (lumiNum>=347 && lumiNum<=724) || (lumiNum>=755 && lumiNum<=1939))) || 
+        (runNum == 258211 && ((lumiNum>=43 && lumiNum<=129))) || 
+        (runNum == 258213 && ((lumiNum>=1 && lumiNum<=165))) || 
+        (runNum == 258214 && ((lumiNum>=1 && lumiNum<=217))) || 
+        (runNum == 258215 && ((lumiNum>=1 && lumiNum<=6))) || 
+        (runNum == 258287 && ((lumiNum>=45 && lumiNum<=144) || (lumiNum>=148 && lumiNum<=227))) || 
+        (runNum == 258403 && ((lumiNum>=1 && lumiNum<=251))) || 
+        (runNum == 258425 && ((lumiNum>=3 && lumiNum<=136))) || 
+        (runNum == 258426 && ((lumiNum>=1 && lumiNum<=10))) || 
+        (runNum == 258427 && ((lumiNum>=1 && lumiNum<=107))) || 
+        (runNum == 258428 && ((lumiNum>=1 && lumiNum<=159))) || 
+        (runNum == 258432 && ((lumiNum>=1 && lumiNum<=4))) || 
+        (runNum == 258434 && ((lumiNum>=1 && lumiNum<=453))) || 
+        (runNum == 258440 && ((lumiNum>=1 && lumiNum<=442) || (lumiNum>=444 && lumiNum<=732))) || 
+        (runNum == 258444 && ((lumiNum>=1 && lumiNum<=37))) || 
+        (runNum == 258445 && ((lumiNum>=1 && lumiNum<=302))) || 
+        (runNum == 258446 && ((lumiNum>=1 && lumiNum<=142))) || 
+        (runNum == 258448 && ((lumiNum>=2 && lumiNum<=100) || (lumiNum>=102 && lumiNum<=731))) || 
+        (runNum == 258655 && ((lumiNum>=60 && lumiNum<=68))) || 
+        (runNum == 258656 && ((lumiNum>=1 && lumiNum<=334))) || 
+        (runNum == 258694 && ((lumiNum>=23 && lumiNum<=199))) || 
+        (runNum == 258702 && ((lumiNum>=52 && lumiNum<=402))) || 
+        (runNum == 258703 && ((lumiNum>=1 && lumiNum<=389))) || 
+        (runNum == 258705 && ((lumiNum>=1 && lumiNum<=100))) || 
+        (runNum == 258706 && ((lumiNum>=1 && lumiNum<=733))) || 
+        (runNum == 258712 && ((lumiNum>=1 && lumiNum<=524))) || 
+        (runNum == 258713 && ((lumiNum>=1 && lumiNum<=161))) || 
+        (runNum == 258714 && ((lumiNum>=1 && lumiNum<=67))) || 
+        (runNum == 258741 && ((lumiNum>=22 && lumiNum<=72))) || 
+        (runNum == 258742 && ((lumiNum>=2 && lumiNum<=693))) || 
+        (runNum == 258745 && ((lumiNum>=1 && lumiNum<=260))) || 
+        (runNum == 258749 && ((lumiNum>=1 && lumiNum<=204) || (lumiNum>=220 && lumiNum<=604))) || 
+        (runNum == 258750 && ((lumiNum>=1 && lumiNum<=197)))
       )) continue;
       if(real_data && runNum > max_runNum) max_runNum=runNum;
       if(real_data && runNum < min_runNum) min_runNum=runNum;
@@ -339,16 +389,20 @@ void make_tnp_skim(
             TLorentzVector *gP4 = (TLorentzVector*)genP4->At(ig);
             if(
               ( (*genPdgId)[ig] == (*lepPdgId)[il] ) && 
-//              ( pow( gP4->Phi() - P4->Phi() , 2 ) + pow( gP4->Eta() - P4->Eta() , 2) < .01 )
               ( gP4->DeltaR( *P4) < .1)
             ) truth=1;
-            //printf("gen particle ID %d, lepton ID %d, delta R %f\n", (*genPdgId)[ig], (*lepPdgId)[il], gP4->DeltaR( *P4));
           }}
           if(truth==0 && !real_data && truth_matching) continue;
           if(abs( (*lepPdgId)[il]) == 11 && do_electrons) {
             if(
-              selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), probe_id, probe_iso) &&
-              !selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), passing_probe_id, passing_probe_iso)
+              (passing_probe_id > 0 && (
+                selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), probe_id, probe_iso) &&
+                !selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), passing_probe_id, passing_probe_iso)
+              )) ||
+              (passing_probe_id < 0 && ( // trigger efficiency
+                selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), probe_id, probe_iso) &&
+                !(((*triggerLeps)[il] & (0x1 << abs(passing_probe_id))) != 0)
+              ))
             ) { // make probe selection but fail test selection
               if(verbose) printf("probe failed test ID, relIso = %f, probe iso %f, test iso %f\n",(*lepIso)[il] / P4->Pt(), selectIsoCut(probe_id, (*lepPdgId)[il], P4->Eta()), selectIsoCut(passing_probe_id, (*lepPdgId)[il], P4->Eta()));
               p4_ele_failing_probe_.push_back((*P4));
@@ -356,8 +410,14 @@ void make_tnp_skim(
               truth_ele_failing_probe_.push_back(truth);
             }
             if(
-              selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), probe_id, probe_iso) &&
-              selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), passing_probe_id, passing_probe_iso)
+              (passing_probe_id > 0 && (
+                selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), probe_id, probe_iso) &&
+                selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), passing_probe_id, passing_probe_iso)
+              )) ||
+              (passing_probe_id < 0 && ( // trigger efficiency
+                selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), probe_id, probe_iso) &&
+                (((*triggerLeps)[il] & (0x1 << abs(passing_probe_id))) != 0)
+              ))
             ) { // make probe selection and pass the test selection
               p4_ele_passing_probe_.push_back((*P4));
               if(verbose) printf("passed test ID, relIso = %f < %f\n",(*lepIso)[il] / P4->Pt(), selectIsoCut(passing_probe_id, (*lepPdgId)[il], P4->Eta()));
@@ -366,7 +426,7 @@ void make_tnp_skim(
             }
             if(
               selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), tag_id, tag_iso) &&
-              ((((*triggerLeps)[il] & (0x1 << 3)) != 0) || !real_data)
+              ((((*triggerLeps)[il] & (0x1 << electron_trigger)) != 0) || !real_data)
             ) { // pass tag ID, and trigger matching
               p4_ele_tag_.push_back((*P4));
               if(verbose) printf("passed tag ID, relIso = %f < %f\n",(*lepIso)[il] / P4->Pt(), selectIsoCut(tag_id, (*lepPdgId)[il], P4->Eta()));
@@ -376,8 +436,14 @@ void make_tnp_skim(
           }
           if(abs( (*lepPdgId)[il] ) == 13 && do_muons) {
             if(
-              selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), probe_id, probe_iso) &&
-              !selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), passing_probe_id, passing_probe_iso)
+              (passing_probe_id > 0 && (
+                selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), probe_id, probe_iso) &&
+                !selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), passing_probe_id, passing_probe_iso)
+              )) ||
+              (passing_probe_id < 0 && ( // trigger efficiency
+                selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), probe_id, probe_iso) &&
+                !(((*triggerLeps)[il] & (0x1 << abs(passing_probe_id))) != 0)
+              ))
             ) { // make probe selection but fail passing probe selection
               if(verbose) printf("probe failed test ID, relIso = %f, probe iso %f, test iso %f\n",(*lepIso)[il] / P4->Pt(), selectIsoCut(probe_id, (*lepPdgId)[il], P4->Eta()), selectIsoCut(passing_probe_id, (*lepPdgId)[il], P4->Eta()));
               p4_mu_failing_probe_.push_back((*P4));
@@ -385,8 +451,14 @@ void make_tnp_skim(
               truth_mu_failing_probe_.push_back(truth);
             }
             if(
-              selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), probe_id, probe_iso) &&
-              selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), passing_probe_id, passing_probe_iso)
+              (passing_probe_id > 0 && (
+                selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), probe_id, probe_iso) &&
+                selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), passing_probe_id, passing_probe_iso)
+              )) ||
+              (passing_probe_id < 0 && ( // trigger efficiency
+                selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), probe_id, probe_iso) &&
+                (((*triggerLeps)[il] & (0x1 << abs(passing_probe_id))) != 0)
+              ))
             ) { // make probe selection and pass the test selection
               if(verbose) printf("passed test ID, relIso = %f < %f\n",(*lepIso)[il] / P4->Pt(), selectIsoCut(passing_probe_id, (*lepPdgId)[il], P4->Eta()));
               p4_mu_passing_probe_.push_back((*P4));
@@ -395,7 +467,7 @@ void make_tnp_skim(
             }
             if(
               selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), tag_id, tag_iso) &&
-              ( (((*triggerLeps)[il] & (0x1 << 6)) != 0) || !real_data)
+              ( (((*triggerLeps)[il] & (0x1 << muon_trigger)) != 0) || !real_data)
             ) { // pass tag ele ID, and trigger matching
               if(verbose) printf("passed tag ID, relIso = %f < %f\n",(*lepIso)[il] / P4->Pt(), selectIsoCut(tag_id, (*lepPdgId)[il], P4->Eta()));
               p4_mu_tag_.push_back((*P4));
@@ -406,7 +478,8 @@ void make_tnp_skim(
           
         }
       }}
-      //demote some integers to unsigned because Kevin is a computer scientist
+
+      //demote some integers to unsigned
       out_runNum=runNum;
       out_lumiSec=lumiNum;
       out_evtNum=eventNum;

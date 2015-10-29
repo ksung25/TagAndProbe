@@ -1443,7 +1443,7 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
   //RooRealVar NbkgPass("NbkgPass","Background count in PASS sample",50,0,NbkgPassMax);
   RooRealVar NbkgPass("NbkgPass","Background count in PASS sample",0.1*NbkgPassMax,0,NbkgPassMax);
   if(fBkgPass==0) NbkgPass.setVal(0);
-  RooRealVar NbkgFail("NbkgFail","Background count in FAIL sample",0.1*NbkgFailMax,0.01,NbkgFailMax);  
+  RooRealVar NbkgFail("NbkgFail","Background count in FAIL sample",0.01*NbkgFailMax,0.01,NbkgFailMax);  
     
   RooFormulaVar NsigPass("NsigPass","eff*Nsig",RooArgList(eff,Nsig));
   RooFormulaVar NsigFail("NsigFail","(1.0-eff)*Nsig",RooArgList(eff,Nsig));
@@ -1586,6 +1586,7 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
   ofstream txtfile;
   char txtfname[100];    
   sprintf(txtfname,"%s/fitres%s_%i.txt",CPlot::sOutDir.Data(),name.c_str(),ibin);
+  printf("\n\nSaved results to %s/fitres%s_%i.txt\n\n",CPlot::sOutDir.Data(),name.c_str(),ibin);
   txtfile.open(txtfname);
   assert(txtfile.is_open());
   fitResult->printStream(txtfile,RooPrintable::kValue,RooPrintable::kVerbose);

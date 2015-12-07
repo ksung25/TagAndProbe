@@ -97,7 +97,7 @@ void CEffUser2D::printHist2D(const TH2D* h, ostream& os) {
       } else {
         ios_base::fmtflags flags = os.flags();
 	os.precision(7);
-	os << " " << setw(9) << fixed << h->GetCellContent(ix,iy) << " ";
+	os << " " << setw(9) << fixed << h->GetBinContent(h->GetBin(ix,iy)) << " ";
 	os.flags(flags);
       }
     }
@@ -128,7 +128,7 @@ float CEffUser2D::getValue(const TH2D* h, const double x, const double y)
   }
   
   if(ix>0 && iy>0)
-    return h->GetCellContent(ix,iy);
+    return h->GetBinContent(h->GetBin(ix,iy));
   else 
     return -1;
 }

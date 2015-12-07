@@ -1154,9 +1154,9 @@ void CEffZFitter::makeEffHist2D(TH2D *hEff, TH2D *hErrl, TH2D *hErrh,
         }
       }
 
-      hEff ->SetCellContent(ix+1, iy+1, eff);
-      hErrl->SetCellContent(ix+1, iy+1, errl);
-      hErrh->SetCellContent(ix+1, iy+1, errh);
+      hEff ->SetBinContent(hEff->GetBin(ix+1, iy+1), eff);
+      hErrl->SetBinContent(hErrl->GetBin(ix+1, iy+1), errl);
+      hErrh->SetBinContent(hErrh->GetBin(ix+1, iy+1), errh);
     }    
   }  
   delete cpass;
@@ -1439,7 +1439,7 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
   double NbkgPassMax = doBinned ? histPass.Integral() : passTree->GetEntries();
   RooRealVar Nsig("Nsig","Signal Yield",0.80*NsigMax,0,NsigMax);
   RooRealVar eff("eff","Efficiency",0.8,0,1.0);
-  RooRealVar NbkgPass("NbkgPass","Background count in PASS sample",50,0,NbkgPassMax);
+  RooRealVar NbkgPass("NbkgPass","Background count in PASS sample",0.01*NbkgPassMax,0,NbkgPassMax);
   if(fBkgPass==0) NbkgPass.setVal(0);
   RooRealVar NbkgFail("NbkgFail","Background count in FAIL sample",0.1*NbkgFailMax,0.01,NbkgFailMax);  
     

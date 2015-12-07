@@ -99,10 +99,11 @@ All outputs are placed in the specified output directory. The ROOT file of effic
 
 
 ## Tutorial
-*Tested on lxplus with CMSSW_5_3_18. The code does not involve any CMSSW, but this is the easiest way to pick up ROOT and RooFit. Set up a CMSSW release,*
+*Tested on lxplus with CMSSW_7_4_12. The code does not involve any CMSSW, but this is the easiest way to pick up ROOT and RooFit. Set up a CMSSW release,*
 ```
-cmsrel CMSSW_5_3_18
-cd CMSSW_5_3_18/src
+export SCRAM_ARCH=slc6_amd64_gcc491
+cmsrel CMSSW_7_4_12
+cd CMSSW_7_4_12/src
 cmsenv
 ```
 *or go to your favorite release and do* `cmsenv`.

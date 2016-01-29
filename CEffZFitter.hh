@@ -41,7 +41,7 @@ public:
   ~CEffZFitter();
   
   void initialize(const std::string conf, const int sigpass, const int bkgpass, const int sigfail, const int bkgfail,
-                  const std::string infname, const std::string outdir, const std::string temfname,
+                  const std::string infname, const std::string outdir, const std::string temfname, const std::string refDir,
                   const double massLo, const double massHi, const double fitMassLo, const double fitMassHi, 
 		  const int uncMethod, const std::string pufname, const int charge,
 		  const unsigned int runNumLo, const unsigned int runNumHi); 
@@ -111,7 +111,8 @@ protected:
   
   // output directory for results
   std::string fOutputDir;
-      
+  std::string fRefDir;
+
   // bin edges for kinematic
   std::vector<double> fPtBinEdgesv;
   std::vector<double> fEtaBinEdgesv;

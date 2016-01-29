@@ -23,6 +23,7 @@ int main(int argc, char **argv)
   const int         doPU     = atoi(argv[8]);	// PU re-weighting mode
   const int         charge   = atoi(argv[9]);	// probe charge requirement (0, -1, +1)
   const std::string temfname = argv[10];        // ROOT file for generating MC-based templates
+  const std::string refDir = argv[11];        // reference dir for fixed parameters
   
   // other settings
   const double       massLo    = 60;
@@ -67,7 +68,7 @@ int main(int argc, char **argv)
 ***************************************************************************/
   CEffZFitter fitter;
   fitter.initialize(conf, sigpass, bkgpass, sigfail, bkgfail,
-                    infname, outdir, temfname,
+                    infname, outdir, temfname, refDir, 
                     massLo, massHi, fitMassLo, fitMassHi, 
 		    uncMethod, pufname, charge, runNumLo, runNumHi);
   fitter.computeEff();

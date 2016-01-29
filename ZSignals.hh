@@ -3,6 +3,8 @@
 #include "RooDataSet.h"
 #include "RooRealVar.h"
 #include "RooAbsPdf.h"
+#include "RooAddPdf.h"
+#include "RooArgList.h"
 #include "RooBreitWigner.h"
 #include "RooCBShape.h"
 #include "RooGaussian.h"
@@ -10,7 +12,9 @@
 #include "RooDataHist.h"
 #include "RooHistPdf.h"
 #include "RooVoigtianShape.h"
+#include "RooVoigtian.h"
 #include "RooKeysPdf.h"
+
 
 class CSignalModel
 {
@@ -29,6 +33,20 @@ public:
   RooBreitWigner *bw;
   RooRealVar     *mean, *sigma, *alpha, *n;
   RooCBShape     *cb;
+};
+
+class CBWCBPlusVoigt : public CSignalModel
+{
+public:
+  CBWCBPlusVoigt(RooRealVar &m, const Bool_t pass, double fsrPeak);
+  ~CBWCBPlusVoigt();
+  RooRealVar     *mass, *width;
+  RooBreitWigner *bw;
+  RooRealVar     *mean, *sigma, *alpha, *n, *vMean, *vWidth, *vSigma, *fsrFrac;
+  RooFormulaVar  *oneMinusFsrFrac;
+  RooCBShape     *cb;
+  RooVoigtian    *voigt;
+  RooAbsPdf      *bwcb;
 };
 
 class CMCTemplateConvGaussian : public CSignalModel
@@ -109,6 +127,85 @@ CBreitWignerConvCrystalBall::CBreitWignerConvCrystalBall(RooRealVar &m, const Bo
 
 CBreitWignerConvCrystalBall::~CBreitWignerConvCrystalBall()
 {
+  delete mass;  mass=0;
+  delete width; width=0;
+  delete bw;    bw=0;
+  delete mean;  mean=0;
+  delete sigma; sigma=0;
+  delete alpha; alpha=0;
+  delete n;     n=0;
+  delete cb;    cb=0;
+}
+
+//--------------------------------------------------------------------------------------------------
+CBWCBPlusVoigt::CBWCBPlusVoigt(RooRealVar &m, const Bool_t pass, double fsrPeak)
+{
+  char name[10];
+  if(pass) sprintf(name,"%s","Pass");
+  else     sprintf(name,"%s","Fail");
+  
+  char vname[50];
+  char formula[100];
+  
+  sprintf(vname,"mass%s",name);
+  mass = new RooRealVar(vname,vname,91,80,100);    
+  mass->setVal(91.1876);
+  mass->setConstant(kTRUE);
+  
+  sprintf(vname,"width%s",name);
+  width = new RooRealVar(vname,vname,2.5,0.1,10);    
+  width->setVal(2.4952);
+  width->setConstant(kTRUE);
+  
+  sprintf(vname,"bw%s",name);
+  bw = new RooBreitWigner(vname,vname,m,*mass,*width);
+
+  //sprintf(vname,"vMean%s",name);      vMean  = new RooRealVar(vname,vname,60,5,150);
+  sprintf(vname,"vMean%s",name);      vMean  = new RooRealVar(vname,vname,fsrPeak,5,150);
+  sprintf(vname,"vWidth%s",name);     vWidth = new RooRealVar(vname,vname,5,0.1,10);
+  sprintf(vname,"vSigma%s",name);     vSigma = new RooRealVar(vname,vname,10,1,50);
+  if(pass) {
+    sprintf(vname,"mean%s",name);       mean   = new RooRealVar(vname,vname,0,-10,10);
+    sprintf(vname,"sigma%s",name);      sigma  = new RooRealVar(vname,vname,1,0.1,15);
+    sprintf(vname,"alpha%s",name);      alpha  = new RooRealVar(vname,vname,5,-20,20);
+    sprintf(vname,"n%s",name);          n      = new RooRealVar(vname,vname,1,0,10);
+    sprintf(vname,"fsrFrac%s",name);    fsrFrac= new RooRealVar(vname,vname,0.3,0,.45);
+  } else {
+    sprintf(vname,"mean%s",name);       mean  = new RooRealVar(vname,vname,0,-10,10);
+    sprintf(vname,"sigma%s",name);      sigma = new RooRealVar(vname,vname,1,0.1,15);
+    sprintf(vname,"alpha%s",name);      alpha = new RooRealVar(vname,vname,5,-20,20);
+    sprintf(vname,"n%s",name);          n     = new RooRealVar(vname,vname,1,0,10);
+    sprintf(vname,"fsrFrac%s",name);    fsrFrac= new RooRealVar(vname,vname,0.3,0,.45);
+  }
+  sprintf(formula, "1 - fsrFrac%s", name);
+  sprintf(vname,"oneMinusFsrFrac%s",name);    oneMinusFsrFrac= new RooFormulaVar(vname,vname,formula, *fsrFrac);
+  //sprintf(vname, "fsrNorm%s", name);    fsrNorm = new RooFormulaVar(vname, "fsrFrac", fsrFrac);
+//  n->setVal(1.0);
+//  n->setConstant(kTRUE);
+  
+  sprintf(vname,"cb%s",name);
+  cb = new RooCBShape(vname,vname,m,*mean,*sigma,*alpha,*n);
+  
+  sprintf(vname, "voigt%s",name);
+  voigt = new RooVoigtian(vname,vname, m, *vMean, *vWidth, *vSigma);
+  sprintf(vname,"bwcb%s",name);
+  bwcb = new RooFFTConvPdf(vname,vname,m,*bw,*cb);
+  RooArgList *pdfs = new RooArgList(*voigt, *bwcb);
+  RooArgList *coeffs = new RooArgList(*fsrFrac, *oneMinusFsrFrac); 
+  sprintf(vname,"signal%s",name);
+  model = new RooAddPdf(vname, vname, *pdfs, *coeffs);
+  //model = new RooFFTConvPdf(vname,vname,m,*bw,*cb);
+}
+
+CBWCBPlusVoigt::~CBWCBPlusVoigt()
+{
+  delete vMean;    vMean=0;
+  delete vWidth;    vWidth=0;
+  delete vSigma;    vSigma=0;
+  delete oneMinusFsrFrac;    oneMinusFsrFrac=0;
+  delete fsrFrac;    fsrFrac=0;
+  delete voigt; voigt=0;
+  delete bwcb;  bwcb=0;
   delete mass;  mass=0;
   delete width; width=0;
   delete bw;    bw=0;

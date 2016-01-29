@@ -4,6 +4,7 @@
 #include "RooExponential.h"
 #include "RooCMSShape.h"
 #include "RooGenericPdf.h"
+#include <vector>
 
 class CBackgroundModel
 {
@@ -11,6 +12,13 @@ public:
   CBackgroundModel():model(0){}
   virtual ~CBackgroundModel() { delete model; }
   RooAbsPdf *model;
+protected:
+  std::vector<double> readBkgParams(
+    const int ibin,
+    const std::string name,
+    std::vector<std::string> paramNames,
+    std::string refDir
+  );
 };
 
 class CExponential : public CBackgroundModel
@@ -26,6 +34,14 @@ class CErfcExpo : public CBackgroundModel
 public:
   CErfcExpo(RooRealVar &m, const Bool_t pass);
   ~CErfcExpo();
+  RooRealVar *alfa, *beta, *gamma, *peak; 
+};
+
+class CErfcExpoFixed : public CBackgroundModel
+{
+public:
+  CErfcExpoFixed(RooRealVar &m, const Bool_t pass, const int ibin, const std::string name, std::string refDir );
+  ~CErfcExpoFixed();
   RooRealVar *alfa, *beta, *gamma, *peak; 
 };
 
@@ -65,9 +81,9 @@ CExponential::CExponential(RooRealVar &m, const Bool_t pass)
   
   sprintf(vname,"t%s",name);
   if(pass)
-    t = new RooRealVar(vname,vname,-0.1,-1.,0.);
+    t = new RooRealVar(vname,vname,-0.04,-1.,-0.05);
   else
-    t = new RooRealVar(vname,vname,-0.1,-1.,0.);
+    t = new RooRealVar(vname,vname,-0.04,-1.,-0.05);
       
   sprintf(vname,"background%s",name);
   model = new RooExponential(vname,vname,m,*t);
@@ -87,7 +103,7 @@ CErfcExpo::CErfcExpo(RooRealVar &m, const Bool_t pass)
   else     sprintf(name,"%s","Fail");
   
   char vname[50];
-  
+
   if(pass) {
     sprintf(vname,"alfa%s",name);  alfa  = new RooRealVar(vname,vname,50,5,200);
     sprintf(vname,"beta%s",name);  beta  = new RooRealVar(vname,vname,0.05,0,0.2);
@@ -108,6 +124,46 @@ CErfcExpo::CErfcExpo(RooRealVar &m, const Bool_t pass)
 }
 
 CErfcExpo::~CErfcExpo()
+{
+  delete alfa;  alfa=0;
+  delete beta;  beta=0;
+  delete gamma; gamma=0;
+  delete peak;  peak=0;
+}
+
+//--------------------------------------------------------------------------------------------------
+CErfcExpoFixed::CErfcExpoFixed(RooRealVar &m, const Bool_t pass, const int ibin, const std::string fitname, std::string refDir)
+{
+  char name[10];
+  if(pass) sprintf(name,"%s","Pass");
+  else     sprintf(name,"%s","Fail");
+  
+  char vname[50];
+  std::vector<std::string> paramNames;
+  if(pass) {
+    paramNames.push_back("alfaPass");
+    paramNames.push_back("betaPass");
+    paramNames.push_back("gammaPass");
+  } else {
+    paramNames.push_back("alfaFail");
+    paramNames.push_back("betaFail");
+    paramNames.push_back("gammaFail");
+  }
+  std::vector<double> params = readBkgParams(ibin, fitname, paramNames, refDir);
+  sprintf(vname,"alfa%s",name);  alfa  = new RooRealVar(vname,vname,params[0]); alfa->setConstant(kTRUE);
+  sprintf(vname,"beta%s",name);  beta  = new RooRealVar(vname,vname,params[1]); beta->setConstant(kTRUE);
+  sprintf(vname,"gamma%s",name); gamma = new RooRealVar(vname,vname,params[2]); gamma->setConstant(kTRUE);
+  
+  sprintf(vname,"peak%s",name);  
+  peak = new RooRealVar(vname,vname,91.1876,85,97); 
+  peak->setVal(91.1876);
+  peak->setConstant(kTRUE);  
+  
+  sprintf(vname,"background%s",name);
+  model = new RooCMSShape(vname,vname,m,*alfa,*beta,*gamma,*peak);
+}
+
+CErfcExpoFixed::~CErfcExpoFixed()
 {
   delete alfa;  alfa=0;
   delete beta;  beta=0;
@@ -216,3 +272,43 @@ CQuadraticExp::~CQuadraticExp()
   delete a2; a2=0;
   delete t;  t=0;
 }
+
+std::vector<double> CBackgroundModel::readBkgParams(
+  const int ibin,
+  const std::string fitname,
+  std::vector<std::string> paramNames,
+  std::string refDir
+) {
+  std::vector<double> params;
+  char rname[512];
+  sprintf(
+    rname,
+    "%s/plots/fitres%s_%i.txt",
+    refDir.c_str(),
+    fitname.c_str(),
+    ibin
+  );
+  ifstream rfile;
+  for(unsigned int i = 0; i<paramNames.size(); i++) {
+    rfile.open(rname);
+    assert(rfile.is_open());
+    std::string line;
+    bool found_param = false;
+    while(getline(rfile,line)) {
+      printf("%s\n", line.c_str());
+      size_t found = line.find(paramNames[i]);
+      if(found!=string::npos) {
+        std::string varname, initval, finalval, pmstr, error, corr;
+        std::stringstream ss(line);
+        ss >> varname >> initval >> finalval >> pmstr >> error >> corr;
+        params.push_back(atof(finalval.c_str()));
+        found_param=true;
+        break;
+      }
+    }
+    assert(found_param);
+    rfile.close();
+  }
+  return params;
+}
+

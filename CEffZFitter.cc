@@ -75,7 +75,7 @@ CEffZFitter::~CEffZFitter()
 
 //--------------------------------------------------------------------------------------------------
 void CEffZFitter::initialize(const std::string conf, const int sigpass, const int bkgpass, const int sigfail, const int bkgfail,
-                             const std::string infname, const std::string outdir, const std::string temfname,
+                             const std::string infname, const std::string outdir, const std::string temfname, const std::string refDir,  
                              const double massLo, const double massHi, const double fitMassLo, const double fitMassHi, 
 		             const int uncMethod, const std::string pufname, const int charge,
 			     const unsigned int runNumLo, const unsigned int runNumHi)
@@ -97,6 +97,7 @@ void CEffZFitter::initialize(const std::string conf, const int sigpass, const in
   
   // set up output directory
   fOutputDir = outdir;
+  fRefDir = refDir;
   gSystem->mkdir(fOutputDir.c_str(),true);
   CPlot::sOutDir = TString(outdir.c_str()) + TString("/plots");
       
@@ -158,7 +159,7 @@ void CEffZFitter::initialize(const std::string conf, const int sigpass, const in
   const unsigned int NBINS_ETAPHI = NBINS_ETA*NBINS_PHI;
   const unsigned int NBINS_NPV    = fNPVBinEdgesv.size()-1;
   
-  char tname[50];
+  char tname[500];
   float wgt;
 
   for(unsigned int ibin=0; ibin<NBINS_PT; ibin++) {
@@ -389,7 +390,7 @@ void CEffZFitter::computeEff()
   // text file of summary tables and summary plots
   //
   ofstream txtfile;
-  char txtfname[100];    
+  char txtfname[1000];    
   sprintf(txtfname,"%s/summary.txt",fOutputDir.c_str());
   txtfile.open(txtfname);
   assert(txtfile.is_open());
@@ -419,6 +420,7 @@ void CEffZFitter::computeEff()
     plotEffPt.SetYRange(0.6, 1.03);
     plotEffPt.SetXRange(0.9*(fPtBinEdgesv[0]),1.1*(fPtBinEdgesv[NBINS_PT-1]));
     plotEffPt.Draw(c,true,"png"); 
+    plotEffPt.Draw(c,true,"pdf"); 
   }
   
   if(grEffEta) {
@@ -436,12 +438,14 @@ void CEffZFitter::computeEff()
     plotEffEta.AddGraph(grEffEta,"",kBlack);
     plotEffEta.SetYRange(0.2, 1.04);
     plotEffEta.Draw(c,true,"png");
+    plotEffEta.Draw(c,true,"pdf");
 
     CPlot plotEffEta2("effeta2","","probe #eta","#varepsilon");
     if(fDoAbsEta) plotEffEta2.SetXTitle("probe |#eta|");
     plotEffEta2.AddGraph(grEffEta,"",kBlack);
     plotEffEta2.SetYRange(0.6, 1.03);
     plotEffEta2.Draw(c,true,"png");
+    plotEffEta2.Draw(c,true,"pdf");
   }
   
   if(grEffPhi) {
@@ -458,6 +462,7 @@ void CEffZFitter::computeEff()
     plotEffPhi.AddGraph(grEffPhi,"",kBlack);
     plotEffPhi.SetYRange(0.6, 1.03);
     plotEffPhi.Draw(c,true,"png"); 
+    plotEffPhi.Draw(c,true,"pdf"); 
   }
   
   if(grEffNPV) {
@@ -473,6 +478,7 @@ void CEffZFitter::computeEff()
     plotEffNPV.SetYRange(0.6, 1.03);
     plotEffNPV.SetXRange(0.9*(fNPVBinEdgesv[0]),1.1*(fNPVBinEdgesv[NBINS_NPV-1]));
     plotEffNPV.Draw(c,true,"png"); 
+    plotEffNPV.Draw(c,true,"pdf"); 
   }
 
 
@@ -493,6 +499,7 @@ void CEffZFitter::computeEff()
     if(fDoAbsEta) { plotEffEtaPt.SetXTitle("probe |#eta|"); }
     plotEffEtaPt.AddHist2D(hEffEtaPt,"COLZ");
     plotEffEtaPt.Draw(c,true,"png");
+    plotEffEtaPt.Draw(c,true,"pdf");
 
     hErrlEtaPt->SetTitleOffset(1.2,"Y");
     if(NBINS_PT>2) { hErrlEtaPt->GetYaxis()->SetRangeUser(fPtBinEdgesv[0],fPtBinEdgesv[NBINS_PT-2]); }
@@ -500,6 +507,7 @@ void CEffZFitter::computeEff()
     if(fDoAbsEta) { plotErrlEtaPt.SetXTitle("probe |#eta|"); }
     plotErrlEtaPt.AddHist2D(hErrlEtaPt,"COLZ");
     plotErrlEtaPt.Draw(c,true,"png");
+    plotErrlEtaPt.Draw(c,true,"pdf");
 
     hErrhEtaPt->SetTitleOffset(1.2,"Y");
     if(NBINS_PT>2) { hErrhEtaPt->GetYaxis()->SetRangeUser(fPtBinEdgesv[0],fPtBinEdgesv[NBINS_PT-2]); }
@@ -507,6 +515,7 @@ void CEffZFitter::computeEff()
     if(fDoAbsEta) { plotErrhEtaPt.SetXTitle("probe |#eta|"); }
     plotErrhEtaPt.AddHist2D(hErrhEtaPt,"COLZ");
     plotErrhEtaPt.Draw(c,true,"png");
+    plotErrhEtaPt.Draw(c,true,"pdf");
   }
 
   if(hEffEtaPhi->GetEntries()>0) {
@@ -521,18 +530,21 @@ void CEffZFitter::computeEff()
     if(fDoAbsEta) { plotEffEtaPhi.SetXTitle("probe |#eta|"); }
     plotEffEtaPhi.AddHist2D(hEffEtaPhi,"COLZ");
     plotEffEtaPhi.Draw(c,true,"png");
+    plotEffEtaPhi.Draw(c,true,"pdf");
 
     hErrlEtaPhi->SetTitleOffset(1.2,"Y");
     CPlot plotErrlEtaPhi("errletaphi","","probe #eta","probe #phi");
     plotErrlEtaPhi.AddHist2D(hErrlEtaPhi,"COLZ");
     if(fDoAbsEta) { plotErrlEtaPhi.SetXTitle("probe |#eta|"); }
     plotErrlEtaPhi.Draw(c,true,"png");
+    plotErrlEtaPhi.Draw(c,true,"pdf");
 
     hErrhEtaPhi->SetTitleOffset(1.2,"Y");
     CPlot plotErrhEtaPhi("errhetaphi","","probe #eta","probe #phi");
     if(fDoAbsEta) { plotErrhEtaPhi.SetXTitle("probe |#eta|"); }
     plotErrhEtaPhi.AddHist2D(hErrhEtaPhi,"COLZ");
     plotErrhEtaPhi.Draw(c,true,"png");
+    plotErrhEtaPhi.Draw(c,true,"pdf");
   }
 
   txtfile.close();
@@ -609,7 +621,7 @@ void CEffZFitter::makeBinnedTemplates(const std::string temfname, const int char
 {
   std::cout << "   [CEffZFitter] Creating binned templates... "; std::cout.flush();
 
-  char hname[50];
+  char hname[500];
   
   const unsigned int NBINS_PT  = fPtBinEdgesv.size()-1;
   const unsigned int NBINS_ETA = fEtaBinEdgesv.size()-1;
@@ -834,7 +846,7 @@ void CEffZFitter::makeUnbinnedTemplates(const std::string temfname, const int ch
   int          qtag, qprobe;              // tag, probe charge
   TLorentzVector *tag=0, *probe=0;        // tag, probe 4-vector
   
-  char tname[50];
+  char tname[500];
   
   const unsigned int NBINS_PT  = fPtBinEdgesv.size()-1;
   const unsigned int NBINS_ETA = fEtaBinEdgesv.size()-1;
@@ -1078,7 +1090,7 @@ TGraphAsymmErrors* CEffZFitter::makeEffGraph(const std::vector<double> &edgesv,
 		 
     } else {  // Fit Z peak
       ifstream rfile;
-      char rname[100];
+      char rname[512];
       sprintf(rname,"%s/plots/fitres%s_%i.txt",fOutputDir.c_str(),name.c_str(),ibin);
       rfile.open(rname);
 
@@ -1137,7 +1149,7 @@ void CEffZFitter::makeEffHist2D(TH2D *hEff, TH2D *hErrl, TH2D *hErrh,
       
       } else {  // Fit Z peak
         ifstream rfile;
-        char rname[100];
+        char rname[512];
         sprintf(rname,"%s/plots/fitres%s_%i.txt",fOutputDir.c_str(),name.c_str(),ibin);
         rfile.open(rname);
 
@@ -1173,12 +1185,12 @@ void CEffZFitter::performCount(double &resEff, double &resErrl, double &resErrh,
                                const std::string name, TCanvas *cpass, TCanvas *cfail)
 {
   float m,w;
-  char pname[50];
-  char binlabelx[100];
-  char binlabely[100];
-  char yield[50];
-  char ylabel[50];
-  char effstr[100];    
+  char pname[500];
+  char binlabelx[1000];
+  char binlabely[1000];
+  char yield[500];
+  char ylabel[500];
+  char effstr[1000];    
   
   double npass=0, ntotal=0;
   passTree->SetBranchAddress("m",&m);
@@ -1255,6 +1267,7 @@ void CEffZFitter::performCount(double &resEff, double &resErrl, double &resErrh,
   }
   plotPass.AddTextBox(effstr,0.69,0.84,0.94,0.89,0,kBlack,42,-1);
   plotPass.Draw(cpass,true,"png");
+  plotPass.Draw(cpass,true,"pdf");
   
   //
   // Plot failing probes
@@ -1282,6 +1295,7 @@ void CEffZFitter::performCount(double &resEff, double &resErrl, double &resErrh,
   }
   plotFail.AddTextBox(effstr,0.69,0.84,0.94,0.89,0,kBlack,42,-1);
   plotFail.Draw(cfail,true,"png");
+  plotFail.Draw(cfail,true,"pdf");
   
   delete hpass;
   delete hfail;
@@ -1298,15 +1312,15 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
   RooRealVar m("m","mass",fFitMassLo,fFitMassHi);
   m.setBins(10000);
   
-  char pname[50];
-  char binlabelx[100];
-  char binlabely[100];
-  char yield[50];
-  char ylabel[50];
-  char effstr[100];
-  char nsigstr[100];
-  char nbkgstr[100];
-  char chi2str[100];
+  char pname[500];
+  char binlabelx[1000];
+  char binlabely[1000];
+  char yield[500];
+  char ylabel[500];
+  char effstr[1000];
+  char nsigstr[1000];
+  char nbkgstr[1000];
+  char chi2str[1000];
   
   TFile *histfile = 0;
   if(fSigPass==2 || fSigFail==2) {
@@ -1364,7 +1378,7 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
     sigModPass = new CBreitWignerConvCrystalBall(m,true);
   
   } else if(fSigPass==2) { 
-    char hname[50];
+    char hname[500];
     sprintf(hname,"pass%s_%i",name.c_str(),ibin);
     TH1D *h = (TH1D*)histfile->Get(hname);
     assert(h);
@@ -1374,11 +1388,19 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
     sigModPass = new CVoigtianCBShape(m,true);
   
   } else if(fSigPass==4) {
-    char tname[50];
+    char tname[500];
     sprintf(tname,"pass%s_%i",name.c_str(),ibin);
     TTree *t = (TTree*)datfile->Get(tname);
     assert(t);
     sigModPass = new CMCDatasetConvGaussian(m,t,true);
+  } else if(fSigPass==5) {
+    double fsrPeak=80;
+    if(name.compare("pt")==0) {
+      fsrPeak=2.5*(xbinLo+xbinHi)/2.;
+    } else if(name.compare("etapt")==0) {
+      fsrPeak=2.5*(ybinLo+ybinHi)/2.;
+    }
+    sigModPass = new CBWCBPlusVoigt(m, true, fsrPeak);
   }
 
   if(fBkgPass==1) { 
@@ -1395,13 +1417,15 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
   
   } else if(fBkgPass==5) {
     bkgModPass = new CQuadraticExp(m,true);
+  } else if(fBkgPass==6) {
+    bkgModPass = new CErfcExpoFixed(m, true, ibin, name, fRefDir);
   }
 
   if(fSigFail==1) {
     sigModFail = new CBreitWignerConvCrystalBall(m,false);
   
   } else if(fSigFail==2) {
-    char hname[50];
+    char hname[500];
     sprintf(hname,"fail%s_%i",name.c_str(),ibin);
     TH1D *h = (TH1D*)histfile->Get(hname);
     assert(h);
@@ -1411,13 +1435,20 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
     sigModFail = new CVoigtianCBShape(m,false);
   
   } else if(fSigFail==4) {
-    char tname[50];
+    char tname[500];
     sprintf(tname,"fail%s_%i",name.c_str(),ibin);
     TTree *t = (TTree*)datfile->Get(tname);
     assert(t);
     sigModFail = new CMCDatasetConvGaussian(m,t,false);
+  } else if(fSigFail==5) {
+    double fsrPeak=80;
+    if(name.compare("pt")==0) {
+      fsrPeak=2.5*(xbinLo+xbinHi)/2.;
+    } else if(name.compare("etapt")==0) {
+      fsrPeak=2.5*(ybinLo+ybinHi)/2.;
+    }
+    sigModFail = new CBWCBPlusVoigt(m, false, fsrPeak);
   }
-
   if(fBkgFail==1) { 
     bkgModFail = new CExponential(m,false);
   
@@ -1432,16 +1463,26 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
   
   } else if(fBkgFail==5) {
     bkgModFail = new CQuadraticExp(m,false);
+  } else if(fBkgPass==6) {
+    bkgModFail = new CErfcExpoFixed(m, false, ibin, name, fRefDir);
   }
   
   // Define free parameters
   double NsigMax     = doBinned ? histPass.Integral()+histFail.Integral() : passTree->GetEntries()+failTree->GetEntries();
   double NbkgFailMax = doBinned ? histFail.Integral() : failTree->GetEntries();
   double NbkgPassMax = doBinned ? histPass.Integral() : passTree->GetEntries();
+  if(name.compare("pt")==0) {
+    if(xbinLo>=30) NbkgFailMax = NbkgFailMax * 0.3;
+    else if(xbinLo>=50) NbkgFailMax = NbkgFailMax * 0.05;
+  } else if(name.compare("etapt")==0) {
+    if(ybinLo>=30) NbkgFailMax = NbkgFailMax * 0.3;
+    else if(ybinLo>=50) NbkgFailMax = NbkgFailMax * 0.05;
+  }
+  NbkgPassMax = NbkgPassMax * 0.05;
   RooRealVar Nsig("Nsig","Signal Yield",0.80*NsigMax,0,NsigMax);
-  RooRealVar eff("eff","Efficiency",0.8,0,1.0);
+  RooRealVar eff("eff","Efficiency",0.6,0,1.0);
   //RooRealVar NbkgPass("NbkgPass","Background count in PASS sample",50,0,NbkgPassMax);
-  RooRealVar NbkgPass("NbkgPass","Background count in PASS sample",0.1*NbkgPassMax,0,NbkgPassMax);
+  RooRealVar NbkgPass("NbkgPass","Background count in PASS sample",0.001*NbkgPassMax,0,0.1*NbkgPassMax);
   if(fBkgPass==0) NbkgPass.setVal(0);
   RooRealVar NbkgFail("NbkgFail","Background count in FAIL sample",0.01*NbkgFailMax,0.01,NbkgFailMax);  
     
@@ -1475,8 +1516,8 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
   RooFitResult *fitResult=0;
   fitResult = totalPdf.fitTo(*dataCombined,
                              RooFit::Extended(),
-                             //RooFit::Strategy(2),
-                             //RooFit::Minos(RooArgSet(eff)),
+                             RooFit::Strategy(2),
+                             RooFit::Minos(RooArgSet(eff)),
                              RooFit::NumCPU(4),
                              RooFit::Save());
  
@@ -1556,6 +1597,7 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
     //plotPass.AddTextBox(0.69,0.73,0.94,0.83,0,kBlack,42,-1,2,nsigstr,chi2str);
   }
   plotPass.Draw(cpass,true,"png");
+  plotPass.Draw(cpass,true,"pdf");
  
   //
   // Plot failing probes
@@ -1579,12 +1621,13 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
   plotFail.AddTextBox(0.69,0.68,0.94,0.83,0,kBlack,42,-1,2,nsigstr,nbkgstr);
   //plotFail.AddTextBox(0.69,0.68,0.94,0.83,0,kBlack,42,-1,3,nsigstr,nbkgstr,chi2str);
   plotFail.Draw(cfail,true,"png");  
+  plotFail.Draw(cfail,true,"pdf");  
   
   //
   // Write fit results
   //
   ofstream txtfile;
-  char txtfname[100];    
+  char txtfname[1000];    
   sprintf(txtfname,"%s/fitres%s_%i.txt",CPlot::sOutDir.Data(),name.c_str(),ibin);
   printf("\n\nSaved results to %s/fitres%s_%i.txt\n\n",CPlot::sOutDir.Data(),name.c_str(),ibin);
   txtfile.open(txtfname);
@@ -1662,7 +1705,7 @@ void CEffZFitter::parseFitResults(std::ifstream& ifs, double& eff, double& errl,
 void CEffZFitter::makeHTML()
 {
   ofstream htmlfile;
-  char htmlfname[100];
+  char htmlfname[1000];
   sprintf(htmlfname,"%s/plots.html",fOutputDir.c_str());
   htmlfile.open(htmlfname);
   htmlfile << "<!DOCTYPE html" << endl;
@@ -1731,7 +1774,7 @@ void CEffZFitter::makeHTML()
 void CEffZFitter::makeHTML(const std::string name, const unsigned int nbins)
 {
   ofstream htmlfile;
-  char htmlfname[100];
+  char htmlfname[1000];
   sprintf(htmlfname,"%s/%s.html",fOutputDir.c_str(),name.c_str());
   htmlfile.open(htmlfname);
   htmlfile << "<!DOCTYPE html" << endl;

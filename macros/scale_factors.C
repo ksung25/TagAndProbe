@@ -1,5 +1,6 @@
 #include <TStyle.h>
 #include <TROOT.h>
+#include <TMath.h>
 #include <TFile.h>
 #include <TH2D.h>
 #include <TH1D.h>
@@ -7,23 +8,41 @@
 #include <TLegend.h>
 #include <TColor.h>
 #include <TPaletteAxis.h>
+#include <iostream>
+//Float_t ele_pt_bins[] = {10,15,20,25,30,40,50,60,70,80,90,100,8000};
+//Float_t ele_eta_bins[] = {0, 1.479, 2.4};
+//Int_t n_ele_pt_bins=12;
+//Int_t n_ele_eta_bins=2;
+//Float_t mu_pt_bins[] = {10,15,20,25,30,40,50,60,70,80,90,100,8000};
+//Float_t mu_eta_bins[] = {0, 1.5, 2.1, 2.4};
+//Int_t n_mu_pt_bins=12;
+//Int_t n_mu_eta_bins=3;
+Float_t ele_pt_bins[] = {10,20,30,40,50,70,100,8000};
+Float_t ele_eta_bins[] = {0, 1.479, 2.4};
+Int_t n_ele_pt_bins=7;
+Int_t n_ele_eta_bins=2;
+Float_t mu_pt_bins[] = {10,20,30,40,50,70,100,8000};
+Float_t mu_eta_bins[] = {0, 1.479, 2.4};
+Int_t n_mu_pt_bins=7;
+Int_t n_mu_eta_bins=2;
 
 // Function to get MIT colors for the 2D plots
 void mitPalette()
 {
-   static Int_t  colors[50];
-   static Bool_t initialized = kFALSE;
-   Double_t Red[3]    = { 1, 138./255., 163/255.};
-   Double_t Green[3]  = { 1, 139./255., 31/255.};
-   Double_t Blue[3]   = { 1, 140./255., 52/255.};
-   Double_t Length[3] = { 0.00, 0.35, 1.00 };
-   if(!initialized){
-      Int_t FI = TColor::CreateGradientColorTable(3,Length,Red,Green,Blue,50);
-      for (int i=0; i<50; i++) colors[i] = FI+i;
-      initialized = kTRUE;
-      return;
-   }
-   gStyle->SetPalette(50,colors);
+  static Int_t  colors[100];
+  static Bool_t initialized = kFALSE;
+  Double_t Red[3]    = { 1, 138./255., 163/255.};
+  Double_t Green[3]  = { 1, 139./255., 31/255.};
+  Double_t Blue[3]   = { 1, 140./255., 52/255.};
+  Double_t Length[3] = { 0.00, 0.35, 1.00 };
+  if(!initialized){
+    Int_t FI = TColor::CreateGradientColorTable(3,Length,Red,Green,Blue,100);
+    for (int i=0; i<100; i++) colors[i] = FI+i;
+    initialized = kTRUE;
+    return;
+  }
+  gStyle->SetPalette(100,colors);
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -31,14 +50,6 @@ void mitPalette()
 // takes the two parts of the electron selection and multiplies them
 // produces plots and rootfiles for the factorized and unfactorized efficiencies
 void factorize_mc_ele(string plots_dir, string root_dir) {
-  Float_t ele_pt_bins[] = {10,15,20,25,30,40,50,60,70,80,90,100,8000};
-  Float_t ele_eta_bins[] = {0, 1.479, 2.4};
-  Int_t n_ele_pt_bins=12;
-  Int_t n_ele_eta_bins=2;
-  Float_t mu_pt_bins[] = {10,15,20,25,30,40,50,60,70,80,90,100,8000};
-  Float_t mu_eta_bins[] = {0, 1.5, 2.1, 2.4};
-  Int_t n_mu_pt_bins=12;
-  Int_t n_mu_eta_bins=3;
   
   TFile *f_BaselineToLoose_electronTnP          = TFile::Open((plots_dir+"DYJetsToLL_BaselineToLoose_electronTnP/eff.root"       ).c_str() ,"READ");
   TFile *f_BaselineToMedium_electronTnP         = TFile::Open((plots_dir+"DYJetsToLL_BaselineToMedium_electronTnP/eff.root"      ).c_str() ,"READ");
@@ -404,10 +415,10 @@ void factorize_mc_ele(string plots_dir, string root_dir) {
   c_factEff_Tight_ele->Print((plots_dir+"DYJetsToLL_factEff_Tight_ele.png").c_str());
   
   TFile *efficiencies_file = TFile::Open((root_dir+"DYJetsToLL_efficiencies_electronTnP.root").c_str(),"RECREATE");
-  eff_BaselineToLoose_electronTnP  ->Write("eff_Veto_ele"); 
-  eff_BaselineToMedium_electronTnP ->Write("eff_Loose_ele"); 
-  eff_BaselineToTight_electronTnP  ->Write("eff_Medium_ele");  
-  eff_BaselineToVeto_electronTnP   ->Write("eff_Tight_ele");  
+  eff_BaselineToVeto_electronTnP   ->Write("eff_Veto_ele");  
+  eff_BaselineToLoose_electronTnP  ->Write("eff_Loose_ele"); 
+  eff_BaselineToMedium_electronTnP ->Write("eff_Medium_ele"); 
+  eff_BaselineToTight_electronTnP  ->Write("eff_Tight_ele");  
   factEff_Veto_ele   ->Write("factEff_Veto_ele");
   factEff_Loose_ele  ->Write("factEff_Loose_ele");
   factEff_Medium_ele ->Write("factEff_Medium_ele");
@@ -416,27 +427,19 @@ void factorize_mc_ele(string plots_dir, string root_dir) {
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void factorize_data_ele(string plots_dir, string root_dir) {
-  Float_t ele_pt_bins[] = {10,15,20,25,30,40,50,60,70,80,90,100,8000};
-  Float_t ele_eta_bins[] = {0, 1.479, 2.4};
-  Int_t n_ele_pt_bins=12;
-  Int_t n_ele_eta_bins=2;
-  Float_t mu_pt_bins[] = {10,15,20,25,30,40,50,60,70,80,90,100,8000};
-  Float_t mu_eta_bins[] = {0, 1.5, 2.1, 2.4};
-  Int_t n_mu_pt_bins=12;
-  Int_t n_mu_eta_bins=3;
   
-  TFile *f_BaselineToLoose_electronTnP          = TFile::Open((plots_dir+"SingleElectron+Run2015D_BaselineToLoose_electronTnP/eff.root"       ).c_str() ,"READ");
-  TFile *f_BaselineToMedium_electronTnP         = TFile::Open((plots_dir+"SingleElectron+Run2015D_BaselineToMedium_electronTnP/eff.root"      ).c_str() ,"READ");
-  TFile *f_BaselineToTight_electronTnP          = TFile::Open((plots_dir+"SingleElectron+Run2015D_BaselineToTight_electronTnP/eff.root"       ).c_str() ,"READ");
-  TFile *f_BaselineToVeto_electronTnP           = TFile::Open((plots_dir+"SingleElectron+Run2015D_BaselineToVeto_electronTnP/eff.root"        ).c_str() ,"READ");
-  TFile *f_LooseIdToLooseIdIso_electronTnP      = TFile::Open((plots_dir+"SingleElectron+Run2015D_LooseIdToLooseIdIso_electronTnP/eff.root"   ).c_str() ,"READ");
-  TFile *f_LooseIsoToLooseIdIso_electronTnP     = TFile::Open((plots_dir+"SingleElectron+Run2015D_LooseIsoToLooseIdIso_electronTnP/eff.root"  ).c_str() ,"READ");
-  TFile *f_MediumIdToMediumIdIso_electronTnP    = TFile::Open((plots_dir+"SingleElectron+Run2015D_MediumIdToMediumIdIso_electronTnP/eff.root" ).c_str() ,"READ");
-  TFile *f_MediumIsoToMediumIdIso_electronTnP   = TFile::Open((plots_dir+"SingleElectron+Run2015D_MediumIsoToMediumIdIso_electronTnP/eff.root").c_str() ,"READ");
-  TFile *f_TightIdToTightIdIso_electronTnP      = TFile::Open((plots_dir+"SingleElectron+Run2015D_TightIdToTightIdIso_electronTnP/eff.root"   ).c_str() ,"READ");
-  TFile *f_TightIsoToTightIdIso_electronTnP     = TFile::Open((plots_dir+"SingleElectron+Run2015D_TightIsoToTightIdIso_electronTnP/eff.root"  ).c_str() ,"READ");
-  TFile *f_VetoIdToVetoIdIso_electronTnP        = TFile::Open((plots_dir+"SingleElectron+Run2015D_VetoIdToVetoIdIso_electronTnP/eff.root"     ).c_str() ,"READ");
-  TFile *f_VetoIsoToVetoIdIso_electronTnP       = TFile::Open((plots_dir+"SingleElectron+Run2015D_VetoIsoToVetoIdIso_electronTnP/eff.root"    ).c_str() ,"READ");
+  TFile *f_BaselineToLoose_electronTnP          = TFile::Open((plots_dir+"SingleElectron_BaselineToLoose_electronTnP/eff.root"       ).c_str() ,"READ");
+  TFile *f_BaselineToMedium_electronTnP         = TFile::Open((plots_dir+"SingleElectron_BaselineToMedium_electronTnP/eff.root"      ).c_str() ,"READ");
+  TFile *f_BaselineToTight_electronTnP          = TFile::Open((plots_dir+"SingleElectron_BaselineToTight_electronTnP/eff.root"       ).c_str() ,"READ");
+  TFile *f_BaselineToVeto_electronTnP           = TFile::Open((plots_dir+"SingleElectron_BaselineToVeto_electronTnP/eff.root"        ).c_str() ,"READ");
+  TFile *f_LooseIdToLooseIdIso_electronTnP      = TFile::Open((plots_dir+"SingleElectron_LooseIdToLooseIdIso_electronTnP/eff.root"   ).c_str() ,"READ");
+  TFile *f_LooseIsoToLooseIdIso_electronTnP     = TFile::Open((plots_dir+"SingleElectron_LooseIsoToLooseIdIso_electronTnP/eff.root"  ).c_str() ,"READ");
+  TFile *f_MediumIdToMediumIdIso_electronTnP    = TFile::Open((plots_dir+"SingleElectron_MediumIdToMediumIdIso_electronTnP/eff.root" ).c_str() ,"READ");
+  TFile *f_MediumIsoToMediumIdIso_electronTnP   = TFile::Open((plots_dir+"SingleElectron_MediumIsoToMediumIdIso_electronTnP/eff.root").c_str() ,"READ");
+  TFile *f_TightIdToTightIdIso_electronTnP      = TFile::Open((plots_dir+"SingleElectron_TightIdToTightIdIso_electronTnP/eff.root"   ).c_str() ,"READ");
+  TFile *f_TightIsoToTightIdIso_electronTnP     = TFile::Open((plots_dir+"SingleElectron_TightIsoToTightIdIso_electronTnP/eff.root"  ).c_str() ,"READ");
+  TFile *f_VetoIdToVetoIdIso_electronTnP        = TFile::Open((plots_dir+"SingleElectron_VetoIdToVetoIdIso_electronTnP/eff.root"     ).c_str() ,"READ");
+  TFile *f_VetoIsoToVetoIdIso_electronTnP       = TFile::Open((plots_dir+"SingleElectron_VetoIsoToVetoIdIso_electronTnP/eff.root"    ).c_str() ,"READ");
   
   TH2D * eff_BaselineToLoose_electronTnP        = (TH2D*) f_BaselineToLoose_electronTnP          ->Get("hEffEtaPt"); 
   TH2D * eff_BaselineToMedium_electronTnP       = (TH2D*) f_BaselineToMedium_electronTnP         ->Get("hEffEtaPt"); 
@@ -567,7 +570,7 @@ void factorize_data_ele(string plots_dir, string root_dir) {
   palette_axis = (TPaletteAxis*) absdiff_Veto_ele->GetListOfFunctions()->FindObject("palette"); 
   palette_axis->SetLabelSize(0.02);
   c_absdiff_Veto_ele->Update();
-  c_absdiff_Veto_ele->Print((plots_dir+"SingleElectron+Run2015D_absdiff_Veto_ele.png").c_str());
+  c_absdiff_Veto_ele->Print((plots_dir+"SingleElectron_absdiff_Veto_ele.png").c_str());
   TCanvas *c_absdiff_Loose_ele = new TCanvas("c_absdiff_Loose_ele","Difference from factorized efficiency, Loose electrons (Data)",800,800);
   absdiff_Loose_ele->Draw("TEXTE COLZ");
   gPad->Update(); 
@@ -587,7 +590,7 @@ void factorize_data_ele(string plots_dir, string root_dir) {
   palette_axis = (TPaletteAxis*) absdiff_Loose_ele->GetListOfFunctions()->FindObject("palette"); 
   palette_axis->SetLabelSize(0.02);
   c_absdiff_Loose_ele->Update();
-  c_absdiff_Loose_ele->Print((plots_dir+"SingleElectron+Run2015D_absdiff_Loose_ele.png").c_str());
+  c_absdiff_Loose_ele->Print((plots_dir+"SingleElectron_absdiff_Loose_ele.png").c_str());
   TCanvas *c_absdiff_Medium_ele = new TCanvas("c_absdiff_Medium_ele","Difference from factorized efficiency, Medium electrons (Data)",800,800);
   absdiff_Medium_ele->Draw("TEXTE COLZ");
   gPad->Update(); 
@@ -607,7 +610,7 @@ void factorize_data_ele(string plots_dir, string root_dir) {
   palette_axis = (TPaletteAxis*) absdiff_Medium_ele->GetListOfFunctions()->FindObject("palette"); 
   palette_axis->SetLabelSize(0.02);
   c_absdiff_Medium_ele->Update();
-  c_absdiff_Medium_ele->Print((plots_dir+"SingleElectron+Run2015D_absdiff_Medium_ele.png").c_str());
+  c_absdiff_Medium_ele->Print((plots_dir+"SingleElectron_absdiff_Medium_ele.png").c_str());
   TCanvas *c_absdiff_Tight_ele = new TCanvas("c_absdiff_Tight_ele","Difference from factorized efficiency, Tight electrons (Data)",800,800);
   absdiff_Tight_ele->Draw("TEXTE COLZ");
   gPad->Update(); 
@@ -627,7 +630,7 @@ void factorize_data_ele(string plots_dir, string root_dir) {
   palette_axis = (TPaletteAxis*) absdiff_Tight_ele->GetListOfFunctions()->FindObject("palette"); 
   palette_axis->SetLabelSize(0.02);
   c_absdiff_Tight_ele->Update();
-  c_absdiff_Tight_ele->Print((plots_dir+"SingleElectron+Run2015D_absdiff_Tight_ele.png").c_str());
+  c_absdiff_Tight_ele->Print((plots_dir+"SingleElectron_absdiff_Tight_ele.png").c_str());
 
   // Draw unfactorized efficiency plots
   TCanvas *c_eff_Veto_ele = new TCanvas("c_eff_Veto_ele","Unfactorized efficiency, Veto electrons (Data)",800,800);
@@ -649,7 +652,7 @@ void factorize_data_ele(string plots_dir, string root_dir) {
   palette_axis = (TPaletteAxis*) eff_BaselineToVeto_electronTnP->GetListOfFunctions()->FindObject("palette"); 
   palette_axis->SetLabelSize(0.02);
   c_eff_Veto_ele->Update();
-  c_eff_Veto_ele->Print((plots_dir+"SingleElectron+Run2015D_eff_Veto_ele.png").c_str());
+  c_eff_Veto_ele->Print((plots_dir+"SingleElectron_eff_Veto_ele.png").c_str());
   TCanvas *c_eff_Loose_ele = new TCanvas("c_eff_Loose_ele","Unfactorized efficiency, Loose electrons (Data)",800,800);
   eff_BaselineToLoose_electronTnP->Draw("TEXTE COLZ");
   gPad->Update(); 
@@ -669,7 +672,7 @@ void factorize_data_ele(string plots_dir, string root_dir) {
   palette_axis = (TPaletteAxis*) eff_BaselineToLoose_electronTnP->GetListOfFunctions()->FindObject("palette"); 
   palette_axis->SetLabelSize(0.02);
   c_eff_Loose_ele->Update();
-  c_eff_Loose_ele->Print((plots_dir+"SingleElectron+Run2015D_eff_Loose_ele.png").c_str());
+  c_eff_Loose_ele->Print((plots_dir+"SingleElectron_eff_Loose_ele.png").c_str());
   TCanvas *c_eff_Medium_ele = new TCanvas("c_eff_Medium_ele","Unfactorized efficiency, Medium electrons (Data)",800,800);
   eff_BaselineToMedium_electronTnP->Draw("TEXTE COLZ");
   gPad->Update(); 
@@ -689,7 +692,7 @@ void factorize_data_ele(string plots_dir, string root_dir) {
   palette_axis = (TPaletteAxis*) eff_BaselineToMedium_electronTnP->GetListOfFunctions()->FindObject("palette"); 
   palette_axis->SetLabelSize(0.02);
   c_eff_Medium_ele->Update();
-  c_eff_Medium_ele->Print((plots_dir+"SingleElectron+Run2015D_eff_Medium_ele.png").c_str());
+  c_eff_Medium_ele->Print((plots_dir+"SingleElectron_eff_Medium_ele.png").c_str());
   TCanvas *c_eff_Tight_ele = new TCanvas("c_eff_Tight_ele","Unfactorized efficiency, Tight electrons (Data)",800,800);
   eff_BaselineToTight_electronTnP->Draw("TEXTE COLZ");
   gPad->Update(); 
@@ -709,7 +712,7 @@ void factorize_data_ele(string plots_dir, string root_dir) {
   palette_axis = (TPaletteAxis*) eff_BaselineToTight_electronTnP->GetListOfFunctions()->FindObject("palette"); 
   palette_axis->SetLabelSize(0.02);
   c_eff_Tight_ele->Update();
-  c_eff_Tight_ele->Print((plots_dir+"SingleElectron+Run2015D_eff_Tight_ele.png").c_str());
+  c_eff_Tight_ele->Print((plots_dir+"SingleElectron_eff_Tight_ele.png").c_str());
 
   // Draw factorized efficiency plots
   TCanvas *c_factEff_Veto_ele = new TCanvas("c_factEff_Veto_ele","Factorized efficiency, Veto electrons (Data)",800,800);
@@ -731,7 +734,7 @@ void factorize_data_ele(string plots_dir, string root_dir) {
   palette_axis = (TPaletteAxis*) factEff_Veto_ele->GetListOfFunctions()->FindObject("palette"); 
   palette_axis->SetLabelSize(0.02);
   c_factEff_Veto_ele->Update();
-  c_factEff_Veto_ele->Print((plots_dir+"SingleElectron+Run2015D_factEff_Veto_ele.png").c_str());
+  c_factEff_Veto_ele->Print((plots_dir+"SingleElectron_factEff_Veto_ele.png").c_str());
   TCanvas *c_factEff_Loose_ele = new TCanvas("c_factEff_Loose_ele","Factorized efficiency, Loose electrons (Data)",800,800);
   factEff_Loose_ele->Draw("TEXTE COLZ");
   gPad->Update(); 
@@ -751,7 +754,7 @@ void factorize_data_ele(string plots_dir, string root_dir) {
   palette_axis = (TPaletteAxis*) factEff_Loose_ele->GetListOfFunctions()->FindObject("palette"); 
   palette_axis->SetLabelSize(0.02);
   c_factEff_Loose_ele->Update();
-  c_factEff_Loose_ele->Print((plots_dir+"SingleElectron+Run2015D_factEff_Loose_ele.png").c_str());
+  c_factEff_Loose_ele->Print((plots_dir+"SingleElectron_factEff_Loose_ele.png").c_str());
   TCanvas *c_factEff_Medium_ele = new TCanvas("c_factEff_Medium_ele","Factorized efficiency, Medium electrons (Data)",800,800);
   factEff_Medium_ele->Draw("TEXTE COLZ");
   gPad->Update(); 
@@ -771,7 +774,7 @@ void factorize_data_ele(string plots_dir, string root_dir) {
   palette_axis = (TPaletteAxis*) factEff_Medium_ele->GetListOfFunctions()->FindObject("palette"); 
   palette_axis->SetLabelSize(0.02);
   c_factEff_Medium_ele->Update();
-  c_factEff_Medium_ele->Print((plots_dir+"SingleElectron+Run2015D_factEff_Medium_ele.png").c_str());
+  c_factEff_Medium_ele->Print((plots_dir+"SingleElectron_factEff_Medium_ele.png").c_str());
   TCanvas *c_factEff_Tight_ele = new TCanvas("c_factEff_Tight_ele","Factorized efficiency, Tight electrons (Data)",800,800);
   factEff_Tight_ele->Draw("TEXTE COLZ");
   gPad->Update(); 
@@ -791,31 +794,27 @@ void factorize_data_ele(string plots_dir, string root_dir) {
   palette_axis = (TPaletteAxis*) factEff_Tight_ele->GetListOfFunctions()->FindObject("palette"); 
   palette_axis->SetLabelSize(0.02);
   c_factEff_Tight_ele->Update();
-  c_factEff_Tight_ele->Print((plots_dir+"SingleElectron+Run2015D_factEff_Tight_ele.png").c_str());
+  c_factEff_Tight_ele->Print((plots_dir+"SingleElectron_factEff_Tight_ele.png").c_str());
   
-  TFile *efficiencies_file = TFile::Open((root_dir+"SingleElectron+Run2015D_efficiencies_electronTnP.root").c_str(),"RECREATE");
-  eff_BaselineToLoose_electronTnP  ->Write("eff_Veto_ele"); 
-  eff_BaselineToMedium_electronTnP ->Write("eff_Loose_ele"); 
-  eff_BaselineToTight_electronTnP  ->Write("eff_Medium_ele");  
-  eff_BaselineToVeto_electronTnP   ->Write("eff_Tight_ele");  
+  TFile *efficiencies_file = TFile::Open((root_dir+"SingleElectron_efficiencies_electronTnP.root").c_str(),"RECREATE");
+  eff_BaselineToVeto_electronTnP   ->Write("eff_Veto_ele");  
+  eff_BaselineToLoose_electronTnP  ->Write("eff_Loose_ele"); 
+  eff_BaselineToMedium_electronTnP ->Write("eff_Medium_ele"); 
+  eff_BaselineToTight_electronTnP  ->Write("eff_Tight_ele");  
   factEff_Veto_ele   ->Write("factEff_Veto_ele");
   factEff_Loose_ele  ->Write("factEff_Loose_ele");
   factEff_Medium_ele ->Write("factEff_Medium_ele");
   factEff_Tight_ele  ->Write("factEff_Tight_ele"); 
+  absdiff_Veto_ele   ->Write("absdiff_Veto_ele");
+  absdiff_Loose_ele  ->Write("absdiff_Loose_ele");
+  absdiff_Medium_ele ->Write("absdiff_Medium_ele");
+  absdiff_Tight_ele  ->Write("absdiff_Tight_ele");
   efficiencies_file->Close();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void efficiencies_mc_mu(string plots_dir, string root_dir) {
-  Float_t ele_pt_bins[] = {10,15,20,25,30,40,50,60,70,80,90,100,8000};
-  Float_t ele_eta_bins[] = {0, 1.479, 2.4};
-  Int_t n_ele_pt_bins=12;
-  Int_t n_ele_eta_bins=2;
-  Float_t mu_pt_bins[] = {10,15,20,25,30,40,50,60,70,80,90,100,8000};
-  Float_t mu_eta_bins[] = {0, 1.5, 2.1, 2.4};
-  Int_t n_mu_pt_bins=12;
-  Int_t n_mu_eta_bins=3;
   
   TFile *f_BaselineToLoose_muonTnP          = TFile::Open((plots_dir+"DYJetsToLL_BaselineToLoose_muonTnP/eff.root" ).c_str()       ,"READ");
   TFile *f_BaselineToMedium_muonTnP         = TFile::Open((plots_dir+"DYJetsToLL_BaselineToMedium_muonTnP/eff.root").c_str()       ,"READ");
@@ -929,28 +928,20 @@ void efficiencies_mc_mu(string plots_dir, string root_dir) {
   c_eff_Tight_mu->Print((plots_dir+"DYJetsToLL_eff_Tight_mu.png").c_str());
 
   TFile *efficiencies_file = TFile::Open((root_dir+"DYJetsToLL_efficiencies_muonTnP.root").c_str() ,"RECREATE");
-  eff_BaselineToLoose_muonTnP  ->Write("eff_Veto_mu"); 
-  eff_BaselineToMedium_muonTnP ->Write("eff_Loose_mu"); 
-  eff_BaselineToTight_muonTnP  ->Write("eff_Medium_mu");  
-  eff_BaselineToVeto_muonTnP   ->Write("eff_Tight_mu");  
+  eff_BaselineToVeto_muonTnP   ->Write("eff_Veto_mu");  
+  eff_BaselineToLoose_muonTnP  ->Write("eff_Loose_mu"); 
+  eff_BaselineToMedium_muonTnP ->Write("eff_Medium_mu"); 
+  eff_BaselineToTight_muonTnP  ->Write("eff_Tight_mu");  
   efficiencies_file->Close();
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void efficiencies_data_mu(string plots_dir, string root_dir) {
-  Float_t ele_pt_bins[] = {10,15,20,25,30,40,50,60,70,80,90,100,8000};
-  Float_t ele_eta_bins[] = {0, 1.479, 2.4};
-  Int_t n_ele_pt_bins=12;
-  Int_t n_ele_eta_bins=2;
-  Float_t mu_pt_bins[] = {10,15,20,25,30,40,50,60,70,80,90,100,8000};
-  Float_t mu_eta_bins[] = {0, 1.5, 2.1, 2.4};
-  Int_t n_mu_pt_bins=12;
-  Int_t n_mu_eta_bins=3;
   
-  TFile *f_BaselineToLoose_muonTnP          = TFile::Open((plots_dir+"SingleMuon+Run2015D_BaselineToLoose_muonTnP/eff.root" ).c_str()       ,"READ");
-  TFile *f_BaselineToMedium_muonTnP         = TFile::Open((plots_dir+"SingleMuon+Run2015D_BaselineToMedium_muonTnP/eff.root").c_str()       ,"READ");
-  TFile *f_BaselineToTight_muonTnP          = TFile::Open((plots_dir+"SingleMuon+Run2015D_BaselineToTight_muonTnP/eff.root" ).c_str()       ,"READ");
-  TFile *f_BaselineToVeto_muonTnP           = TFile::Open((plots_dir+"SingleMuon+Run2015D_BaselineToVeto_muonTnP/eff.root"  ).c_str()       ,"READ");
+  TFile *f_BaselineToLoose_muonTnP          = TFile::Open((plots_dir+"SingleMuon_BaselineToLoose_muonTnP/eff.root" ).c_str()       ,"READ");
+  TFile *f_BaselineToMedium_muonTnP         = TFile::Open((plots_dir+"SingleMuon_BaselineToMedium_muonTnP/eff.root").c_str()       ,"READ");
+  TFile *f_BaselineToTight_muonTnP          = TFile::Open((plots_dir+"SingleMuon_BaselineToTight_muonTnP/eff.root" ).c_str()       ,"READ");
+  TFile *f_BaselineToVeto_muonTnP           = TFile::Open((plots_dir+"SingleMuon_BaselineToVeto_muonTnP/eff.root"  ).c_str()       ,"READ");
   
   TH2D * eff_BaselineToLoose_muonTnP        = (TH2D*) f_BaselineToLoose_muonTnP          ->Get("hEffEtaPt"); 
   TH2D * eff_BaselineToMedium_muonTnP       = (TH2D*) f_BaselineToMedium_muonTnP         ->Get("hEffEtaPt"); 
@@ -996,7 +987,7 @@ void efficiencies_data_mu(string plots_dir, string root_dir) {
   palette_axis = (TPaletteAxis*) eff_BaselineToVeto_muonTnP->GetListOfFunctions()->FindObject("palette"); 
   palette_axis->SetLabelSize(0.02);
   c_eff_Veto_mu->Update();
-  c_eff_Veto_mu->Print((plots_dir+"SingleMuon+Run2015D_eff_Veto_mu.png").c_str());
+  c_eff_Veto_mu->Print((plots_dir+"SingleMuon_eff_Veto_mu.png").c_str());
   TCanvas *c_eff_Loose_mu = new TCanvas("c_eff_Loose_mu","Unfactorized Loose muon efficiency (Data)",800,800);
   eff_BaselineToLoose_muonTnP->Draw("TEXTE COLZ");
   gPad->Update(); 
@@ -1016,7 +1007,7 @@ void efficiencies_data_mu(string plots_dir, string root_dir) {
   palette_axis = (TPaletteAxis*) eff_BaselineToLoose_muonTnP->GetListOfFunctions()->FindObject("palette"); 
   palette_axis->SetLabelSize(0.02);
   c_eff_Loose_mu->Update();
-  c_eff_Loose_mu->Print((plots_dir+"SingleMuon+Run2015D_eff_Loose_mu.png").c_str());
+  c_eff_Loose_mu->Print((plots_dir+"SingleMuon_eff_Loose_mu.png").c_str());
   TCanvas *c_eff_Medium_mu = new TCanvas("c_eff_Medium_mu","Unfactorized Medium muon efficiency (Data)",800,800);
   eff_BaselineToMedium_muonTnP->Draw("TEXTE COLZ");
   gPad->Update(); 
@@ -1036,7 +1027,7 @@ void efficiencies_data_mu(string plots_dir, string root_dir) {
   palette_axis = (TPaletteAxis*) eff_BaselineToMedium_muonTnP->GetListOfFunctions()->FindObject("palette"); 
   palette_axis->SetLabelSize(0.02);
   c_eff_Medium_mu->Update();
-  c_eff_Medium_mu->Print((plots_dir+"SingleMuon+Run2015D_eff_Medium_mu.png").c_str());
+  c_eff_Medium_mu->Print((plots_dir+"SingleMuon_eff_Medium_mu.png").c_str());
   TCanvas *c_eff_Tight_mu = new TCanvas("c_eff_Tight_mu","Unfactorized Tight muon efficiency (Data)",800,800);
   eff_BaselineToTight_muonTnP->Draw("TEXTE COLZ");
   gPad->Update(); 
@@ -1056,13 +1047,14 @@ void efficiencies_data_mu(string plots_dir, string root_dir) {
   palette_axis = (TPaletteAxis*) eff_BaselineToTight_muonTnP->GetListOfFunctions()->FindObject("palette"); 
   palette_axis->SetLabelSize(0.02);
   c_eff_Tight_mu->Update();
-  c_eff_Tight_mu->Print((plots_dir+"SingleMuon+Run2015D_eff_Tight_mu.png").c_str());
+  c_eff_Tight_mu->Print((plots_dir+"SingleMuon_eff_Tight_mu.png").c_str());
 
-  TFile *efficiencies_file = TFile::Open((root_dir+"SingleMuon+Run2015D_efficiencies_muonTnP.root").c_str(),"RECREATE");
-  eff_BaselineToLoose_muonTnP  ->Write("eff_Veto_mu"); 
-  eff_BaselineToMedium_muonTnP ->Write("eff_Loose_mu"); 
-  eff_BaselineToTight_muonTnP  ->Write("eff_Medium_mu");  
-  eff_BaselineToVeto_muonTnP   ->Write("eff_Tight_mu");  
+  TFile *efficiencies_file = TFile::Open((root_dir+"SingleMuon_efficiencies_muonTnP.root").c_str(),"RECREATE");
+  eff_BaselineToVeto_muonTnP   ->Write("eff_Veto_mu");  
+  eff_BaselineToLoose_muonTnP  ->Write("eff_Loose_mu"); 
+  eff_BaselineToMedium_muonTnP ->Write("eff_Medium_mu"); 
+  eff_BaselineToTight_muonTnP  ->Write("eff_Tight_mu");  
+  
   efficiencies_file->Close();
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1073,13 +1065,9 @@ void efficiencies_data_mu(string plots_dir, string root_dir) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void make_ele_scale_factors(string plots_dir, string root_dir) {
-  Float_t ele_pt_bins[] = {10,15,20,25,30,40,50,60,70,80,90,100,8000};
-  Float_t ele_eta_bins[] = {0, 1.479, 2.4};
-  Int_t n_ele_pt_bins=12;
-  Int_t n_ele_eta_bins=2;
 
   TFile *f_mc   = TFile::Open((root_dir+"DYJetsToLL_efficiencies_electronTnP.root").c_str(),"READ");
-  TFile *f_data = TFile::Open((root_dir+"SingleElectron+Run2015D_efficiencies_electronTnP.root").c_str(),"READ");
+  TFile *f_data = TFile::Open((root_dir+"SingleElectron_efficiencies_electronTnP.root").c_str(),"READ");
 
   // compute Veto scalefactors
   TH2D *eff_Veto_ele_data   = (TH2D*) f_data ->Get("eff_Veto_ele");
@@ -1167,9 +1155,13 @@ void make_ele_scale_factors(string plots_dir, string root_dir) {
   mitPalette();
   TPaletteAxis *palette_axis;
   TLine *oneline=new TLine(10,1,100,1);
-  oneline->SetLineColor(2);
-  oneline->SetLineStyle(7);
-  
+  oneline->SetLineColor(1);
+  oneline->SetLineStyle(3);
+  Int_t mit_red  = 1861; 
+  Int_t mit_gray = 1862; 
+  TColor *col_mit_red  = new TColor(mit_red,  163/255., 31/255.,  52/255.);
+  TColor *col_mit_gray = new TColor(mit_gray, 138/255., 139/255., 140/255.);
+
   // Draw unfactorized scalefactor plots
   TCanvas *c_unfactorized_scalefactors_Veto_ele = new TCanvas("c_unfactorized_scalefactors_Veto_ele","Unfactorized Veto electron scale factors (Data/MC)",800,800);
   unfactorized_scalefactors_Veto_ele->Draw("TEXTE COLZ");
@@ -1334,10 +1326,11 @@ void make_ele_scale_factors(string plots_dir, string root_dir) {
   c_factorized_scalefactors_Tight_ele->Update();
   c_factorized_scalefactors_Tight_ele->Print((plots_dir+"factorized_scalefactors_Tight_ele.png").c_str());
 
-  TCanvas *c_factorized_scalefactors_Veto_ele_eta1 = new TCanvas("c_factorized_scalefactors_Veto_ele_eta1","Factorized Veto electron scale factors, eta<1.479 ",800,600);
+  TCanvas *c_factorized_scalefactors_Veto_ele_1d = new TCanvas("c_factorized_scalefactors_Veto_ele_1d","Factorized Veto electron scale factors",800,600);
   TH1D *factorized_scalefactors_Veto_ele_eta1 = factorized_scalefactors_Veto_ele->ProjectionY("factorized_scalefactors_Veto_ele_eta1", 1, 1);
+  TH1D *factorized_scalefactors_Veto_ele_eta2 = factorized_scalefactors_Veto_ele->ProjectionY("factorized_scalefactors_Veto_ele_eta2", 2, 2);
   factorized_scalefactors_Veto_ele_eta1->Draw("P0 E1");
-  factorized_scalefactors_Veto_ele_eta1->SetTitle("Factorized Veto electron scale factors, | #eta | < 1.479 ");
+  factorized_scalefactors_Veto_ele_eta1->SetTitle("Factorized Veto electron scale factors");
   factorized_scalefactors_Veto_ele_eta1->GetXaxis()->SetTitle("p_{T} [GeV]");
   factorized_scalefactors_Veto_ele_eta1->GetXaxis()->SetTitleOffset(0.9);
   factorized_scalefactors_Veto_ele_eta1->GetXaxis()->SetTitleSize(0.04);
@@ -1348,34 +1341,27 @@ void make_ele_scale_factors(string plots_dir, string root_dir) {
   factorized_scalefactors_Veto_ele_eta1->GetYaxis()->SetLabelSize(0.02);
   factorized_scalefactors_Veto_ele_eta1->SetMinimum(0.8);
   factorized_scalefactors_Veto_ele_eta1->SetMaximum(1.2);
-  factorized_scalefactors_Veto_ele_eta1->SetMarkerStyle(21);
-  oneline->Draw("SAME");
-  c_factorized_scalefactors_Veto_ele_eta1->Update();
-  c_factorized_scalefactors_Veto_ele_eta1->Print((plots_dir+"factorized_scalefactors_Veto_ele_eta1.png").c_str());
-  
-  TCanvas *c_factorized_scalefactors_Veto_ele_eta2 = new TCanvas("c_factorized_scalefactors_Veto_ele_eta2","Factorized Veto electron scale factors, eta>1.479 ",800,600);
-  TH1D *factorized_scalefactors_Veto_ele_eta2 = factorized_scalefactors_Veto_ele->ProjectionY("factorized_scalefactors_Veto_ele_eta2", 2, 2);
-  factorized_scalefactors_Veto_ele_eta2->Draw("P0 E1");
-  factorized_scalefactors_Veto_ele_eta2->SetTitle("Factorized Veto electron scale factors, | #eta | > 1.479 ");
-  factorized_scalefactors_Veto_ele_eta2->GetXaxis()->SetTitle("p_{T} [GeV]");
-  factorized_scalefactors_Veto_ele_eta2->GetXaxis()->SetTitleOffset(0.9);
-  factorized_scalefactors_Veto_ele_eta2->GetXaxis()->SetTitleSize(0.04);
-  factorized_scalefactors_Veto_ele_eta2->GetXaxis()->SetLabelSize(0.02);
-  factorized_scalefactors_Veto_ele_eta2->GetYaxis()->SetTitle("#varepsilon_{data} / #varepsilon_{MC}");
-  factorized_scalefactors_Veto_ele_eta2->GetYaxis()->SetTitleOffset(0.9);
-  factorized_scalefactors_Veto_ele_eta2->GetYaxis()->SetTitleSize(0.04);
-  factorized_scalefactors_Veto_ele_eta2->GetYaxis()->SetLabelSize(0.02);
-  factorized_scalefactors_Veto_ele_eta2->SetMinimum(0.8);
-  factorized_scalefactors_Veto_ele_eta2->SetMaximum(1.2);
+  factorized_scalefactors_Veto_ele_eta1->SetMarkerStyle(20);
+  factorized_scalefactors_Veto_ele_eta1->SetMarkerColor(1);
+  factorized_scalefactors_Veto_ele_eta1->SetLineColor(1);
   factorized_scalefactors_Veto_ele_eta2->SetMarkerStyle(21);
+  factorized_scalefactors_Veto_ele_eta2->SetMarkerColor(1861);
+  factorized_scalefactors_Veto_ele_eta2->SetLineColor(1861);
+  factorized_scalefactors_Veto_ele_eta2->Draw("P0 E1 SAME");
   oneline->Draw("SAME");
-  c_factorized_scalefactors_Veto_ele_eta2->Update();
-  c_factorized_scalefactors_Veto_ele_eta2->Print((plots_dir+"factorized_scalefactors_Veto_ele_eta2.png").c_str());
-
-  TCanvas *c_factorized_scalefactors_Loose_ele_eta1 = new TCanvas("c_factorized_scalefactors_Loose_ele_eta1","Factorized Loose electron scale factors, eta<1.479 ",800,600);
+  TLegend *legend_Veto_1d=new TLegend(.7,.7,.85,.85);
+  legend_Veto_1d->AddEntry(factorized_scalefactors_Veto_ele_eta1,"| #eta | < 1.479", "lp");
+  legend_Veto_1d->AddEntry(factorized_scalefactors_Veto_ele_eta2,"| #eta | > 1.479", "lp");
+  legend_Veto_1d->SetFillColor(0);
+  legend_Veto_1d->Draw("SAME");
+  c_factorized_scalefactors_Veto_ele_1d->Update();
+  c_factorized_scalefactors_Veto_ele_1d->Print((plots_dir+"factorized_scalefactors_Veto_ele_1d.png").c_str());
+  
+  TCanvas *c_factorized_scalefactors_Loose_ele_1d = new TCanvas("c_factorized_scalefactors_Loose_ele_1d","Factorized Loose electron scale factors",800,600);
   TH1D *factorized_scalefactors_Loose_ele_eta1 = factorized_scalefactors_Loose_ele->ProjectionY("factorized_scalefactors_Loose_ele_eta1", 1, 1);
+  TH1D *factorized_scalefactors_Loose_ele_eta2 = factorized_scalefactors_Loose_ele->ProjectionY("factorized_scalefactors_Loose_ele_eta2", 2, 2);
   factorized_scalefactors_Loose_ele_eta1->Draw("P0 E1");
-  factorized_scalefactors_Loose_ele_eta1->SetTitle("Factorized Loose electron scale factors, | #eta | < 1.479 ");
+  factorized_scalefactors_Loose_ele_eta1->SetTitle("Factorized Loose electron scale factors");
   factorized_scalefactors_Loose_ele_eta1->GetXaxis()->SetTitle("p_{T} [GeV]");
   factorized_scalefactors_Loose_ele_eta1->GetXaxis()->SetTitleOffset(0.9);
   factorized_scalefactors_Loose_ele_eta1->GetXaxis()->SetTitleSize(0.04);
@@ -1386,34 +1372,27 @@ void make_ele_scale_factors(string plots_dir, string root_dir) {
   factorized_scalefactors_Loose_ele_eta1->GetYaxis()->SetLabelSize(0.02);
   factorized_scalefactors_Loose_ele_eta1->SetMinimum(0.8);
   factorized_scalefactors_Loose_ele_eta1->SetMaximum(1.2);
-  factorized_scalefactors_Loose_ele_eta1->SetMarkerStyle(21);
-  oneline->Draw("SAME");
-  c_factorized_scalefactors_Loose_ele_eta1->Update();
-  c_factorized_scalefactors_Loose_ele_eta1->Print((plots_dir+"factorized_scalefactors_Loose_ele_eta1.png").c_str());
-  
-  TCanvas *c_factorized_scalefactors_Loose_ele_eta2 = new TCanvas("c_factorized_scalefactors_Loose_ele_eta2","Factorized Loose electron scale factors, eta>1.479 ",800,600);
-  TH1D *factorized_scalefactors_Loose_ele_eta2 = factorized_scalefactors_Loose_ele->ProjectionY("factorized_scalefactors_Loose_ele_eta2", 2, 2);
-  factorized_scalefactors_Loose_ele_eta2->Draw("P0 E1");
-  factorized_scalefactors_Loose_ele_eta2->SetTitle("Factorized Loose electron scale factors, | #eta | > 1.479 ");
-  factorized_scalefactors_Loose_ele_eta2->GetXaxis()->SetTitle("p_{T} [GeV]");
-  factorized_scalefactors_Loose_ele_eta2->GetXaxis()->SetTitleOffset(0.9);
-  factorized_scalefactors_Loose_ele_eta2->GetXaxis()->SetTitleSize(0.04);
-  factorized_scalefactors_Loose_ele_eta2->GetXaxis()->SetLabelSize(0.02);
-  factorized_scalefactors_Loose_ele_eta2->GetYaxis()->SetTitle("#varepsilon_{data} / #varepsilon_{MC}");
-  factorized_scalefactors_Loose_ele_eta2->GetYaxis()->SetTitleOffset(0.9);
-  factorized_scalefactors_Loose_ele_eta2->GetYaxis()->SetTitleSize(0.04);
-  factorized_scalefactors_Loose_ele_eta2->GetYaxis()->SetLabelSize(0.02);
-  factorized_scalefactors_Loose_ele_eta2->SetMinimum(0.8);
-  factorized_scalefactors_Loose_ele_eta2->SetMaximum(1.2);
+  factorized_scalefactors_Loose_ele_eta1->SetMarkerStyle(20);
+  factorized_scalefactors_Loose_ele_eta1->SetMarkerColor(1);
+  factorized_scalefactors_Loose_ele_eta1->SetLineColor(1);
   factorized_scalefactors_Loose_ele_eta2->SetMarkerStyle(21);
+  factorized_scalefactors_Loose_ele_eta2->SetMarkerColor(1861);
+  factorized_scalefactors_Loose_ele_eta2->SetLineColor(1861);
+  factorized_scalefactors_Loose_ele_eta2->Draw("P0 E1 SAME");
   oneline->Draw("SAME");
-  c_factorized_scalefactors_Loose_ele_eta2->Update();
-  c_factorized_scalefactors_Loose_ele_eta2->Print((plots_dir+"factorized_scalefactors_Loose_ele_eta2.png").c_str());
-
-  TCanvas *c_factorized_scalefactors_Medium_ele_eta1 = new TCanvas("c_factorized_scalefactors_Medium_ele_eta1","Factorized Medium electron scale factors, eta<1.479 ",800,600);
+  TLegend *legend_Loose_1d=new TLegend(.7,.7,.85,.85);
+  legend_Loose_1d->AddEntry(factorized_scalefactors_Loose_ele_eta1,"| #eta | < 1.479", "lp");
+  legend_Loose_1d->AddEntry(factorized_scalefactors_Loose_ele_eta2,"| #eta | > 1.479", "lp");
+  legend_Loose_1d->SetFillColor(0);
+  legend_Loose_1d->Draw("SAME");
+  c_factorized_scalefactors_Loose_ele_1d->Update();
+  c_factorized_scalefactors_Loose_ele_1d->Print((plots_dir+"factorized_scalefactors_Loose_ele_1d.png").c_str());
+  
+  TCanvas *c_factorized_scalefactors_Medium_ele_1d = new TCanvas("c_factorized_scalefactors_Medium_ele_1d","Factorized Medium electron scale factors",800,600);
   TH1D *factorized_scalefactors_Medium_ele_eta1 = factorized_scalefactors_Medium_ele->ProjectionY("factorized_scalefactors_Medium_ele_eta1", 1, 1);
+  TH1D *factorized_scalefactors_Medium_ele_eta2 = factorized_scalefactors_Medium_ele->ProjectionY("factorized_scalefactors_Medium_ele_eta2", 2, 2);
   factorized_scalefactors_Medium_ele_eta1->Draw("P0 E1");
-  factorized_scalefactors_Medium_ele_eta1->SetTitle("Factorized Medium electron scale factors, | #eta | < 1.479 ");
+  factorized_scalefactors_Medium_ele_eta1->SetTitle("Factorized Medium electron scale factors");
   factorized_scalefactors_Medium_ele_eta1->GetXaxis()->SetTitle("p_{T} [GeV]");
   factorized_scalefactors_Medium_ele_eta1->GetXaxis()->SetTitleOffset(0.9);
   factorized_scalefactors_Medium_ele_eta1->GetXaxis()->SetTitleSize(0.04);
@@ -1424,34 +1403,27 @@ void make_ele_scale_factors(string plots_dir, string root_dir) {
   factorized_scalefactors_Medium_ele_eta1->GetYaxis()->SetLabelSize(0.02);
   factorized_scalefactors_Medium_ele_eta1->SetMinimum(0.8);
   factorized_scalefactors_Medium_ele_eta1->SetMaximum(1.2);
-  factorized_scalefactors_Medium_ele_eta1->SetMarkerStyle(21);
-  oneline->Draw("SAME");
-  c_factorized_scalefactors_Medium_ele_eta1->Update();
-  c_factorized_scalefactors_Medium_ele_eta1->Print((plots_dir+"factorized_scalefactors_Medium_ele_eta1.png").c_str());
-  
-  TCanvas *c_factorized_scalefactors_Medium_ele_eta2 = new TCanvas("c_factorized_scalefactors_Medium_ele_eta2","Factorized Medium electron scale factors, eta>1.479 ",800,600);
-  TH1D *factorized_scalefactors_Medium_ele_eta2 = factorized_scalefactors_Medium_ele->ProjectionY("factorized_scalefactors_Medium_ele_eta2", 2, 2);
-  factorized_scalefactors_Medium_ele_eta2->Draw("P0 E1");
-  factorized_scalefactors_Medium_ele_eta2->SetTitle("Factorized Medium electron scale factors, | #eta | > 1.479 ");
-  factorized_scalefactors_Medium_ele_eta2->GetXaxis()->SetTitle("p_{T} [GeV]");
-  factorized_scalefactors_Medium_ele_eta2->GetXaxis()->SetTitleOffset(0.9);
-  factorized_scalefactors_Medium_ele_eta2->GetXaxis()->SetTitleSize(0.04);
-  factorized_scalefactors_Medium_ele_eta2->GetXaxis()->SetLabelSize(0.02);
-  factorized_scalefactors_Medium_ele_eta2->GetYaxis()->SetTitle("#varepsilon_{data} / #varepsilon_{MC}");
-  factorized_scalefactors_Medium_ele_eta2->GetYaxis()->SetTitleOffset(0.9);
-  factorized_scalefactors_Medium_ele_eta2->GetYaxis()->SetTitleSize(0.04);
-  factorized_scalefactors_Medium_ele_eta2->GetYaxis()->SetLabelSize(0.02);
-  factorized_scalefactors_Medium_ele_eta2->SetMinimum(0.8);
-  factorized_scalefactors_Medium_ele_eta2->SetMaximum(1.2);
+  factorized_scalefactors_Medium_ele_eta1->SetMarkerStyle(20);
+  factorized_scalefactors_Medium_ele_eta1->SetMarkerColor(1);
+  factorized_scalefactors_Medium_ele_eta1->SetLineColor(1);
   factorized_scalefactors_Medium_ele_eta2->SetMarkerStyle(21);
+  factorized_scalefactors_Medium_ele_eta2->SetMarkerColor(1861);
+  factorized_scalefactors_Medium_ele_eta2->SetLineColor(1861);
+  factorized_scalefactors_Medium_ele_eta2->Draw("P0 E1 SAME");
   oneline->Draw("SAME");
-  c_factorized_scalefactors_Medium_ele_eta2->Update();
-  c_factorized_scalefactors_Medium_ele_eta2->Print((plots_dir+"factorized_scalefactors_Medium_ele_eta2.png").c_str());
-
-  TCanvas *c_factorized_scalefactors_Tight_ele_eta1 = new TCanvas("c_factorized_scalefactors_Tight_ele_eta1","Factorized Tight electron scale factors, eta<1.479 ",800,600);
+  TLegend *legend_Medium_1d=new TLegend(.7,.7,.85,.85);
+  legend_Medium_1d->AddEntry(factorized_scalefactors_Medium_ele_eta1,"| #eta | < 1.479", "lp");
+  legend_Medium_1d->AddEntry(factorized_scalefactors_Medium_ele_eta2,"| #eta | > 1.479", "lp");
+  legend_Medium_1d->SetFillColor(0);
+  legend_Medium_1d->Draw("SAME");
+  c_factorized_scalefactors_Medium_ele_1d->Update();
+  c_factorized_scalefactors_Medium_ele_1d->Print((plots_dir+"factorized_scalefactors_Medium_ele_1d.png").c_str());
+  
+  TCanvas *c_factorized_scalefactors_Tight_ele_1d = new TCanvas("c_factorized_scalefactors_Tight_ele_1d","Factorized Tight electron scale factors",800,600);
   TH1D *factorized_scalefactors_Tight_ele_eta1 = factorized_scalefactors_Tight_ele->ProjectionY("factorized_scalefactors_Tight_ele_eta1", 1, 1);
+  TH1D *factorized_scalefactors_Tight_ele_eta2 = factorized_scalefactors_Tight_ele->ProjectionY("factorized_scalefactors_Tight_ele_eta2", 2, 2);
   factorized_scalefactors_Tight_ele_eta1->Draw("P0 E1");
-  factorized_scalefactors_Tight_ele_eta1->SetTitle("Factorized Tight electron scale factors, | #eta | < 1.479 ");
+  factorized_scalefactors_Tight_ele_eta1->SetTitle("Factorized Tight electron scale factors");
   factorized_scalefactors_Tight_ele_eta1->GetXaxis()->SetTitle("p_{T} [GeV]");
   factorized_scalefactors_Tight_ele_eta1->GetXaxis()->SetTitleOffset(0.9);
   factorized_scalefactors_Tight_ele_eta1->GetXaxis()->SetTitleSize(0.04);
@@ -1462,181 +1434,22 @@ void make_ele_scale_factors(string plots_dir, string root_dir) {
   factorized_scalefactors_Tight_ele_eta1->GetYaxis()->SetLabelSize(0.02);
   factorized_scalefactors_Tight_ele_eta1->SetMinimum(0.8);
   factorized_scalefactors_Tight_ele_eta1->SetMaximum(1.2);
-  factorized_scalefactors_Tight_ele_eta1->SetMarkerStyle(21);
-  oneline->Draw("SAME");
-  c_factorized_scalefactors_Tight_ele_eta1->Update();
-  c_factorized_scalefactors_Tight_ele_eta1->Print((plots_dir+"factorized_scalefactors_Tight_ele_eta1.png").c_str());
-  
-  TCanvas *c_factorized_scalefactors_Tight_ele_eta2 = new TCanvas("c_factorized_scalefactors_Tight_ele_eta2","Factorized Tight electron scale factors, eta>1.479 ",800,600);
-  TH1D *factorized_scalefactors_Tight_ele_eta2 = factorized_scalefactors_Tight_ele->ProjectionY("factorized_scalefactors_Tight_ele_eta2", 2, 2);
-  factorized_scalefactors_Tight_ele_eta2->Draw("P0 E1");
-  factorized_scalefactors_Tight_ele_eta2->SetTitle("Factorized Tight electron scale factors, | #eta | > 1.479 ");
-  factorized_scalefactors_Tight_ele_eta2->GetXaxis()->SetTitle("p_{T} [GeV]");
-  factorized_scalefactors_Tight_ele_eta2->GetXaxis()->SetTitleOffset(0.9);
-  factorized_scalefactors_Tight_ele_eta2->GetXaxis()->SetTitleSize(0.04);
-  factorized_scalefactors_Tight_ele_eta2->GetXaxis()->SetLabelSize(0.02);
-  factorized_scalefactors_Tight_ele_eta2->GetYaxis()->SetTitle("#varepsilon_{data} / #varepsilon_{MC}");
-  factorized_scalefactors_Tight_ele_eta2->GetYaxis()->SetTitleOffset(0.9);
-  factorized_scalefactors_Tight_ele_eta2->GetYaxis()->SetTitleSize(0.04);
-  factorized_scalefactors_Tight_ele_eta2->GetYaxis()->SetLabelSize(0.02);
-  factorized_scalefactors_Tight_ele_eta2->SetMinimum(0.8);
-  factorized_scalefactors_Tight_ele_eta2->SetMaximum(1.2);
+  factorized_scalefactors_Tight_ele_eta1->SetMarkerStyle(20);
+  factorized_scalefactors_Tight_ele_eta1->SetMarkerColor(1);
+  factorized_scalefactors_Tight_ele_eta1->SetLineColor(1);
   factorized_scalefactors_Tight_ele_eta2->SetMarkerStyle(21);
+  factorized_scalefactors_Tight_ele_eta2->SetMarkerColor(1861);
+  factorized_scalefactors_Tight_ele_eta2->SetLineColor(1861);
+  factorized_scalefactors_Tight_ele_eta2->Draw("P0 E1 SAME");
   oneline->Draw("SAME");
-  c_factorized_scalefactors_Tight_ele_eta2->Update();
-  c_factorized_scalefactors_Tight_ele_eta2->Print((plots_dir+"factorized_scalefactors_Tight_ele_eta2.png").c_str());
+  TLegend *legend_Tight_1d=new TLegend(.7,.7,.85,.85);
+  legend_Tight_1d->AddEntry(factorized_scalefactors_Tight_ele_eta1,"| #eta | < 1.479", "lp");
+  legend_Tight_1d->AddEntry(factorized_scalefactors_Tight_ele_eta2,"| #eta | > 1.479", "lp");
+  legend_Tight_1d->SetFillColor(0);
+  legend_Tight_1d->Draw("SAME");
+  c_factorized_scalefactors_Tight_ele_1d->Update();
+  c_factorized_scalefactors_Tight_ele_1d->Print((plots_dir+"factorized_scalefactors_Tight_ele_1d.png").c_str());
   
-  TCanvas *c_unfactorized_scalefactors_Veto_ele_eta1 = new TCanvas("c_unfactorized_scalefactors_Veto_ele_eta1","Unfactorized Veto electron scale factors, eta<1.479 ",800,600);
-  TH1D *unfactorized_scalefactors_Veto_ele_eta1 = unfactorized_scalefactors_Veto_ele->ProjectionY("unfactorized_scalefactors_Veto_ele_eta1", 1, 1);
-  unfactorized_scalefactors_Veto_ele_eta1->Draw("P0 E1");
-  unfactorized_scalefactors_Veto_ele_eta1->SetTitle("Unfactorized Veto electron scale factors, | #eta | < 1.479 ");
-  unfactorized_scalefactors_Veto_ele_eta1->GetXaxis()->SetTitle("p_{T} [GeV]");
-  unfactorized_scalefactors_Veto_ele_eta1->GetXaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Veto_ele_eta1->GetXaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Veto_ele_eta1->GetXaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Veto_ele_eta1->GetYaxis()->SetTitle("#varepsilon_{data} / #varepsilon_{MC}");
-  unfactorized_scalefactors_Veto_ele_eta1->GetYaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Veto_ele_eta1->GetYaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Veto_ele_eta1->GetYaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Veto_ele_eta1->SetMinimum(0.8);
-  unfactorized_scalefactors_Veto_ele_eta1->SetMaximum(1.2);
-  unfactorized_scalefactors_Veto_ele_eta1->SetMarkerStyle(21);
-  oneline->Draw("SAME");
-  c_unfactorized_scalefactors_Veto_ele_eta1->Update();
-  c_unfactorized_scalefactors_Veto_ele_eta1->Print((plots_dir+"unfactorized_scalefactors_Veto_ele_eta1.png").c_str());
-  
-  TCanvas *c_unfactorized_scalefactors_Veto_ele_eta2 = new TCanvas("c_unfactorized_scalefactors_Veto_ele_eta2","Unfactorized Veto electron scale factors, eta>1.479 ",800,600);
-  TH1D *unfactorized_scalefactors_Veto_ele_eta2 = unfactorized_scalefactors_Veto_ele->ProjectionY("unfactorized_scalefactors_Veto_ele_eta2", 2, 2);
-  unfactorized_scalefactors_Veto_ele_eta2->Draw("P0 E1");
-  unfactorized_scalefactors_Veto_ele_eta2->SetTitle("Unfactorized Veto electron scale factors, | #eta | > 1.479 ");
-  unfactorized_scalefactors_Veto_ele_eta2->GetXaxis()->SetTitle("p_{T} [GeV]");
-  unfactorized_scalefactors_Veto_ele_eta2->GetXaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Veto_ele_eta2->GetXaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Veto_ele_eta2->GetXaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Veto_ele_eta2->GetYaxis()->SetTitle("#varepsilon_{data} / #varepsilon_{MC}");
-  unfactorized_scalefactors_Veto_ele_eta2->GetYaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Veto_ele_eta2->GetYaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Veto_ele_eta2->GetYaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Veto_ele_eta2->SetMinimum(0.8);
-  unfactorized_scalefactors_Veto_ele_eta2->SetMaximum(1.2);
-  unfactorized_scalefactors_Veto_ele_eta2->SetMarkerStyle(21);
-  oneline->Draw("SAME");
-  c_unfactorized_scalefactors_Veto_ele_eta2->Update();
-  c_unfactorized_scalefactors_Veto_ele_eta2->Print((plots_dir+"unfactorized_scalefactors_Veto_ele_eta2.png").c_str());
-
-  TCanvas *c_unfactorized_scalefactors_Loose_ele_eta1 = new TCanvas("c_unfactorized_scalefactors_Loose_ele_eta1","Unfactorized Loose electron scale factors, eta<1.479 ",800,600);
-  TH1D *unfactorized_scalefactors_Loose_ele_eta1 = unfactorized_scalefactors_Loose_ele->ProjectionY("unfactorized_scalefactors_Loose_ele_eta1", 1, 1);
-  unfactorized_scalefactors_Loose_ele_eta1->Draw("P0 E1");
-  unfactorized_scalefactors_Loose_ele_eta1->SetTitle("Unfactorized Loose electron scale factors, | #eta | < 1.479 ");
-  unfactorized_scalefactors_Loose_ele_eta1->GetXaxis()->SetTitle("p_{T} [GeV]");
-  unfactorized_scalefactors_Loose_ele_eta1->GetXaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Loose_ele_eta1->GetXaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Loose_ele_eta1->GetXaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Loose_ele_eta1->GetYaxis()->SetTitle("#varepsilon_{data} / #varepsilon_{MC}");
-  unfactorized_scalefactors_Loose_ele_eta1->GetYaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Loose_ele_eta1->GetYaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Loose_ele_eta1->GetYaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Loose_ele_eta1->SetMinimum(0.8);
-  unfactorized_scalefactors_Loose_ele_eta1->SetMaximum(1.2);
-  unfactorized_scalefactors_Loose_ele_eta1->SetMarkerStyle(21);
-  oneline->Draw("SAME");
-  c_unfactorized_scalefactors_Loose_ele_eta1->Update();
-  c_unfactorized_scalefactors_Loose_ele_eta1->Print((plots_dir+"unfactorized_scalefactors_Loose_ele_eta1.png").c_str());
-  
-  TCanvas *c_unfactorized_scalefactors_Loose_ele_eta2 = new TCanvas("c_unfactorized_scalefactors_Loose_ele_eta2","Unfactorized Loose electron scale factors, eta>1.479 ",800,600);
-  TH1D *unfactorized_scalefactors_Loose_ele_eta2 = unfactorized_scalefactors_Loose_ele->ProjectionY("unfactorized_scalefactors_Loose_ele_eta2", 2, 2);
-  unfactorized_scalefactors_Loose_ele_eta2->Draw("P0 E1");
-  unfactorized_scalefactors_Loose_ele_eta2->SetTitle("Unfactorized Loose electron scale factors, | #eta | > 1.479 ");
-  unfactorized_scalefactors_Loose_ele_eta2->GetXaxis()->SetTitle("p_{T} [GeV]");
-  unfactorized_scalefactors_Loose_ele_eta2->GetXaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Loose_ele_eta2->GetXaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Loose_ele_eta2->GetXaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Loose_ele_eta2->GetYaxis()->SetTitle("#varepsilon_{data} / #varepsilon_{MC}");
-  unfactorized_scalefactors_Loose_ele_eta2->GetYaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Loose_ele_eta2->GetYaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Loose_ele_eta2->GetYaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Loose_ele_eta2->SetMinimum(0.8);
-  unfactorized_scalefactors_Loose_ele_eta2->SetMaximum(1.2);
-  unfactorized_scalefactors_Loose_ele_eta2->SetMarkerStyle(21);
-  oneline->Draw("SAME");
-  c_unfactorized_scalefactors_Loose_ele_eta2->Update();
-  c_unfactorized_scalefactors_Loose_ele_eta2->Print((plots_dir+"unfactorized_scalefactors_Loose_ele_eta2.png").c_str());
-
-  TCanvas *c_unfactorized_scalefactors_Medium_ele_eta1 = new TCanvas("c_unfactorized_scalefactors_Medium_ele_eta1","Unfactorized Medium electron scale factors, eta<1.479 ",800,600);
-  TH1D *unfactorized_scalefactors_Medium_ele_eta1 = unfactorized_scalefactors_Medium_ele->ProjectionY("unfactorized_scalefactors_Medium_ele_eta1", 1, 1);
-  unfactorized_scalefactors_Medium_ele_eta1->Draw("P0 E1");
-  unfactorized_scalefactors_Medium_ele_eta1->SetTitle("Unfactorized Medium electron scale factors, | #eta | < 1.479 ");
-  unfactorized_scalefactors_Medium_ele_eta1->GetXaxis()->SetTitle("p_{T} [GeV]");
-  unfactorized_scalefactors_Medium_ele_eta1->GetXaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Medium_ele_eta1->GetXaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Medium_ele_eta1->GetXaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Medium_ele_eta1->GetYaxis()->SetTitle("#varepsilon_{data} / #varepsilon_{MC}");
-  unfactorized_scalefactors_Medium_ele_eta1->GetYaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Medium_ele_eta1->GetYaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Medium_ele_eta1->GetYaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Medium_ele_eta1->SetMinimum(0.8);
-  unfactorized_scalefactors_Medium_ele_eta1->SetMaximum(1.2);
-  unfactorized_scalefactors_Medium_ele_eta1->SetMarkerStyle(21);
-  oneline->Draw("SAME");
-  c_unfactorized_scalefactors_Medium_ele_eta1->Update();
-  c_unfactorized_scalefactors_Medium_ele_eta1->Print((plots_dir+"unfactorized_scalefactors_Medium_ele_eta1.png").c_str());
-  
-  TCanvas *c_unfactorized_scalefactors_Medium_ele_eta2 = new TCanvas("c_unfactorized_scalefactors_Medium_ele_eta2","Unfactorized Medium electron scale factors, eta>1.479 ",800,600);
-  TH1D *unfactorized_scalefactors_Medium_ele_eta2 = unfactorized_scalefactors_Medium_ele->ProjectionY("unfactorized_scalefactors_Medium_ele_eta2", 2, 2);
-  unfactorized_scalefactors_Medium_ele_eta2->Draw("P0 E1");
-  unfactorized_scalefactors_Medium_ele_eta2->SetTitle("Unfactorized Medium electron scale factors, | #eta | > 1.479 ");
-  unfactorized_scalefactors_Medium_ele_eta2->GetXaxis()->SetTitle("p_{T} [GeV]");
-  unfactorized_scalefactors_Medium_ele_eta2->GetXaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Medium_ele_eta2->GetXaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Medium_ele_eta2->GetXaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Medium_ele_eta2->GetYaxis()->SetTitle("#varepsilon_{data} / #varepsilon_{MC}");
-  unfactorized_scalefactors_Medium_ele_eta2->GetYaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Medium_ele_eta2->GetYaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Medium_ele_eta2->GetYaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Medium_ele_eta2->SetMinimum(0.8);
-  unfactorized_scalefactors_Medium_ele_eta2->SetMaximum(1.2);
-  unfactorized_scalefactors_Medium_ele_eta2->SetMarkerStyle(21);
-  oneline->Draw("SAME");
-  c_unfactorized_scalefactors_Medium_ele_eta2->Update();
-  c_unfactorized_scalefactors_Medium_ele_eta2->Print((plots_dir+"unfactorized_scalefactors_Medium_ele_eta2.png").c_str());
-
-  TCanvas *c_unfactorized_scalefactors_Tight_ele_eta1 = new TCanvas("c_unfactorized_scalefactors_Tight_ele_eta1","Unfactorized Tight electron scale factors, eta<1.479 ",800,600);
-  TH1D *unfactorized_scalefactors_Tight_ele_eta1 = unfactorized_scalefactors_Tight_ele->ProjectionY("unfactorized_scalefactors_Tight_ele_eta1", 1, 1);
-  unfactorized_scalefactors_Tight_ele_eta1->Draw("P0 E1");
-  unfactorized_scalefactors_Tight_ele_eta1->SetTitle("Unfactorized Tight electron scale factors, | #eta | < 1.479 ");
-  unfactorized_scalefactors_Tight_ele_eta1->GetXaxis()->SetTitle("p_{T} [GeV]");
-  unfactorized_scalefactors_Tight_ele_eta1->GetXaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Tight_ele_eta1->GetXaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Tight_ele_eta1->GetXaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Tight_ele_eta1->GetYaxis()->SetTitle("#varepsilon_{data} / #varepsilon_{MC}");
-  unfactorized_scalefactors_Tight_ele_eta1->GetYaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Tight_ele_eta1->GetYaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Tight_ele_eta1->GetYaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Tight_ele_eta1->SetMinimum(0.8);
-  unfactorized_scalefactors_Tight_ele_eta1->SetMaximum(1.2);
-  unfactorized_scalefactors_Tight_ele_eta1->SetMarkerStyle(21);
-  oneline->Draw("SAME");
-  c_unfactorized_scalefactors_Tight_ele_eta1->Update();
-  c_unfactorized_scalefactors_Tight_ele_eta1->Print((plots_dir+"unfactorized_scalefactors_Tight_ele_eta1.png").c_str());
-  
-  TCanvas *c_unfactorized_scalefactors_Tight_ele_eta2 = new TCanvas("c_unfactorized_scalefactors_Tight_ele_eta2","Unfactorized Tight electron scale factors, eta>1.479 ",800,600);
-  TH1D *unfactorized_scalefactors_Tight_ele_eta2 = unfactorized_scalefactors_Tight_ele->ProjectionY("unfactorized_scalefactors_Tight_ele_eta2", 2, 2);
-  unfactorized_scalefactors_Tight_ele_eta2->Draw("P0 E1");
-  unfactorized_scalefactors_Tight_ele_eta2->SetTitle("Unfactorized Tight electron scale factors, | #eta | > 1.479 ");
-  unfactorized_scalefactors_Tight_ele_eta2->GetXaxis()->SetTitle("p_{T} [GeV]");
-  unfactorized_scalefactors_Tight_ele_eta2->GetXaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Tight_ele_eta2->GetXaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Tight_ele_eta2->GetXaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Tight_ele_eta2->GetYaxis()->SetTitle("#varepsilon_{data} / #varepsilon_{MC}");
-  unfactorized_scalefactors_Tight_ele_eta2->GetYaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Tight_ele_eta2->GetYaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Tight_ele_eta2->GetYaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Tight_ele_eta2->SetMinimum(0.8);
-  unfactorized_scalefactors_Tight_ele_eta2->SetMaximum(1.2);
-  unfactorized_scalefactors_Tight_ele_eta2->SetMarkerStyle(21);
-  oneline->Draw("SAME");
-  c_unfactorized_scalefactors_Tight_ele_eta2->Update();
-  c_unfactorized_scalefactors_Tight_ele_eta2->Print((plots_dir+"unfactorized_scalefactors_Tight_ele_eta2.png").c_str());
 
   // write to file
   TFile *scalefactors_file = TFile::Open((root_dir+"scalefactors_ele.root").c_str(),"RECREATE");
@@ -1648,35 +1461,23 @@ void make_ele_scale_factors(string plots_dir, string root_dir) {
   factorized_scalefactors_Loose_ele   ->Write("factorized_scalefactors_Loose_ele" );
   factorized_scalefactors_Medium_ele  ->Write("factorized_scalefactors_Medium_ele");
   factorized_scalefactors_Tight_ele   ->Write("factorized_scalefactors_Tight_ele" );
-  unfactorized_scalefactors_Veto_ele_eta1->Write("unfactorized_scalefactors_Veto_ele_eta1");
-  unfactorized_scalefactors_Veto_ele_eta2->Write("unfactorized_scalefactors_Veto_ele_eta2");
-  unfactorized_scalefactors_Loose_ele_eta1->Write("unfactorized_scalefactors_Loose_ele_eta1");
-  unfactorized_scalefactors_Loose_ele_eta2->Write("unfactorized_scalefactors_Loose_ele_eta2");
-  unfactorized_scalefactors_Medium_ele_eta1->Write("unfactorized_scalefactors_Medium_ele_eta1");
-  unfactorized_scalefactors_Medium_ele_eta2->Write("unfactorized_scalefactors_Medium_ele_eta2");
-  unfactorized_scalefactors_Tight_ele_eta1->Write("unfactorized_scalefactors_Tight_ele_eta1");
-  unfactorized_scalefactors_Tight_ele_eta2->Write("unfactorized_scalefactors_Tight_ele_eta2");
-  factorized_scalefactors_Veto_ele_eta1->Write("unfactorized_scalefactors_Veto_ele_eta1");
-  factorized_scalefactors_Veto_ele_eta2->Write("unfactorized_scalefactors_Veto_ele_eta2");
-  factorized_scalefactors_Loose_ele_eta1->Write("unfactorized_scalefactors_Loose_ele_eta1");
-  factorized_scalefactors_Loose_ele_eta2->Write("unfactorized_scalefactors_Loose_ele_eta2");
-  factorized_scalefactors_Medium_ele_eta1->Write("unfactorized_scalefactors_Medium_ele_eta1");
-  factorized_scalefactors_Medium_ele_eta2->Write("unfactorized_scalefactors_Medium_ele_eta2");
-  factorized_scalefactors_Tight_ele_eta1->Write("unfactorized_scalefactors_Tight_ele_eta1");
-  factorized_scalefactors_Tight_ele_eta2->Write("unfactorized_scalefactors_Tight_ele_eta2");
+  factorized_scalefactors_Veto_ele_eta1->Write("factorized_scalefactors_Veto_ele_eta1");
+  factorized_scalefactors_Veto_ele_eta2->Write("factorized_scalefactors_Veto_ele_eta2");
+  factorized_scalefactors_Loose_ele_eta1->Write("factorized_scalefactors_Loose_ele_eta1");
+  factorized_scalefactors_Loose_ele_eta2->Write("factorized_scalefactors_Loose_ele_eta2");
+  factorized_scalefactors_Medium_ele_eta1->Write("factorized_scalefactors_Medium_ele_eta1");
+  factorized_scalefactors_Medium_ele_eta2->Write("factorized_scalefactors_Medium_ele_eta2");
+  factorized_scalefactors_Tight_ele_eta1->Write("factorized_scalefactors_Tight_ele_eta1");
+  factorized_scalefactors_Tight_ele_eta2->Write("factorized_scalefactors_Tight_ele_eta2");
   scalefactors_file->Close();
 }
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void make_mu_scale_factors(string plots_dir, string root_dir) {
-  Float_t mu_pt_bins[] = {10,15,20,25,30,40,50,60,70,80,90,100,8000};
-  Float_t mu_eta_bins[] = {0, 1.5, 2.1, 2.4};
-  Int_t n_mu_pt_bins=12;
-  Int_t n_mu_eta_bins=3;
   
   TFile *f_mc   = TFile::Open((root_dir+"DYJetsToLL_efficiencies_muonTnP.root").c_str(),"READ");
-  TFile *f_data = TFile::Open((root_dir+"SingleMuon+Run2015D_efficiencies_muonTnP.root").c_str(),"READ");
+  TFile *f_data = TFile::Open((root_dir+"SingleMuon_efficiencies_muonTnP.root").c_str(),"READ");
 
   // compute Veto scalefactors
   TH2D *eff_Veto_mu_data   = (TH2D*) f_data ->Get("eff_Veto_mu");
@@ -1728,8 +1529,12 @@ void make_mu_scale_factors(string plots_dir, string root_dir) {
   mitPalette();
   TPaletteAxis *palette_axis;
   TLine *oneline=new TLine(10,1,100,1);
-  oneline->SetLineColor(2);
-  oneline->SetLineStyle(7);
+  oneline->SetLineColor(1);
+  oneline->SetLineStyle(3);
+  Int_t mit_red  = 1861; 
+  Int_t mit_gray = 1862; 
+  TColor *col_mit_red  = new TColor(mit_red,  163/255., 31/255.,  52/255.);
+  TColor *col_mit_gray = new TColor(mit_gray, 138/255., 139/255., 140/255.);
 
   // Draw unfactorized scalefactor plots
   TCanvas *c_unfactorized_scalefactors_Veto_mu = new TCanvas("c_unfactorized_scalefactors_Veto_mu","Unfactorized Veto muon scale factors (Data/MC)",800,800);
@@ -1748,8 +1553,8 @@ void make_mu_scale_factors(string plots_dir, string root_dir) {
   unfactorized_scalefactors_Veto_mu->SetMinimum(0.7);
   unfactorized_scalefactors_Veto_mu->SetMaximum(1.3);
   unfactorized_scalefactors_Veto_mu->SetMarkerSize(.8);
-  palette_axis = (TPaletteAxis*) unfactorized_scalefactors_Veto_mu->GetListOfFunctions()->FindObject("palette"); 
-  palette_axis->SetLabelSize(0.02);
+  //palette_axis = (TPaletteAxis*) unfactorized_scalefactors_Veto_mu->GetListOfFunctions()->FindObject("palette"); 
+  //palette_axis->SetLabelSize(0.02);
   c_unfactorized_scalefactors_Veto_mu->Update();
   c_unfactorized_scalefactors_Veto_mu->Print((plots_dir+"unfactorized_scalefactors_Veto_mu.png").c_str());
   TCanvas *c_unfactorized_scalefactors_Loose_mu = new TCanvas("c_unfactorized_scalefactors_Loose_mu","Unfactorized Loose muon scale factors (Data/MC)",800,800);
@@ -1813,10 +1618,12 @@ void make_mu_scale_factors(string plots_dir, string root_dir) {
   c_unfactorized_scalefactors_Tight_mu->Update();
   c_unfactorized_scalefactors_Tight_mu->Print((plots_dir+"unfactorized_scalefactors_Tight_mu.png").c_str());
 
-  TCanvas *c_unfactorized_scalefactors_Veto_mu_eta1 = new TCanvas("c_unfactorized_scalefactors_Veto_mu_eta1","Factorized Veto muon scale factors, eta<1.479 ",800,600);
+  TCanvas *c_unfactorized_scalefactors_Veto_mu_1d = new TCanvas("c_unfactorized_scalefactors_Veto_mu_1d","Unfactorized Veto muon scale factors",800,600);
   TH1D *unfactorized_scalefactors_Veto_mu_eta1 = unfactorized_scalefactors_Veto_mu->ProjectionY("unfactorized_scalefactors_Veto_mu_eta1", 1, 1);
+  TH1D *unfactorized_scalefactors_Veto_mu_eta2 = unfactorized_scalefactors_Veto_mu->ProjectionY("unfactorized_scalefactors_Veto_mu_eta2", 2, 2);
+  //TH1D *unfactorized_scalefactors_Veto_mu_eta3 = unfactorized_scalefactors_Veto_mu->ProjectionY("unfactorized_scalefactors_Veto_mu_eta3", 3, 3);
   unfactorized_scalefactors_Veto_mu_eta1->Draw("P0 E1");
-  unfactorized_scalefactors_Veto_mu_eta1->SetTitle("Factorized Veto muon scale factors, | #eta | < 1.5 ");
+  unfactorized_scalefactors_Veto_mu_eta1->SetTitle("Unfactorized Veto muon scale factors");
   unfactorized_scalefactors_Veto_mu_eta1->GetXaxis()->SetTitle("p_{T} [GeV]");
   unfactorized_scalefactors_Veto_mu_eta1->GetXaxis()->SetTitleOffset(0.9);
   unfactorized_scalefactors_Veto_mu_eta1->GetXaxis()->SetTitleSize(0.04);
@@ -1827,53 +1634,35 @@ void make_mu_scale_factors(string plots_dir, string root_dir) {
   unfactorized_scalefactors_Veto_mu_eta1->GetYaxis()->SetLabelSize(0.02);
   unfactorized_scalefactors_Veto_mu_eta1->SetMinimum(0.8);
   unfactorized_scalefactors_Veto_mu_eta1->SetMaximum(1.2);
-  unfactorized_scalefactors_Veto_mu_eta1->SetMarkerStyle(21);
-  oneline->Draw("SAME");
-  c_unfactorized_scalefactors_Veto_mu_eta1->Update();
-  c_unfactorized_scalefactors_Veto_mu_eta1->Print((plots_dir+"unfactorized_scalefactors_Veto_mu_eta1.png").c_str());
-  
-  TCanvas *c_unfactorized_scalefactors_Veto_mu_eta2 = new TCanvas("c_unfactorized_scalefactors_Veto_mu_eta2","Factorized muon Veto scale factors, 1.5<eta<2.1 ",800,600);
-  TH1D *unfactorized_scalefactors_Veto_mu_eta2 = unfactorized_scalefactors_Veto_mu->ProjectionY("unfactorized_scalefactors_Veto_mu_eta2", 2, 2);
-  unfactorized_scalefactors_Veto_mu_eta2->Draw("P0 E1");
-  unfactorized_scalefactors_Veto_mu_eta2->SetTitle("Factorized Veto muon scale factors, 1.5 < | #eta | < 2.1 ");
-  unfactorized_scalefactors_Veto_mu_eta2->GetXaxis()->SetTitle("p_{T} [GeV]");
-  unfactorized_scalefactors_Veto_mu_eta2->GetXaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Veto_mu_eta2->GetXaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Veto_mu_eta2->GetXaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Veto_mu_eta2->GetYaxis()->SetTitle("#varepsilon_{data} / #varepsilon_{MC}");
-  unfactorized_scalefactors_Veto_mu_eta2->GetYaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Veto_mu_eta2->GetYaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Veto_mu_eta2->GetYaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Veto_mu_eta2->SetMinimum(0.8);
-  unfactorized_scalefactors_Veto_mu_eta2->SetMaximum(1.2);
+  unfactorized_scalefactors_Veto_mu_eta1->SetMarkerStyle(20);
+  unfactorized_scalefactors_Veto_mu_eta1->SetMarkerColor(1);
+  unfactorized_scalefactors_Veto_mu_eta1->SetLineColor(1);
   unfactorized_scalefactors_Veto_mu_eta2->SetMarkerStyle(21);
+  unfactorized_scalefactors_Veto_mu_eta2->SetMarkerColor(1861);
+  unfactorized_scalefactors_Veto_mu_eta2->SetLineColor(1861);
+  unfactorized_scalefactors_Veto_mu_eta2->Draw("P0 E1 SAME");
+  //unfactorized_scalefactors_Veto_mu_eta3->SetMarkerStyle(22);
+  //unfactorized_scalefactors_Veto_mu_eta3->SetMarkerColor(1862);
+  //unfactorized_scalefactors_Veto_mu_eta3->SetLineColor(1862);
+  //unfactorized_scalefactors_Veto_mu_eta3->Draw("P0 E1 SAME");
   oneline->Draw("SAME");
-  c_unfactorized_scalefactors_Veto_mu_eta2->Update();
-  c_unfactorized_scalefactors_Veto_mu_eta2->Print((plots_dir+"unfactorized_scalefactors_Veto_mu_eta2.png").c_str());
+  TLegend *legend_Veto_1d=new TLegend(.6,.7,.85,.85);
+  legend_Veto_1d->AddEntry(unfactorized_scalefactors_Veto_mu_eta1,"| #eta | < 1.479", "lp");
+  //legend_Veto_1d->AddEntry(unfactorized_scalefactors_Veto_mu_eta2,"1.5 < | #eta | < 2.4", "lp");
+  legend_Veto_1d->AddEntry(unfactorized_scalefactors_Veto_mu_eta2,"1.479 < | #eta | < 2.4", "lp");
+  //legend_Veto_1d->AddEntry(unfactorized_scalefactors_Veto_mu_eta3,"2.1 < | #eta | < 2.4", "lp");
+  legend_Veto_1d->SetFillColor(0);
+  legend_Veto_1d->Draw("SAME");
+  c_unfactorized_scalefactors_Veto_mu_1d->Update();
+  c_unfactorized_scalefactors_Veto_mu_1d->Print((plots_dir+"unfactorized_scalefactors_Veto_mu_1d.png").c_str());
   
-  TCanvas *c_unfactorized_scalefactors_Veto_mu_eta3 = new TCanvas("c_unfactorized_scalefactors_Veto_mu_eta3","Factorized muon Veto scale factors, 2.1<eta<2.4 ",800,600);
-  TH1D *unfactorized_scalefactors_Veto_mu_eta3 = unfactorized_scalefactors_Veto_mu->ProjectionY("unfactorized_scalefactors_Veto_mu_eta3", 3, 3);
-  unfactorized_scalefactors_Veto_mu_eta3->Draw("P0 E1");
-  unfactorized_scalefactors_Veto_mu_eta3->SetTitle("Factorized Veto muon scale factors, 2.1 < | #eta | < 2.4 ");
-  unfactorized_scalefactors_Veto_mu_eta3->GetXaxis()->SetTitle("p_{T} [GeV]");
-  unfactorized_scalefactors_Veto_mu_eta3->GetXaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Veto_mu_eta3->GetXaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Veto_mu_eta3->GetXaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Veto_mu_eta3->GetYaxis()->SetTitle("#varepsilon_{data} / #varepsilon_{MC}");
-  unfactorized_scalefactors_Veto_mu_eta3->GetYaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Veto_mu_eta3->GetYaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Veto_mu_eta3->GetYaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Veto_mu_eta3->SetMinimum(0.8);
-  unfactorized_scalefactors_Veto_mu_eta3->SetMaximum(1.2);
-  unfactorized_scalefactors_Veto_mu_eta3->SetMarkerStyle(21);
-  oneline->Draw("SAME");
-  c_unfactorized_scalefactors_Veto_mu_eta3->Update();
-  c_unfactorized_scalefactors_Veto_mu_eta3->Print((plots_dir+"unfactorized_scalefactors_Veto_mu_eta3.png").c_str());
 
-  TCanvas *c_unfactorized_scalefactors_Loose_mu_eta1 = new TCanvas("c_unfactorized_scalefactors_Loose_mu_eta1","Factorized Loose muon scale factors, eta<1.479 ",800,600);
+  TCanvas *c_unfactorized_scalefactors_Loose_mu_1d = new TCanvas("c_unfactorized_scalefactors_Loose_mu_1d","Unfactorized Loose muon scale factors",800,600);
   TH1D *unfactorized_scalefactors_Loose_mu_eta1 = unfactorized_scalefactors_Loose_mu->ProjectionY("unfactorized_scalefactors_Loose_mu_eta1", 1, 1);
+  TH1D *unfactorized_scalefactors_Loose_mu_eta2 = unfactorized_scalefactors_Loose_mu->ProjectionY("unfactorized_scalefactors_Loose_mu_eta2", 2, 2);
+  //TH1D *unfactorized_scalefactors_Loose_mu_eta3 = unfactorized_scalefactors_Loose_mu->ProjectionY("unfactorized_scalefactors_Loose_mu_eta3", 3, 3);
   unfactorized_scalefactors_Loose_mu_eta1->Draw("P0 E1");
-  unfactorized_scalefactors_Loose_mu_eta1->SetTitle("Factorized Loose muon scale factors, | #eta | < 1.5 ");
+  unfactorized_scalefactors_Loose_mu_eta1->SetTitle("Unfactorized Loose muon scale factors");
   unfactorized_scalefactors_Loose_mu_eta1->GetXaxis()->SetTitle("p_{T} [GeV]");
   unfactorized_scalefactors_Loose_mu_eta1->GetXaxis()->SetTitleOffset(0.9);
   unfactorized_scalefactors_Loose_mu_eta1->GetXaxis()->SetTitleSize(0.04);
@@ -1884,53 +1673,35 @@ void make_mu_scale_factors(string plots_dir, string root_dir) {
   unfactorized_scalefactors_Loose_mu_eta1->GetYaxis()->SetLabelSize(0.02);
   unfactorized_scalefactors_Loose_mu_eta1->SetMinimum(0.8);
   unfactorized_scalefactors_Loose_mu_eta1->SetMaximum(1.2);
-  unfactorized_scalefactors_Loose_mu_eta1->SetMarkerStyle(21);
-  oneline->Draw("SAME");
-  c_unfactorized_scalefactors_Loose_mu_eta1->Update();
-  c_unfactorized_scalefactors_Loose_mu_eta1->Print((plots_dir+"unfactorized_scalefactors_Loose_mu_eta1.png").c_str());
-  
-  TCanvas *c_unfactorized_scalefactors_Loose_mu_eta2 = new TCanvas("c_unfactorized_scalefactors_Loose_mu_eta2","Factorized muon Loose scale factors, 1.5<eta<2.1 ",800,600);
-  TH1D *unfactorized_scalefactors_Loose_mu_eta2 = unfactorized_scalefactors_Loose_mu->ProjectionY("unfactorized_scalefactors_Loose_mu_eta2", 2, 2);
-  unfactorized_scalefactors_Loose_mu_eta2->Draw("P0 E1");
-  unfactorized_scalefactors_Loose_mu_eta2->SetTitle("Factorized Loose muon scale factors, 1.5 < | #eta | < 2.1 ");
-  unfactorized_scalefactors_Loose_mu_eta2->GetXaxis()->SetTitle("p_{T} [GeV]");
-  unfactorized_scalefactors_Loose_mu_eta2->GetXaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Loose_mu_eta2->GetXaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Loose_mu_eta2->GetXaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Loose_mu_eta2->GetYaxis()->SetTitle("#varepsilon_{data} / #varepsilon_{MC}");
-  unfactorized_scalefactors_Loose_mu_eta2->GetYaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Loose_mu_eta2->GetYaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Loose_mu_eta2->GetYaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Loose_mu_eta2->SetMinimum(0.8);
-  unfactorized_scalefactors_Loose_mu_eta2->SetMaximum(1.2);
+  unfactorized_scalefactors_Loose_mu_eta1->SetMarkerStyle(20);
+  unfactorized_scalefactors_Loose_mu_eta1->SetMarkerColor(1);
+  unfactorized_scalefactors_Loose_mu_eta1->SetLineColor(1);
   unfactorized_scalefactors_Loose_mu_eta2->SetMarkerStyle(21);
+  unfactorized_scalefactors_Loose_mu_eta2->SetMarkerColor(1861);
+  unfactorized_scalefactors_Loose_mu_eta2->SetLineColor(1861);
+  unfactorized_scalefactors_Loose_mu_eta2->Draw("P0 E1 SAME");
+  //unfactorized_scalefactors_Loose_mu_eta3->SetMarkerStyle(22);
+  //unfactorized_scalefactors_Loose_mu_eta3->SetMarkerColor(1862);
+  //unfactorized_scalefactors_Loose_mu_eta3->SetLineColor(1862);
+  //unfactorized_scalefactors_Loose_mu_eta3->Draw("P0 E1 SAME");
   oneline->Draw("SAME");
-  c_unfactorized_scalefactors_Loose_mu_eta2->Update();
-  c_unfactorized_scalefactors_Loose_mu_eta2->Print((plots_dir+"unfactorized_scalefactors_Loose_mu_eta2.png").c_str());
+  TLegend *legend_Loose_1d=new TLegend(.6,.7,.85,.85);
+  legend_Loose_1d->AddEntry(unfactorized_scalefactors_Loose_mu_eta1,"| #eta | < 1.479", "lp");
+  //legend_Loose_1d->AddEntry(unfactorized_scalefactors_Loose_mu_eta2,"1.5 < | #eta | < 2.4", "lp");
+  legend_Loose_1d->AddEntry(unfactorized_scalefactors_Loose_mu_eta2,"1.479 < | #eta | < 2.4", "lp");
+  //legend_Loose_1d->AddEntry(unfactorized_scalefactors_Loose_mu_eta3,"2.1 < | #eta | < 2.4", "lp");
+  legend_Loose_1d->SetFillColor(0);
+  legend_Loose_1d->Draw("SAME");
+  c_unfactorized_scalefactors_Loose_mu_1d->Update();
+  c_unfactorized_scalefactors_Loose_mu_1d->Print((plots_dir+"unfactorized_scalefactors_Loose_mu_1d.png").c_str());
   
-  TCanvas *c_unfactorized_scalefactors_Loose_mu_eta3 = new TCanvas("c_unfactorized_scalefactors_Loose_mu_eta3","Factorized muon Loose scale factors, 2.1<eta<2.4 ",800,600);
-  TH1D *unfactorized_scalefactors_Loose_mu_eta3 = unfactorized_scalefactors_Loose_mu->ProjectionY("unfactorized_scalefactors_Loose_mu_eta3", 3, 3);
-  unfactorized_scalefactors_Loose_mu_eta3->Draw("P0 E1");
-  unfactorized_scalefactors_Loose_mu_eta3->SetTitle("Factorized Loose muon scale factors, 2.1 < | #eta | < 2.4 ");
-  unfactorized_scalefactors_Loose_mu_eta3->GetXaxis()->SetTitle("p_{T} [GeV]");
-  unfactorized_scalefactors_Loose_mu_eta3->GetXaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Loose_mu_eta3->GetXaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Loose_mu_eta3->GetXaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Loose_mu_eta3->GetYaxis()->SetTitle("#varepsilon_{data} / #varepsilon_{MC}");
-  unfactorized_scalefactors_Loose_mu_eta3->GetYaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Loose_mu_eta3->GetYaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Loose_mu_eta3->GetYaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Loose_mu_eta3->SetMinimum(0.8);
-  unfactorized_scalefactors_Loose_mu_eta3->SetMaximum(1.2);
-  unfactorized_scalefactors_Loose_mu_eta3->SetMarkerStyle(21);
-  oneline->Draw("SAME");
-  c_unfactorized_scalefactors_Loose_mu_eta3->Update();
-  c_unfactorized_scalefactors_Loose_mu_eta3->Print((plots_dir+"unfactorized_scalefactors_Loose_mu_eta3.png").c_str());
 
-  TCanvas *c_unfactorized_scalefactors_Medium_mu_eta1 = new TCanvas("c_unfactorized_scalefactors_Medium_mu_eta1","Factorized Medium muon scale factors, eta<1.479 ",800,600);
+  TCanvas *c_unfactorized_scalefactors_Medium_mu_1d = new TCanvas("c_unfactorized_scalefactors_Medium_mu_1d","Unfactorized Medium muon scale factors",800,600);
   TH1D *unfactorized_scalefactors_Medium_mu_eta1 = unfactorized_scalefactors_Medium_mu->ProjectionY("unfactorized_scalefactors_Medium_mu_eta1", 1, 1);
+  TH1D *unfactorized_scalefactors_Medium_mu_eta2 = unfactorized_scalefactors_Medium_mu->ProjectionY("unfactorized_scalefactors_Medium_mu_eta2", 2, 2);
+  //TH1D *unfactorized_scalefactors_Medium_mu_eta3 = unfactorized_scalefactors_Medium_mu->ProjectionY("unfactorized_scalefactors_Medium_mu_eta3", 3, 3);
   unfactorized_scalefactors_Medium_mu_eta1->Draw("P0 E1");
-  unfactorized_scalefactors_Medium_mu_eta1->SetTitle("Factorized Medium muon scale factors, | #eta | < 1.5 ");
+  unfactorized_scalefactors_Medium_mu_eta1->SetTitle("Unfactorized Medium muon scale factors");
   unfactorized_scalefactors_Medium_mu_eta1->GetXaxis()->SetTitle("p_{T} [GeV]");
   unfactorized_scalefactors_Medium_mu_eta1->GetXaxis()->SetTitleOffset(0.9);
   unfactorized_scalefactors_Medium_mu_eta1->GetXaxis()->SetTitleSize(0.04);
@@ -1941,53 +1712,35 @@ void make_mu_scale_factors(string plots_dir, string root_dir) {
   unfactorized_scalefactors_Medium_mu_eta1->GetYaxis()->SetLabelSize(0.02);
   unfactorized_scalefactors_Medium_mu_eta1->SetMinimum(0.8);
   unfactorized_scalefactors_Medium_mu_eta1->SetMaximum(1.2);
-  unfactorized_scalefactors_Medium_mu_eta1->SetMarkerStyle(21);
-  oneline->Draw("SAME");
-  c_unfactorized_scalefactors_Medium_mu_eta1->Update();
-  c_unfactorized_scalefactors_Medium_mu_eta1->Print((plots_dir+"unfactorized_scalefactors_Medium_mu_eta1.png").c_str());
-  
-  TCanvas *c_unfactorized_scalefactors_Medium_mu_eta2 = new TCanvas("c_unfactorized_scalefactors_Medium_mu_eta2","Factorized muon Medium scale factors, 1.5<eta<2.1 ",800,600);
-  TH1D *unfactorized_scalefactors_Medium_mu_eta2 = unfactorized_scalefactors_Medium_mu->ProjectionY("unfactorized_scalefactors_Medium_mu_eta2", 2, 2);
-  unfactorized_scalefactors_Medium_mu_eta2->Draw("P0 E1");
-  unfactorized_scalefactors_Medium_mu_eta2->SetTitle("Factorized Medium muon scale factors, 1.5 < | #eta | < 2.1 ");
-  unfactorized_scalefactors_Medium_mu_eta2->GetXaxis()->SetTitle("p_{T} [GeV]");
-  unfactorized_scalefactors_Medium_mu_eta2->GetXaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Medium_mu_eta2->GetXaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Medium_mu_eta2->GetXaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Medium_mu_eta2->GetYaxis()->SetTitle("#varepsilon_{data} / #varepsilon_{MC}");
-  unfactorized_scalefactors_Medium_mu_eta2->GetYaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Medium_mu_eta2->GetYaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Medium_mu_eta2->GetYaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Medium_mu_eta2->SetMinimum(0.8);
-  unfactorized_scalefactors_Medium_mu_eta2->SetMaximum(1.2);
+  unfactorized_scalefactors_Medium_mu_eta1->SetMarkerStyle(20);
+  unfactorized_scalefactors_Medium_mu_eta1->SetMarkerColor(1);
+  unfactorized_scalefactors_Medium_mu_eta1->SetLineColor(1);
   unfactorized_scalefactors_Medium_mu_eta2->SetMarkerStyle(21);
+  unfactorized_scalefactors_Medium_mu_eta2->SetMarkerColor(1861);
+  unfactorized_scalefactors_Medium_mu_eta2->SetLineColor(1861);
+  unfactorized_scalefactors_Medium_mu_eta2->Draw("P0 E1 SAME");
+  //unfactorized_scalefactors_Medium_mu_eta3->SetMarkerStyle(22);
+  //unfactorized_scalefactors_Medium_mu_eta3->SetMarkerColor(1862);
+  //unfactorized_scalefactors_Medium_mu_eta3->SetLineColor(1862);
+  //unfactorized_scalefactors_Medium_mu_eta3->Draw("P0 E1 SAME");
   oneline->Draw("SAME");
-  c_unfactorized_scalefactors_Medium_mu_eta2->Update();
-  c_unfactorized_scalefactors_Medium_mu_eta2->Print((plots_dir+"unfactorized_scalefactors_Medium_mu_eta2.png").c_str());
+  TLegend *legend_Medium_1d=new TLegend(.6,.7,.85,.85);
+  legend_Medium_1d->AddEntry(unfactorized_scalefactors_Medium_mu_eta1,"| #eta | < 1.479", "lp");
+  //legend_Medium_1d->AddEntry(unfactorized_scalefactors_Medium_mu_eta2,"1.5 < | #eta | < 2.4", "lp");
+  legend_Medium_1d->AddEntry(unfactorized_scalefactors_Medium_mu_eta2,"1.479 < | #eta | < 2.4", "lp");
+  //legend_Medium_1d->AddEntry(unfactorized_scalefactors_Medium_mu_eta3,"2.1 < | #eta | < 2.4", "lp");
+  legend_Medium_1d->SetFillColor(0);
+  legend_Medium_1d->Draw("SAME");
+  c_unfactorized_scalefactors_Medium_mu_1d->Update();
+  c_unfactorized_scalefactors_Medium_mu_1d->Print((plots_dir+"unfactorized_scalefactors_Medium_mu_1d.png").c_str());
   
-  TCanvas *c_unfactorized_scalefactors_Medium_mu_eta3 = new TCanvas("c_unfactorized_scalefactors_Medium_mu_eta3","Factorized muon Medium scale factors, 2.1<eta<2.4 ",800,600);
-  TH1D *unfactorized_scalefactors_Medium_mu_eta3 = unfactorized_scalefactors_Medium_mu->ProjectionY("unfactorized_scalefactors_Medium_mu_eta3", 3, 3);
-  unfactorized_scalefactors_Medium_mu_eta3->Draw("P0 E1");
-  unfactorized_scalefactors_Medium_mu_eta3->SetTitle("Factorized Medium muon scale factors, 2.1 < | #eta | < 2.4 ");
-  unfactorized_scalefactors_Medium_mu_eta3->GetXaxis()->SetTitle("p_{T} [GeV]");
-  unfactorized_scalefactors_Medium_mu_eta3->GetXaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Medium_mu_eta3->GetXaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Medium_mu_eta3->GetXaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Medium_mu_eta3->GetYaxis()->SetTitle("#varepsilon_{data} / #varepsilon_{MC}");
-  unfactorized_scalefactors_Medium_mu_eta3->GetYaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Medium_mu_eta3->GetYaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Medium_mu_eta3->GetYaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Medium_mu_eta3->SetMinimum(0.8);
-  unfactorized_scalefactors_Medium_mu_eta3->SetMaximum(1.2);
-  unfactorized_scalefactors_Medium_mu_eta3->SetMarkerStyle(21);
-  oneline->Draw("SAME");
-  c_unfactorized_scalefactors_Medium_mu_eta3->Update();
-  c_unfactorized_scalefactors_Medium_mu_eta3->Print((plots_dir+"unfactorized_scalefactors_Medium_mu_eta3.png").c_str());
 
-  TCanvas *c_unfactorized_scalefactors_Tight_mu_eta1 = new TCanvas("c_unfactorized_scalefactors_Tight_mu_eta1","Factorized Tight muon scale factors, eta<1.479 ",800,600);
+  TCanvas *c_unfactorized_scalefactors_Tight_mu_1d = new TCanvas("c_unfactorized_scalefactors_Tight_mu_1d","Unfactorized Tight muon scale factors",800,600);
   TH1D *unfactorized_scalefactors_Tight_mu_eta1 = unfactorized_scalefactors_Tight_mu->ProjectionY("unfactorized_scalefactors_Tight_mu_eta1", 1, 1);
+  TH1D *unfactorized_scalefactors_Tight_mu_eta2 = unfactorized_scalefactors_Tight_mu->ProjectionY("unfactorized_scalefactors_Tight_mu_eta2", 2, 2);
+  //TH1D *unfactorized_scalefactors_Tight_mu_eta3 = unfactorized_scalefactors_Tight_mu->ProjectionY("unfactorized_scalefactors_Tight_mu_eta3", 3, 3);
   unfactorized_scalefactors_Tight_mu_eta1->Draw("P0 E1");
-  unfactorized_scalefactors_Tight_mu_eta1->SetTitle("Factorized Tight muon scale factors, | #eta | < 1.5 ");
+  unfactorized_scalefactors_Tight_mu_eta1->SetTitle("Unfactorized Tight muon scale factors");
   unfactorized_scalefactors_Tight_mu_eta1->GetXaxis()->SetTitle("p_{T} [GeV]");
   unfactorized_scalefactors_Tight_mu_eta1->GetXaxis()->SetTitleOffset(0.9);
   unfactorized_scalefactors_Tight_mu_eta1->GetXaxis()->SetTitleSize(0.04);
@@ -1998,48 +1751,28 @@ void make_mu_scale_factors(string plots_dir, string root_dir) {
   unfactorized_scalefactors_Tight_mu_eta1->GetYaxis()->SetLabelSize(0.02);
   unfactorized_scalefactors_Tight_mu_eta1->SetMinimum(0.8);
   unfactorized_scalefactors_Tight_mu_eta1->SetMaximum(1.2);
-  unfactorized_scalefactors_Tight_mu_eta1->SetMarkerStyle(21);
-  oneline->Draw("SAME");
-  c_unfactorized_scalefactors_Tight_mu_eta1->Update();
-  c_unfactorized_scalefactors_Tight_mu_eta1->Print((plots_dir+"unfactorized_scalefactors_Tight_mu_eta1.png").c_str());
-  
-  TCanvas *c_unfactorized_scalefactors_Tight_mu_eta2 = new TCanvas("c_unfactorized_scalefactors_Tight_mu_eta2","Factorized muon Tight scale factors, 1.5<eta<2.1 ",800,600);
-  TH1D *unfactorized_scalefactors_Tight_mu_eta2 = unfactorized_scalefactors_Tight_mu->ProjectionY("unfactorized_scalefactors_Tight_mu_eta2", 2, 2);
-  unfactorized_scalefactors_Tight_mu_eta2->Draw("P0 E1");
-  unfactorized_scalefactors_Tight_mu_eta2->SetTitle("Factorized Tight muon scale factors, 1.5 < | #eta | < 2.1 ");
-  unfactorized_scalefactors_Tight_mu_eta2->GetXaxis()->SetTitle("p_{T} [GeV]");
-  unfactorized_scalefactors_Tight_mu_eta2->GetXaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Tight_mu_eta2->GetXaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Tight_mu_eta2->GetXaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Tight_mu_eta2->GetYaxis()->SetTitle("#varepsilon_{data} / #varepsilon_{MC}");
-  unfactorized_scalefactors_Tight_mu_eta2->GetYaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Tight_mu_eta2->GetYaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Tight_mu_eta2->GetYaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Tight_mu_eta2->SetMinimum(0.8);
-  unfactorized_scalefactors_Tight_mu_eta2->SetMaximum(1.2);
+  unfactorized_scalefactors_Tight_mu_eta1->SetMarkerStyle(20);
+  unfactorized_scalefactors_Tight_mu_eta1->SetMarkerColor(1);
+  unfactorized_scalefactors_Tight_mu_eta1->SetLineColor(1);
   unfactorized_scalefactors_Tight_mu_eta2->SetMarkerStyle(21);
+  unfactorized_scalefactors_Tight_mu_eta2->SetMarkerColor(1861);
+  unfactorized_scalefactors_Tight_mu_eta2->SetLineColor(1861);
+  unfactorized_scalefactors_Tight_mu_eta2->Draw("P0 E1 SAME");
+  //unfactorized_scalefactors_Tight_mu_eta3->SetMarkerStyle(22);
+  //unfactorized_scalefactors_Tight_mu_eta3->SetMarkerColor(1862);
+  //unfactorized_scalefactors_Tight_mu_eta3->SetLineColor(1862);
+  //unfactorized_scalefactors_Tight_mu_eta3->Draw("P0 E1 SAME");
   oneline->Draw("SAME");
-  c_unfactorized_scalefactors_Tight_mu_eta2->Update();
-  c_unfactorized_scalefactors_Tight_mu_eta2->Print((plots_dir+"unfactorized_scalefactors_Tight_mu_eta2.png").c_str());
+  TLegend *legend_Tight_1d=new TLegend(.6,.7,.85,.85);
+  legend_Tight_1d->AddEntry(unfactorized_scalefactors_Tight_mu_eta1,"| #eta | < 1.479", "lp");
+  //legend_Tight_1d->AddEntry(unfactorized_scalefactors_Tight_mu_eta2,"1.5 < | #eta | < 2.4", "lp");
+  legend_Tight_1d->AddEntry(unfactorized_scalefactors_Tight_mu_eta2,"1.479 < | #eta | < 2.4", "lp");
+  //legend_Tight_1d->AddEntry(unfactorized_scalefactors_Tight_mu_eta3,"2.1 < | #eta | < 2.4", "lp");
+  legend_Tight_1d->SetFillColor(0);
+  legend_Tight_1d->Draw("SAME");
+  c_unfactorized_scalefactors_Tight_mu_1d->Update();
+  c_unfactorized_scalefactors_Tight_mu_1d->Print((plots_dir+"unfactorized_scalefactors_Tight_mu_1d.png").c_str());
   
-  TCanvas *c_unfactorized_scalefactors_Tight_mu_eta3 = new TCanvas("c_unfactorized_scalefactors_Tight_mu_eta3","Factorized muon Tight scale factors, 2.1<eta<2.4 ",800,600);
-  TH1D *unfactorized_scalefactors_Tight_mu_eta3 = unfactorized_scalefactors_Tight_mu->ProjectionY("unfactorized_scalefactors_Tight_mu_eta3", 3, 3);
-  unfactorized_scalefactors_Tight_mu_eta3->Draw("P0 E1");
-  unfactorized_scalefactors_Tight_mu_eta3->SetTitle("Factorized Tight muon scale factors, 2.1 < | #eta | < 2.4 ");
-  unfactorized_scalefactors_Tight_mu_eta3->GetXaxis()->SetTitle("p_{T} [GeV]");
-  unfactorized_scalefactors_Tight_mu_eta3->GetXaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Tight_mu_eta3->GetXaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Tight_mu_eta3->GetXaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Tight_mu_eta3->GetYaxis()->SetTitle("#varepsilon_{data} / #varepsilon_{MC}");
-  unfactorized_scalefactors_Tight_mu_eta3->GetYaxis()->SetTitleOffset(0.9);
-  unfactorized_scalefactors_Tight_mu_eta3->GetYaxis()->SetTitleSize(0.04);
-  unfactorized_scalefactors_Tight_mu_eta3->GetYaxis()->SetLabelSize(0.02);
-  unfactorized_scalefactors_Tight_mu_eta3->SetMinimum(0.8);
-  unfactorized_scalefactors_Tight_mu_eta3->SetMaximum(1.2);
-  unfactorized_scalefactors_Tight_mu_eta3->SetMarkerStyle(21);
-  oneline->Draw("SAME");
-  c_unfactorized_scalefactors_Tight_mu_eta3->Update();
-  c_unfactorized_scalefactors_Tight_mu_eta3->Print((plots_dir+"unfactorized_scalefactors_Tight_mu_eta3.png").c_str());
   
   TFile *scalefactors_file = TFile::Open((root_dir+"scalefactors_mu.root").c_str(),"RECREATE");
   unfactorized_scalefactors_Veto_mu   ->Write("unfactorized_scalefactors_Veto_mu"  );
@@ -2048,181 +1781,364 @@ void make_mu_scale_factors(string plots_dir, string root_dir) {
   unfactorized_scalefactors_Tight_mu  ->Write("unfactorized_scalefactors_Tight_mu" );
   unfactorized_scalefactors_Veto_mu_eta1->Write("unfactorized_scalefactors_Veto_mu_eta1");
   unfactorized_scalefactors_Veto_mu_eta2->Write("unfactorized_scalefactors_Veto_mu_eta2");
-  unfactorized_scalefactors_Veto_mu_eta3->Write("unfactorized_scalefactors_Veto_mu_eta3");
+//  unfactorized_scalefactors_Veto_mu_eta3->Write("unfactorized_scalefactors_Veto_mu_eta3");
   unfactorized_scalefactors_Loose_mu_eta1->Write("unfactorized_scalefactors_Loose_mu_eta1");
   unfactorized_scalefactors_Loose_mu_eta2->Write("unfactorized_scalefactors_Loose_mu_eta2");
-  unfactorized_scalefactors_Loose_mu_eta3->Write("unfactorized_scalefactors_Loose_mu_eta3");
+//  unfactorized_scalefactors_Loose_mu_eta3->Write("unfactorized_scalefactors_Loose_mu_eta3");
   unfactorized_scalefactors_Medium_mu_eta1->Write("unfactorized_scalefactors_Medium_mu_eta1");
   unfactorized_scalefactors_Medium_mu_eta2->Write("unfactorized_scalefactors_Medium_mu_eta2");
-  unfactorized_scalefactors_Medium_mu_eta3->Write("unfactorized_scalefactors_Medium_mu_eta3");
+//  unfactorized_scalefactors_Medium_mu_eta3->Write("unfactorized_scalefactors_Medium_mu_eta3");
   unfactorized_scalefactors_Tight_mu_eta1->Write("unfactorized_scalefactors_Tight_mu_eta1");
   unfactorized_scalefactors_Tight_mu_eta2->Write("unfactorized_scalefactors_Tight_mu_eta2");
-  unfactorized_scalefactors_Tight_mu_eta3->Write("unfactorized_scalefactors_Tight_mu_eta3");
+//  unfactorized_scalefactors_Tight_mu_eta3->Write("unfactorized_scalefactors_Tight_mu_eta3");
   scalefactors_file->Close();
 }
-
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void plot_ele() {
-  gStyle->SetOptStat(0);
-  Float_t bins[] = {20,30,40,60,80,150};
-  Int_t nbins=5;
+// estimate systematic uncertainty by taking absolute difference in scale factors from two methods
+void estimate_systematics(string plots_dir_method1, string plots_dir_method2, string root_dir_method1, string root_dir_method2) {
   
-  TH1D *h_data_eff_veto   = new TH1D("h_data_eff_veto","Electron ID efficiencies in 2015C data using tag and probe",nbins,bins);
-  TH1D *h_data_eff_medium = new TH1D("h_data_eff_medium","Loose to medium",nbins,bins);
-  TH1D *h_data_eff_tight  = new TH1D("h_data_eff_tight","Loose to tight",nbins,bins);
-  TH1D *h_mc_eff_veto     = new TH1D("h_mc_eff_veto","Electron ID efficiencies in MC using tag and probe",nbins,bins);
-  TH1D *h_mc_eff_medium   = new TH1D("h_mc_eff_medium","Loose to medium",nbins,bins);
-  TH1D *h_mc_eff_tight    = new TH1D("h_mc_eff_tight","Loose to tight",nbins,bins);
-  TH1D *h_ratio_eff_veto     = new TH1D("h_ratio_eff_veto","Electron ID scale factors from MC to data",nbins,bins);
-  TH1D *h_ratio_eff_medium   = new TH1D("h_ratio_eff_medium","Loose to medium",nbins,bins);
-  TH1D *h_ratio_eff_tight    = new TH1D("h_ratio_eff_tight","Loose to tight",nbins,bins);
-
-  double data_eff_veto[]       = {0.8272808,  0.9283912,  0.9673420,  0.9699439,  0.9874522};
-  double data_eff_medium[]     = {0.6770211,  0.7857058,  0.8492878,  0.8921974,  0.9396030};
-  double data_eff_tight[]      = {0.5638646,  0.6700576,  0.7592614,  0.8063168,  0.9065888};
-  double data_err_eff_veto[]   = {0.0239439,  0.0052142,  0.0030022,  0.0117742,  0.0133755};
-  double data_err_eff_medium[] = {0.0204696,  0.0009449,  0.0050543,  0.0220630,  0.0252899};
-  double data_err_eff_tight[]  = {0.0168675,  0.0072819,  0.0055368,  0.0223588,  0.0357888};
-  double mc_eff_veto[]         = {0.9410147,  0.9691390,  0.9868144,  0.9906645,  0.9925915};
-  double mc_eff_medium[]       = {0.7576817,  0.8388063,  0.8917681,  0.9197389,  0.9359847};
-  double mc_eff_tight[]        = {0.6287441,  0.7210381,  0.7966400,  0.8474214,  0.8831588};
-  double mc_err_eff_veto[]     = {0.0005299,  0.0001449,  0.0000881,  0.0002378,  0.0002474};
-  double mc_err_eff_medium[]   = {0.0006801,  0.0003545,  0.0002198,  0.0005312,  0.0007027};
-  double mc_err_eff_tight[]    = {0.0007327,  0.0000890,  0.0002817,  0.0006866,  0.0008913};
-  for(int i=1; i<=nbins; i++) {
-    h_data_eff_veto   ->SetBinContent (i, data_eff_veto[i-1]       );  
-    h_data_eff_veto   ->SetBinError   (i, data_err_eff_veto[i-1]   );  
-    h_data_eff_medium ->SetBinContent (i, data_eff_medium[i-1]     );  
-    h_data_eff_medium ->SetBinError   (i, data_err_eff_medium[i-1] );  
-    h_data_eff_tight  ->SetBinContent (i, data_eff_tight[i-1]      );  
-    h_data_eff_tight  ->SetBinError   (i, data_err_eff_tight[i-1]  );  
-    h_mc_eff_veto     ->SetBinContent (i, mc_eff_veto[i-1]       );  
-    h_mc_eff_veto     ->SetBinError   (i, mc_err_eff_veto[i-1]   );  
-    h_mc_eff_medium   ->SetBinContent (i, mc_eff_medium[i-1]     );  
-    h_mc_eff_medium   ->SetBinError   (i, mc_err_eff_medium[i-1] );  
-    h_mc_eff_tight    ->SetBinContent (i, mc_eff_tight[i-1]      );  
-    h_mc_eff_tight    ->SetBinError   (i, mc_err_eff_tight[i-1]  ); 
-    // add relative errors in quadrature
-    h_ratio_eff_veto   ->SetBinContent(i, data_eff_veto[i-1]/mc_eff_veto[i-1]);
-    h_ratio_eff_veto   ->SetBinError  (i, (data_eff_veto[i-1]/mc_eff_veto[i-1]) * sqrt(pow(data_err_eff_veto[i-1]/data_eff_veto[i-1], 2) + pow(mc_err_eff_veto[i-1]/mc_eff_veto[i-1],2) ));
-    h_ratio_eff_medium ->SetBinContent(i, data_eff_medium[i-1]/mc_eff_medium[i-1]);
-    h_ratio_eff_medium ->SetBinError  (i, (data_eff_medium[i-1]/mc_eff_medium[i-1]) * sqrt(pow(data_err_eff_medium[i-1]/data_eff_medium[i-1], 2) + pow(mc_err_eff_medium[i-1]/mc_eff_medium[i-1],2) ));
-    h_ratio_eff_tight   ->SetBinContent(i, data_eff_tight[i-1]/mc_eff_tight[i-1]);
-    h_ratio_eff_tight   ->SetBinError  (i, (data_eff_tight[i-1]/mc_eff_tight[i-1]) * sqrt(pow(data_err_eff_tight[i-1]/data_eff_tight[i-1], 2) + pow(mc_err_eff_tight[i-1]/mc_eff_tight[i-1],2) ));
-    printf("pT [ %d , %d ] GeV: scale factor %f +/- %f\n", int(bins[i-1]), int(bins[i]), h_ratio_eff_tight->GetBinContent(i), h_ratio_eff_tight->GetBinError(i));
+  TFile *ele_scalefactors_file_method1 = TFile::Open((root_dir_method1+"scalefactors_ele.root").c_str(),"UPDATE");
+  TFile *ele_scalefactors_file_method2 = TFile::Open((root_dir_method2+"scalefactors_ele.root").c_str(),"UPDATE");
+  TFile *mu_scalefactors_file_method1 = TFile::Open((root_dir_method1+"scalefactors_mu.root").c_str(),"UPDATE");
+  TFile *mu_scalefactors_file_method2 = TFile::Open((root_dir_method2+"scalefactors_mu.root").c_str(),"UPDATE");
+  if(!ele_scalefactors_file_method1 || !ele_scalefactors_file_method2 || !mu_scalefactors_file_method1 || !mu_scalefactors_file_method2) {
+    printf("error opening scalefactors files\n"); return;
   }
-  TCanvas *c1 = new TCanvas("c1","Electron efficiency in data vs. pT");
-  h_data_eff_veto   ->SetMarkerStyle(20);
-  h_data_eff_medium ->SetMarkerStyle(21);
-  h_data_eff_tight  ->SetMarkerStyle(22);
-  h_data_eff_veto   ->SetLineColor(52);
-  h_data_eff_medium ->SetLineColor(62);
-  h_data_eff_tight  ->SetLineColor(98);
-  h_data_eff_veto   ->SetMarkerColor(52);
-  h_data_eff_medium ->SetMarkerColor(62);
-  h_data_eff_tight  ->SetMarkerColor(98);
-  h_data_eff_veto->Draw("E1 P");
-  h_data_eff_medium->Draw("E1 P SAME");
-  h_data_eff_tight->Draw("E1 P SAME");
-  h_data_eff_veto->GetXaxis()->SetTitle("p_{T} [GeV]");
-  h_data_eff_veto->GetYaxis()->SetTitle("Efficiency");
-  h_data_eff_veto->SetMaximum(1.2);
-  h_data_eff_veto->SetMinimum(0);
-  TLegend *data_legend = new TLegend(0.65,0.15,0.85,0.35);
-  data_legend->AddEntry(h_data_eff_veto,"Loose to veto","lp");
-  data_legend->AddEntry(h_data_eff_medium,"Loose to medium","lp");
-  data_legend->AddEntry(h_data_eff_tight,"Loose to tight","lp");
-  data_legend->SetFillColor(0);
-  data_legend->Draw("SAME");
 
-  TCanvas *c2 = new TCanvas("c2","Electron efficiency in MC vs. pT");
-  h_mc_eff_veto   ->SetMarkerStyle(20);
-  h_mc_eff_medium ->SetMarkerStyle(21);
-  h_mc_eff_tight  ->SetMarkerStyle(22);
-  h_mc_eff_veto   ->SetLineColor(52);
-  h_mc_eff_medium ->SetLineColor(62);
-  h_mc_eff_tight  ->SetLineColor(98);
-  h_mc_eff_veto   ->SetMarkerColor(52);
-  h_mc_eff_medium ->SetMarkerColor(62);
-  h_mc_eff_tight  ->SetMarkerColor(98);
-  h_mc_eff_veto->Draw("E1 P");
-  h_mc_eff_medium->Draw("E1 P SAME");
-  h_mc_eff_tight->Draw("E1 P SAME");
-  h_mc_eff_veto->GetXaxis()->SetTitle("p_{T} [GeV]");
-  h_mc_eff_veto->GetYaxis()->SetTitle("Efficiency");
-  h_mc_eff_veto->SetMaximum(1.2);
-  h_mc_eff_veto->SetMinimum(0);
-  TLegend *mc_legend = new TLegend(0.65,0.15,0.85,0.35);
-  mc_legend->AddEntry(h_data_eff_veto,"Loose to veto","lp");
-  mc_legend->AddEntry(h_data_eff_medium,"Loose to medium","lp");
-  mc_legend->AddEntry(h_data_eff_tight,"Loose to tight","lp");
-  mc_legend->SetFillColor(0);
-  mc_legend->Draw("SAME");
-
-  TCanvas *c3 = new TCanvas("c3","Ratio of efficiency data:MC vs. pT");
-  h_ratio_eff_veto   ->SetMarkerStyle(20);
-  h_ratio_eff_medium ->SetMarkerStyle(21);
-  h_ratio_eff_tight  ->SetMarkerStyle(22);
-  h_ratio_eff_veto   ->SetLineColor(52);
-  h_ratio_eff_medium ->SetLineColor(62);
-  h_ratio_eff_tight  ->SetLineColor(98);
-  h_ratio_eff_veto   ->SetMarkerColor(52);
-  h_ratio_eff_medium ->SetMarkerColor(62);
-  h_ratio_eff_tight  ->SetMarkerColor(98);
-  h_ratio_eff_veto->Draw("E1 P");
-  h_ratio_eff_medium->Draw("E1 P SAME");
-  h_ratio_eff_tight->Draw("E1 P SAME");
-  h_ratio_eff_veto->GetXaxis()->SetTitle("p_{T} [GeV]");
-  h_ratio_eff_veto->GetYaxis()->SetTitle("Efficiency");
-  h_ratio_eff_veto->SetMaximum(1.2);
-  h_ratio_eff_veto->SetMinimum(0.8);
-  TLegend *ratio_legend = new TLegend(0.65,0.15,0.85,0.35);
-  ratio_legend->AddEntry(h_data_eff_veto,"Loose to veto","lp");
-  ratio_legend->AddEntry(h_data_eff_medium,"Loose to medium","lp");
-  ratio_legend->AddEntry(h_data_eff_tight,"Loose to tight","lp");
-  ratio_legend->SetFillColor(0);
-  ratio_legend->Draw("SAME");
-}
-void plot_mu() {
-  gStyle->SetOptStat(0);
-  Float_t bins[] = {20,30,40,60,80,150};
-  Int_t nbins=5;
   
-  TH1D *h_eff_tight   = new TH1D("h_eff_tight","Muon ID efficiency using tag and probe",nbins,bins);
+  TH2D *unfactorized_scalefactors_Veto_mu_method1   = (TH2D*)mu_scalefactors_file_method1->Get("unfactorized_scalefactors_Veto_mu");
+  TH2D *unfactorized_scalefactors_Loose_mu_method1  = (TH2D*)mu_scalefactors_file_method1->Get("unfactorized_scalefactors_Loose_mu");
+  TH2D *unfactorized_scalefactors_Medium_mu_method1 = (TH2D*)mu_scalefactors_file_method1->Get("unfactorized_scalefactors_Medium_mu");
+  TH2D *unfactorized_scalefactors_Tight_mu_method1  = (TH2D*)mu_scalefactors_file_method1->Get("unfactorized_scalefactors_Tight_mu");
+  TH2D *unfactorized_scalefactors_Veto_mu_method2   = (TH2D*)mu_scalefactors_file_method2->Get("unfactorized_scalefactors_Veto_mu");
+  TH2D *unfactorized_scalefactors_Loose_mu_method2  = (TH2D*)mu_scalefactors_file_method2->Get("unfactorized_scalefactors_Loose_mu");
+  TH2D *unfactorized_scalefactors_Medium_mu_method2 = (TH2D*)mu_scalefactors_file_method2->Get("unfactorized_scalefactors_Medium_mu");
+  TH2D *unfactorized_scalefactors_Tight_mu_method2  = (TH2D*)mu_scalefactors_file_method2->Get("unfactorized_scalefactors_Tight_mu");
+  TH2D *factorized_scalefactors_Veto_ele_method1   = (TH2D*)ele_scalefactors_file_method1->Get("factorized_scalefactors_Veto_ele");
+  TH2D *factorized_scalefactors_Loose_ele_method1  = (TH2D*)ele_scalefactors_file_method1->Get("factorized_scalefactors_Loose_ele");
+  TH2D *factorized_scalefactors_Medium_ele_method1 = (TH2D*)ele_scalefactors_file_method1->Get("factorized_scalefactors_Medium_ele");
+  TH2D *factorized_scalefactors_Tight_ele_method1  = (TH2D*)ele_scalefactors_file_method1->Get("factorized_scalefactors_Tight_ele");
+  TH2D *factorized_scalefactors_Veto_ele_method2   = (TH2D*)ele_scalefactors_file_method2->Get("factorized_scalefactors_Veto_ele");
+  TH2D *factorized_scalefactors_Loose_ele_method2  = (TH2D*)ele_scalefactors_file_method2->Get("factorized_scalefactors_Loose_ele");
+  TH2D *factorized_scalefactors_Medium_ele_method2 = (TH2D*)ele_scalefactors_file_method2->Get("factorized_scalefactors_Medium_ele");
+  TH2D *factorized_scalefactors_Tight_ele_method2  = (TH2D*)ele_scalefactors_file_method2->Get("factorized_scalefactors_Tight_ele");
+  
+  TH2D *absDiff_unfactorized_scalefactors_Veto_mu = new TH2D(
+    "absDiff_unfactorized_scalefactors_Veto_mu",
+    "Absolute difference between unfactorized Muon Veto scalefactors computed 2 ways",
+    n_mu_eta_bins, mu_eta_bins,
+    n_mu_pt_bins, mu_pt_bins
+  );
+  TH2D *absDiff_unfactorized_scalefactors_Loose_mu = new TH2D(
+    "absDiff_unfactorized_scalefactors_Loose_mu",
+    "Absolute difference between unfactorized Muon Loose scalefactors computed 2 ways",
+    n_mu_eta_bins, mu_eta_bins,
+    n_mu_pt_bins, mu_pt_bins
+  );
+  TH2D *absDiff_unfactorized_scalefactors_Medium_mu = new TH2D(
+    "absDiff_unfactorized_scalefactors_Medium_mu",
+    "Absolute difference between unfactorized Muon Medium scalefactors computed 2 ways",
+    n_mu_eta_bins, mu_eta_bins,
+    n_mu_pt_bins, mu_pt_bins
+  );
+  TH2D *absDiff_unfactorized_scalefactors_Tight_mu = new TH2D(
+    "absDiff_unfactorized_scalefactors_Tight_mu",
+    "Absolute difference between unfactorized Muon Tight scalefactors computed 2 ways",
+    n_mu_eta_bins, mu_eta_bins,
+    n_mu_pt_bins, mu_pt_bins
+  );
+  TH2D *absDiff_factorized_scalefactors_Veto_ele = new TH2D(
+    "absDiff_factorized_scalefactors_Veto_ele",
+    "Absolute difference between factorized Electron Veto scalefactors computed 2 ways",
+    n_ele_eta_bins, ele_eta_bins,
+    n_ele_pt_bins, ele_pt_bins
+  );
+  TH2D *absDiff_factorized_scalefactors_Loose_ele = new TH2D(
+    "absDiff_factorized_scalefactors_Loose_ele",
+    "Absolute difference between factorized Electron Loose scalefactors computed 2 ways",
+    n_ele_eta_bins, ele_eta_bins,
+    n_ele_pt_bins, ele_pt_bins
+  );
+  TH2D *absDiff_factorized_scalefactors_Medium_ele = new TH2D(
+    "absDiff_factorized_scalefactors_Medium_ele",
+    "Absolute difference between factorized Electron Medium scalefactors computed 2 ways",
+    n_ele_eta_bins, ele_eta_bins,
+    n_ele_pt_bins, ele_pt_bins
+  );
+  TH2D *absDiff_factorized_scalefactors_Tight_ele = new TH2D(
+    "absDiff_factorized_scalefactors_Tight_ele",
+    "Absolute difference between factorized Electron Tight scalefactors computed 2 ways",
+    n_ele_eta_bins, ele_eta_bins,
+    n_ele_pt_bins, ele_pt_bins
+  );
 
-  double eff_tight[]  = {0.6110737,  0.7796324,  0.8833061,  0.9420620,  0.9509638};
-  double err_eff_tight[]  = {0.0078726,  0.0044903,  0.0030520,  0.0077855,  0.0107436 };
-  for(int i=1; i<=nbins; i++) {
-    h_eff_tight->SetBinContent(i, eff_tight[i-1]);  
-    h_eff_tight->SetBinError(i, err_eff_tight[i-1]);  
-  }
-  TCanvas *c1 = new TCanvas("c1","Muon efficiency as function of pT");
-  //h_eff_veto   ->SetMarkerStyle(20);
-  //h_eff_medium ->SetMarkerStyle(21);
-  h_eff_tight  ->SetMarkerStyle(22);
-  //h_eff_veto   ->SetLineColor(52);
-  //h_eff_medium ->SetLineColor(62);
-  h_eff_tight  ->SetLineColor(98);
-  //h_eff_veto   ->SetMarkerColor(52);
-  //h_eff_medium ->SetMarkerColor(62);
-  h_eff_tight  ->SetMarkerColor(98);
-  h_eff_tight->Draw("E1 P");
-  //h_eff_veto->Draw("E1 P");
-  //h_eff_medium->Draw("E1 P SAME");
-  //h_eff_tight->Draw("E1 P SAME");
-  h_eff_tight->GetXaxis()->SetTitle("p_{T} [GeV]");
-  h_eff_tight->GetYaxis()->SetTitle("Efficiency");
-  h_eff_tight->SetMaximum(1.2);
-  h_eff_tight->SetMinimum(0);
-  TLegend *legend = new TLegend(0.65,0.15,0.85,0.35);
-  //legend->AddEntry(h_eff_veto,"Loose to veto","lp");
-  //legend->AddEntry(h_eff_medium,"Loose to medium","lp");
-  legend->AddEntry(h_eff_tight,"Loose to tight","lp");
-  legend->SetFillColor(0);
-  legend->Draw("SAME");
+  // compute difference
+  (*absDiff_unfactorized_scalefactors_Veto_mu)   = (*unfactorized_scalefactors_Veto_mu_method1)   - (*unfactorized_scalefactors_Veto_mu_method2);
+  (*absDiff_unfactorized_scalefactors_Loose_mu)  = (*unfactorized_scalefactors_Loose_mu_method1)  - (*unfactorized_scalefactors_Loose_mu_method2);
+  (*absDiff_unfactorized_scalefactors_Medium_mu) = (*unfactorized_scalefactors_Medium_mu_method1) - (*unfactorized_scalefactors_Medium_mu_method2);
+  (*absDiff_unfactorized_scalefactors_Tight_mu)  = (*unfactorized_scalefactors_Tight_mu_method1)  - (*unfactorized_scalefactors_Tight_mu_method2);
+  (*absDiff_factorized_scalefactors_Veto_ele)   = (*factorized_scalefactors_Veto_ele_method1)   - (*factorized_scalefactors_Veto_ele_method2);
+  (*absDiff_factorized_scalefactors_Loose_ele)  = (*factorized_scalefactors_Loose_ele_method1)  - (*factorized_scalefactors_Loose_ele_method2);
+  (*absDiff_factorized_scalefactors_Medium_ele) = (*factorized_scalefactors_Medium_ele_method1) - (*factorized_scalefactors_Medium_ele_method2);
+  (*absDiff_factorized_scalefactors_Tight_ele)  = (*factorized_scalefactors_Tight_ele_method1)  - (*factorized_scalefactors_Tight_ele_method2);
+  // take its absolute value
+  for(int i = 1; i<=n_mu_eta_bins; i++) { for(int j = 1; j<=n_mu_pt_bins; j++) {
+    int nbin = absDiff_unfactorized_scalefactors_Veto_mu->GetBin(i,j);
+    absDiff_unfactorized_scalefactors_Veto_mu   ->SetBinContent(nbin, TMath::Abs(absDiff_unfactorized_scalefactors_Veto_mu  ->GetBinContent(nbin)));  
+    absDiff_unfactorized_scalefactors_Loose_mu  ->SetBinContent(nbin, TMath::Abs(absDiff_unfactorized_scalefactors_Loose_mu ->GetBinContent(nbin)));  
+    absDiff_unfactorized_scalefactors_Medium_mu ->SetBinContent(nbin, TMath::Abs(absDiff_unfactorized_scalefactors_Medium_mu->GetBinContent(nbin)));  
+    absDiff_unfactorized_scalefactors_Tight_mu  ->SetBinContent(nbin, TMath::Abs(absDiff_unfactorized_scalefactors_Tight_mu ->GetBinContent(nbin)));  
+  }}
+  for(int i = 1; i<=n_ele_eta_bins; i++) { for(int j = 1; j<=n_ele_pt_bins; j++) {
+    int nbin = absDiff_factorized_scalefactors_Veto_ele->GetBin(i,j);
+    absDiff_factorized_scalefactors_Veto_ele   ->SetBinContent(nbin, TMath::Abs(absDiff_factorized_scalefactors_Veto_ele  ->GetBinContent(nbin)));  
+    absDiff_factorized_scalefactors_Loose_ele  ->SetBinContent(nbin, TMath::Abs(absDiff_factorized_scalefactors_Loose_ele ->GetBinContent(nbin)));  
+    absDiff_factorized_scalefactors_Medium_ele ->SetBinContent(nbin, TMath::Abs(absDiff_factorized_scalefactors_Medium_ele->GetBinContent(nbin)));  
+    absDiff_factorized_scalefactors_Tight_ele  ->SetBinContent(nbin, TMath::Abs(absDiff_factorized_scalefactors_Tight_ele ->GetBinContent(nbin)));  
+  }}
+
+  // Start drawing stuff 
+  gStyle->SetOptStat(0);
+  gStyle->SetPaintTextFormat("4.3f");
+  mitPalette();
+  TPaletteAxis *palette_axis;
+  TLine *oneline=new TLine(10,1,100,1);
+  oneline->SetLineColor(1);
+  oneline->SetLineStyle(3);
+  Int_t mit_red  = 1861; 
+  Int_t mit_gray = 1862; 
+  TColor *col_mit_red  = new TColor(mit_red,  163/255., 31/255.,  52/255.);
+  TColor *col_mit_gray = new TColor(mit_gray, 138/255., 139/255., 140/255.);
+
+  // Draw absolute difference plots
+  TCanvas *c_absDiff_unfactorized_scalefactors_Veto_mu = new TCanvas("c_absDiff_unfactorized_scalefactors_Veto_mu","Method |difference| for Veto muon scale factors",800,800);
+  absDiff_unfactorized_scalefactors_Veto_mu->Draw("TEXTE COLZ");
+  gPad->Update(); 
+  absDiff_unfactorized_scalefactors_Veto_mu->SetTitle("Method |difference| for Veto Muon scale factors");
+  absDiff_unfactorized_scalefactors_Veto_mu->GetXaxis()->SetTitle("| #eta |");
+  absDiff_unfactorized_scalefactors_Veto_mu->GetXaxis()->SetTitleOffset(0.9);
+  absDiff_unfactorized_scalefactors_Veto_mu->GetXaxis()->SetTitleSize(0.04);
+  absDiff_unfactorized_scalefactors_Veto_mu->GetXaxis()->SetLabelSize(0.02);
+  absDiff_unfactorized_scalefactors_Veto_mu->GetYaxis()->SetTitle("p_{T} [GeV]");
+  absDiff_unfactorized_scalefactors_Veto_mu->GetYaxis()->SetTitleOffset(0.9);
+  absDiff_unfactorized_scalefactors_Veto_mu->GetYaxis()->SetTitleSize(0.04);
+  absDiff_unfactorized_scalefactors_Veto_mu->GetYaxis()->SetLabelSize(0.02);
+  absDiff_unfactorized_scalefactors_Veto_mu->GetYaxis()->SetRangeUser(10,100);
+  absDiff_unfactorized_scalefactors_Veto_mu->SetMinimum(0);
+  absDiff_unfactorized_scalefactors_Veto_mu->SetMaximum(0.2);
+  absDiff_unfactorized_scalefactors_Veto_mu->SetMarkerSize(.8);
+  palette_axis = (TPaletteAxis*) absDiff_unfactorized_scalefactors_Veto_mu->GetListOfFunctions()->FindObject("palette"); 
+  palette_axis->SetLabelSize(0.02);
+  c_absDiff_unfactorized_scalefactors_Veto_mu->Update();
+  c_absDiff_unfactorized_scalefactors_Veto_mu->Print((plots_dir_method1+"absDiff_unfactorized_scalefactors_Veto_mu.png").c_str());
+  c_absDiff_unfactorized_scalefactors_Veto_mu->Print((plots_dir_method2+"absDiff_unfactorized_scalefactors_Veto_mu.png").c_str());
+
+  TCanvas *c_absDiff_unfactorized_scalefactors_Loose_mu = new TCanvas("c_absDiff_unfactorized_scalefactors_Loose_mu","Method |difference| for Loose muon scale factors",800,800);
+  absDiff_unfactorized_scalefactors_Loose_mu->Draw("TEXTE COLZ");
+  gPad->Update(); 
+  absDiff_unfactorized_scalefactors_Loose_mu->SetTitle("Method |difference| for Loose Muon scale factors");
+  absDiff_unfactorized_scalefactors_Loose_mu->GetXaxis()->SetTitle("| #eta |");
+  absDiff_unfactorized_scalefactors_Loose_mu->GetXaxis()->SetTitleOffset(0.9);
+  absDiff_unfactorized_scalefactors_Loose_mu->GetXaxis()->SetTitleSize(0.04);
+  absDiff_unfactorized_scalefactors_Loose_mu->GetXaxis()->SetLabelSize(0.02);
+  absDiff_unfactorized_scalefactors_Loose_mu->GetYaxis()->SetTitle("p_{T} [GeV]");
+  absDiff_unfactorized_scalefactors_Loose_mu->GetYaxis()->SetTitleOffset(0.9);
+  absDiff_unfactorized_scalefactors_Loose_mu->GetYaxis()->SetTitleSize(0.04);
+  absDiff_unfactorized_scalefactors_Loose_mu->GetYaxis()->SetLabelSize(0.02);
+  absDiff_unfactorized_scalefactors_Loose_mu->GetYaxis()->SetRangeUser(10,100);
+  absDiff_unfactorized_scalefactors_Loose_mu->SetMinimum(0);
+  absDiff_unfactorized_scalefactors_Loose_mu->SetMaximum(0.2);
+  absDiff_unfactorized_scalefactors_Loose_mu->SetMarkerSize(.8);
+  palette_axis = (TPaletteAxis*) absDiff_unfactorized_scalefactors_Loose_mu->GetListOfFunctions()->FindObject("palette"); 
+  palette_axis->SetLabelSize(0.02);
+  c_absDiff_unfactorized_scalefactors_Loose_mu->Update();
+  c_absDiff_unfactorized_scalefactors_Loose_mu->Print((plots_dir_method1+"absDiff_unfactorized_scalefactors_Loose_mu.png").c_str());
+  c_absDiff_unfactorized_scalefactors_Loose_mu->Print((plots_dir_method2+"absDiff_unfactorized_scalefactors_Loose_mu.png").c_str());
+
+  TCanvas *c_absDiff_unfactorized_scalefactors_Medium_mu = new TCanvas("c_absDiff_unfactorized_scalefactors_Medium_mu","Method |difference| for Medium muon scale factors",800,800);
+  absDiff_unfactorized_scalefactors_Medium_mu->Draw("TEXTE COLZ");
+  gPad->Update(); 
+  absDiff_unfactorized_scalefactors_Medium_mu->SetTitle("Method |difference| for Medium Muon scale factors");
+  absDiff_unfactorized_scalefactors_Medium_mu->GetXaxis()->SetTitle("| #eta |");
+  absDiff_unfactorized_scalefactors_Medium_mu->GetXaxis()->SetTitleOffset(0.9);
+  absDiff_unfactorized_scalefactors_Medium_mu->GetXaxis()->SetTitleSize(0.04);
+  absDiff_unfactorized_scalefactors_Medium_mu->GetXaxis()->SetLabelSize(0.02);
+  absDiff_unfactorized_scalefactors_Medium_mu->GetYaxis()->SetTitle("p_{T} [GeV]");
+  absDiff_unfactorized_scalefactors_Medium_mu->GetYaxis()->SetTitleOffset(0.9);
+  absDiff_unfactorized_scalefactors_Medium_mu->GetYaxis()->SetTitleSize(0.04);
+  absDiff_unfactorized_scalefactors_Medium_mu->GetYaxis()->SetLabelSize(0.02);
+  absDiff_unfactorized_scalefactors_Medium_mu->GetYaxis()->SetRangeUser(10,100);
+  absDiff_unfactorized_scalefactors_Medium_mu->SetMinimum(0);
+  absDiff_unfactorized_scalefactors_Medium_mu->SetMaximum(0.2);
+  absDiff_unfactorized_scalefactors_Medium_mu->SetMarkerSize(.8);
+  palette_axis = (TPaletteAxis*) absDiff_unfactorized_scalefactors_Medium_mu->GetListOfFunctions()->FindObject("palette"); 
+  palette_axis->SetLabelSize(0.02);
+  c_absDiff_unfactorized_scalefactors_Medium_mu->Update();
+  c_absDiff_unfactorized_scalefactors_Medium_mu->Print((plots_dir_method1+"absDiff_unfactorized_scalefactors_Medium_mu.png").c_str());
+  c_absDiff_unfactorized_scalefactors_Medium_mu->Print((plots_dir_method2+"absDiff_unfactorized_scalefactors_Medium_mu.png").c_str());
+
+  TCanvas *c_absDiff_unfactorized_scalefactors_Tight_mu = new TCanvas("c_absDiff_unfactorized_scalefactors_Tight_mu","Method |difference| for Tight muon scale factors",800,800);
+  absDiff_unfactorized_scalefactors_Tight_mu->Draw("TEXTE COLZ");
+  gPad->Update(); 
+  absDiff_unfactorized_scalefactors_Tight_mu->SetTitle("Method |difference| for Tight Muon scale factors");
+  absDiff_unfactorized_scalefactors_Tight_mu->GetXaxis()->SetTitle("| #eta |");
+  absDiff_unfactorized_scalefactors_Tight_mu->GetXaxis()->SetTitleOffset(0.9);
+  absDiff_unfactorized_scalefactors_Tight_mu->GetXaxis()->SetTitleSize(0.04);
+  absDiff_unfactorized_scalefactors_Tight_mu->GetXaxis()->SetLabelSize(0.02);
+  absDiff_unfactorized_scalefactors_Tight_mu->GetYaxis()->SetTitle("p_{T} [GeV]");
+  absDiff_unfactorized_scalefactors_Tight_mu->GetYaxis()->SetTitleOffset(0.9);
+  absDiff_unfactorized_scalefactors_Tight_mu->GetYaxis()->SetTitleSize(0.04);
+  absDiff_unfactorized_scalefactors_Tight_mu->GetYaxis()->SetLabelSize(0.02);
+  absDiff_unfactorized_scalefactors_Tight_mu->GetYaxis()->SetRangeUser(10,100);
+  absDiff_unfactorized_scalefactors_Tight_mu->SetMinimum(0);
+  absDiff_unfactorized_scalefactors_Tight_mu->SetMaximum(0.2);
+  absDiff_unfactorized_scalefactors_Tight_mu->SetMarkerSize(.8);
+  palette_axis = (TPaletteAxis*) absDiff_unfactorized_scalefactors_Tight_mu->GetListOfFunctions()->FindObject("palette"); 
+  palette_axis->SetLabelSize(0.02);
+  c_absDiff_unfactorized_scalefactors_Tight_mu->Update();
+  c_absDiff_unfactorized_scalefactors_Tight_mu->Print((plots_dir_method1+"absDiff_unfactorized_scalefactors_Tight_mu.png").c_str());
+  c_absDiff_unfactorized_scalefactors_Tight_mu->Print((plots_dir_method2+"absDiff_unfactorized_scalefactors_Tight_mu.png").c_str());
+
+  TCanvas *c_absDiff_factorized_scalefactors_Veto_ele = new TCanvas("c_absDiff_factorized_scalefactors_Veto_ele","Method |difference| for Veto electron scale factors",800,800);
+  absDiff_factorized_scalefactors_Veto_ele->Draw("TEXTE COLZ");
+  gPad->Update(); 
+  absDiff_factorized_scalefactors_Veto_ele->SetTitle("Method |difference| for Veto Electron scale factors");
+  absDiff_factorized_scalefactors_Veto_ele->GetXaxis()->SetTitle("| #eta |");
+  absDiff_factorized_scalefactors_Veto_ele->GetXaxis()->SetTitleOffset(0.9);
+  absDiff_factorized_scalefactors_Veto_ele->GetXaxis()->SetTitleSize(0.04);
+  absDiff_factorized_scalefactors_Veto_ele->GetXaxis()->SetLabelSize(0.02);
+  absDiff_factorized_scalefactors_Veto_ele->GetYaxis()->SetTitle("p_{T} [GeV]");
+  absDiff_factorized_scalefactors_Veto_ele->GetYaxis()->SetTitleOffset(0.9);
+  absDiff_factorized_scalefactors_Veto_ele->GetYaxis()->SetTitleSize(0.04);
+  absDiff_factorized_scalefactors_Veto_ele->GetYaxis()->SetLabelSize(0.02);
+  absDiff_factorized_scalefactors_Veto_ele->GetYaxis()->SetRangeUser(10,100);
+  absDiff_factorized_scalefactors_Veto_ele->SetMinimum(0);
+  absDiff_factorized_scalefactors_Veto_ele->SetMaximum(0.2);
+  absDiff_factorized_scalefactors_Veto_ele->SetMarkerSize(.8);
+  palette_axis = (TPaletteAxis*) absDiff_factorized_scalefactors_Veto_ele->GetListOfFunctions()->FindObject("palette"); 
+  palette_axis->SetLabelSize(0.02);
+  c_absDiff_factorized_scalefactors_Veto_ele->Update();
+  c_absDiff_factorized_scalefactors_Veto_ele->Print((plots_dir_method1+"absDiff_factorized_scalefactors_Veto_ele.png").c_str());
+  c_absDiff_factorized_scalefactors_Veto_ele->Print((plots_dir_method2+"absDiff_factorized_scalefactors_Veto_ele.png").c_str());
+
+  TCanvas *c_absDiff_factorized_scalefactors_Loose_ele = new TCanvas("c_absDiff_factorized_scalefactors_Loose_ele","Method |difference| for Loose electron scale factors",800,800);
+  absDiff_factorized_scalefactors_Loose_ele->Draw("TEXTE COLZ");
+  gPad->Update(); 
+  absDiff_factorized_scalefactors_Loose_ele->SetTitle("Method |difference| for Loose Electron scale factors");
+  absDiff_factorized_scalefactors_Loose_ele->GetXaxis()->SetTitle("| #eta |");
+  absDiff_factorized_scalefactors_Loose_ele->GetXaxis()->SetTitleOffset(0.9);
+  absDiff_factorized_scalefactors_Loose_ele->GetXaxis()->SetTitleSize(0.04);
+  absDiff_factorized_scalefactors_Loose_ele->GetXaxis()->SetLabelSize(0.02);
+  absDiff_factorized_scalefactors_Loose_ele->GetYaxis()->SetTitle("p_{T} [GeV]");
+  absDiff_factorized_scalefactors_Loose_ele->GetYaxis()->SetTitleOffset(0.9);
+  absDiff_factorized_scalefactors_Loose_ele->GetYaxis()->SetTitleSize(0.04);
+  absDiff_factorized_scalefactors_Loose_ele->GetYaxis()->SetLabelSize(0.02);
+  absDiff_factorized_scalefactors_Loose_ele->GetYaxis()->SetRangeUser(10,100);
+  absDiff_factorized_scalefactors_Loose_ele->SetMinimum(0);
+  absDiff_factorized_scalefactors_Loose_ele->SetMaximum(0.2);
+  absDiff_factorized_scalefactors_Loose_ele->SetMarkerSize(.8);
+  palette_axis = (TPaletteAxis*) absDiff_factorized_scalefactors_Loose_ele->GetListOfFunctions()->FindObject("palette"); 
+  palette_axis->SetLabelSize(0.02);
+  c_absDiff_factorized_scalefactors_Loose_ele->Update();
+  c_absDiff_factorized_scalefactors_Loose_ele->Print((plots_dir_method1+"absDiff_factorized_scalefactors_Loose_ele.png").c_str());
+  c_absDiff_factorized_scalefactors_Loose_ele->Print((plots_dir_method2+"absDiff_factorized_scalefactors_Loose_ele.png").c_str());
+
+  TCanvas *c_absDiff_factorized_scalefactors_Medium_ele = new TCanvas("c_absDiff_factorized_scalefactors_Medium_ele","Method |difference| for Medium electron scale factors",800,800);
+  absDiff_factorized_scalefactors_Medium_ele->Draw("TEXTE COLZ");
+  gPad->Update(); 
+  absDiff_factorized_scalefactors_Medium_ele->SetTitle("Method |difference| for Medium Electron scale factors");
+  absDiff_factorized_scalefactors_Medium_ele->GetXaxis()->SetTitle("| #eta |");
+  absDiff_factorized_scalefactors_Medium_ele->GetXaxis()->SetTitleOffset(0.9);
+  absDiff_factorized_scalefactors_Medium_ele->GetXaxis()->SetTitleSize(0.04);
+  absDiff_factorized_scalefactors_Medium_ele->GetXaxis()->SetLabelSize(0.02);
+  absDiff_factorized_scalefactors_Medium_ele->GetYaxis()->SetTitle("p_{T} [GeV]");
+  absDiff_factorized_scalefactors_Medium_ele->GetYaxis()->SetTitleOffset(0.9);
+  absDiff_factorized_scalefactors_Medium_ele->GetYaxis()->SetTitleSize(0.04);
+  absDiff_factorized_scalefactors_Medium_ele->GetYaxis()->SetLabelSize(0.02);
+  absDiff_factorized_scalefactors_Medium_ele->GetYaxis()->SetRangeUser(10,100);
+  absDiff_factorized_scalefactors_Medium_ele->SetMinimum(0);
+  absDiff_factorized_scalefactors_Medium_ele->SetMaximum(0.2);
+  absDiff_factorized_scalefactors_Medium_ele->SetMarkerSize(.8);
+  palette_axis = (TPaletteAxis*) absDiff_factorized_scalefactors_Medium_ele->GetListOfFunctions()->FindObject("palette"); 
+  palette_axis->SetLabelSize(0.02);
+  c_absDiff_factorized_scalefactors_Medium_ele->Update();
+  c_absDiff_factorized_scalefactors_Medium_ele->Print((plots_dir_method1+"absDiff_factorized_scalefactors_Medium_ele.png").c_str());
+  c_absDiff_factorized_scalefactors_Medium_ele->Print((plots_dir_method2+"absDiff_factorized_scalefactors_Medium_ele.png").c_str());
+
+  TCanvas *c_absDiff_factorized_scalefactors_Tight_ele = new TCanvas("c_absDiff_factorized_scalefactors_Tight_ele","Method |difference| for Tight electron scale factors",800,800);
+  absDiff_factorized_scalefactors_Tight_ele->Draw("TEXTE COLZ");
+  gPad->Update(); 
+  absDiff_factorized_scalefactors_Tight_ele->SetTitle("Method |difference| for Tight Electron scale factors");
+  absDiff_factorized_scalefactors_Tight_ele->GetXaxis()->SetTitle("| #eta |");
+  absDiff_factorized_scalefactors_Tight_ele->GetXaxis()->SetTitleOffset(0.9);
+  absDiff_factorized_scalefactors_Tight_ele->GetXaxis()->SetTitleSize(0.04);
+  absDiff_factorized_scalefactors_Tight_ele->GetXaxis()->SetLabelSize(0.02);
+  absDiff_factorized_scalefactors_Tight_ele->GetYaxis()->SetTitle("p_{T} [GeV]");
+  absDiff_factorized_scalefactors_Tight_ele->GetYaxis()->SetTitleOffset(0.9);
+  absDiff_factorized_scalefactors_Tight_ele->GetYaxis()->SetTitleSize(0.04);
+  absDiff_factorized_scalefactors_Tight_ele->GetYaxis()->SetLabelSize(0.02);
+  absDiff_factorized_scalefactors_Tight_ele->GetYaxis()->SetRangeUser(10,100);
+  absDiff_factorized_scalefactors_Tight_ele->SetMinimum(0);
+  absDiff_factorized_scalefactors_Tight_ele->SetMaximum(0.2);
+  absDiff_factorized_scalefactors_Tight_ele->SetMarkerSize(.8);
+  palette_axis = (TPaletteAxis*) absDiff_factorized_scalefactors_Tight_ele->GetListOfFunctions()->FindObject("palette"); 
+  palette_axis->SetLabelSize(0.02);
+  c_absDiff_factorized_scalefactors_Tight_ele->Update();
+  c_absDiff_factorized_scalefactors_Tight_ele->Print((plots_dir_method1+"absDiff_factorized_scalefactors_Tight_ele.png").c_str());
+  c_absDiff_factorized_scalefactors_Tight_ele->Print((plots_dir_method2+"absDiff_factorized_scalefactors_Tight_ele.png").c_str());
+
+  mu_scalefactors_file_method1->cd(); 
+  mu_scalefactors_file_method1->Delete("absDiff_unfactorized_scalefactors_Veto_mu;*");
+  mu_scalefactors_file_method1->Delete("absDiff_unfactorized_scalefactors_Loose_mu;*");
+  mu_scalefactors_file_method1->Delete("absDiff_unfactorized_scalefactors_Medium_mu;*");
+  mu_scalefactors_file_method1->Delete("absDiff_unfactorized_scalefactors_Tight_mu;*");
+  absDiff_unfactorized_scalefactors_Veto_mu->Write("absDiff_unfactorized_scalefactors_Veto_mu");
+  absDiff_unfactorized_scalefactors_Loose_mu->Write("absDiff_unfactorized_scalefactors_Loose_mu");
+  absDiff_unfactorized_scalefactors_Medium_mu->Write("absDiff_unfactorized_scalefactors_Medium_mu");
+  absDiff_unfactorized_scalefactors_Tight_mu->Write("absDiff_unfactorized_scalefactors_Tight_mu");
+  mu_scalefactors_file_method2->cd();
+  mu_scalefactors_file_method2->Delete("absDiff_unfactorized_scalefactors_Veto_mu;*");
+  mu_scalefactors_file_method2->Delete("absDiff_unfactorized_scalefactors_Loose_mu;*");
+  mu_scalefactors_file_method2->Delete("absDiff_unfactorized_scalefactors_Medium_mu;*");
+  mu_scalefactors_file_method2->Delete("absDiff_unfactorized_scalefactors_Tight_mu;*");
+  absDiff_unfactorized_scalefactors_Veto_mu->Write("absDiff_unfactorized_scalefactors_Veto_mu");
+  absDiff_unfactorized_scalefactors_Loose_mu->Write("absDiff_unfactorized_scalefactors_Loose_mu");
+  absDiff_unfactorized_scalefactors_Medium_mu->Write("absDiff_unfactorized_scalefactors_Medium_mu");
+  absDiff_unfactorized_scalefactors_Tight_mu->Write("absDiff_unfactorized_scalefactors_Tight_mu");
+  ele_scalefactors_file_method1->cd();
+  ele_scalefactors_file_method1->Delete("absDiff_factorized_scalefactors_Veto_ele;*");
+  ele_scalefactors_file_method1->Delete("absDiff_factorized_scalefactors_Loose_ele;*");
+  ele_scalefactors_file_method1->Delete("absDiff_factorized_scalefactors_Medium_ele;*");
+  ele_scalefactors_file_method1->Delete("absDiff_factorized_scalefactors_Tight_ele;*");
+  absDiff_factorized_scalefactors_Veto_ele->Write("absDiff_factorized_scalefactors_Veto_ele");
+  absDiff_factorized_scalefactors_Loose_ele->Write("absDiff_factorized_scalefactors_Loose_ele");
+  absDiff_factorized_scalefactors_Medium_ele->Write("absDiff_factorized_scalefactors_Medium_ele");
+  absDiff_factorized_scalefactors_Tight_ele->Write("absDiff_factorized_scalefactors_Tight_ele");
+  ele_scalefactors_file_method2->cd();
+  ele_scalefactors_file_method2->Delete("absDiff_factorized_scalefactors_Veto_ele;*");
+  ele_scalefactors_file_method2->Delete("absDiff_factorized_scalefactors_Loose_ele;*");
+  ele_scalefactors_file_method2->Delete("absDiff_factorized_scalefactors_Medium_ele;*");
+  ele_scalefactors_file_method2->Delete("absDiff_factorized_scalefactors_Tight_ele;*");
+  absDiff_factorized_scalefactors_Veto_ele->Write("absDiff_factorized_scalefactors_Veto_ele");
+  absDiff_factorized_scalefactors_Loose_ele->Write("absDiff_factorized_scalefactors_Loose_ele");
+  absDiff_factorized_scalefactors_Medium_ele->Write("absDiff_factorized_scalefactors_Medium_ele");
+  absDiff_factorized_scalefactors_Tight_ele->Write("absDiff_factorized_scalefactors_Tight_ele");
+  printf("* press any key to continue * \n\n");
+  std::cin.ignore();
+
+  ele_scalefactors_file_method1->Close();
+  ele_scalefactors_file_method2->Close();
+  mu_scalefactors_file_method1->Close();
+  mu_scalefactors_file_method2->Close();
 }
 
 
-
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void wholething(string plots_dir, string root_dir) {
+  efficiencies_mc_mu(plots_dir, root_dir);
+  efficiencies_data_mu(plots_dir, root_dir);
+  factorize_mc_ele(plots_dir, root_dir);
+  factorize_data_ele(plots_dir, root_dir);
+  make_ele_scale_factors(plots_dir, root_dir);
+  make_mu_scale_factors(plots_dir, root_dir);
+}

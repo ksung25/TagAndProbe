@@ -1394,13 +1394,16 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
     assert(t);
     sigModPass = new CMCDatasetConvGaussian(m,t,true);
   } else if(fSigPass==5) {
-    double fsrPeak=80;
+    double ptMax=8000;
+    double ptMin=0;
     if(name.compare("pt")==0) {
-      fsrPeak=2.5*(xbinLo+xbinHi)/2.;
+      ptMax=xbinHi;
+      ptMin=xbinLo;
     } else if(name.compare("etapt")==0) {
-      fsrPeak=2.5*(ybinLo+ybinHi)/2.;
+      ptMax=ybinHi;
+      ptMin=ybinLo;
     }
-    sigModPass = new CBWCBPlusVoigt(m, true, fsrPeak);
+    sigModPass = new CBWCBPlusVoigt(m, true, ptMin, ptMax);
   }
 
   if(fBkgPass==1) { 
@@ -1441,13 +1444,16 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
     assert(t);
     sigModFail = new CMCDatasetConvGaussian(m,t,false);
   } else if(fSigFail==5) {
-    double fsrPeak=80;
+    double ptMax=8000;
+    double ptMin=0;
     if(name.compare("pt")==0) {
-      fsrPeak=2.5*(xbinLo+xbinHi)/2.;
+      ptMax=xbinHi;
+      ptMin=xbinLo;
     } else if(name.compare("etapt")==0) {
-      fsrPeak=2.5*(ybinLo+ybinHi)/2.;
+      ptMax=ybinHi;
+      ptMin=ybinLo;
     }
-    sigModFail = new CBWCBPlusVoigt(m, false, fsrPeak);
+    sigModFail = new CBWCBPlusVoigt(m, false, ptMin, ptMax);
   }
   if(fBkgFail==1) { 
     bkgModFail = new CExponential(m,false);

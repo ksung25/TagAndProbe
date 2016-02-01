@@ -294,6 +294,7 @@ std::vector<double> CBackgroundModel::readBkgParams(
     assert(rfile.is_open());
     std::string line;
     bool found_param = false;
+    printf("Looking for parameter %s...\n", paramNames[i].c_str());
     while(getline(rfile,line)) {
       printf("%s\n", line.c_str());
       size_t found = line.find(paramNames[i]);

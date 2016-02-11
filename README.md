@@ -69,7 +69,7 @@ this needs to be done every time you open a new shell.
 
 The executable call is:
 ```
-./effZFit  <conf>  <sig-pass>  <bkg-pass>  <sig-fail>  <bkg-fail>  <in-fname>  <outdir>  <doPU>  <charge>  <template-file>
+./effZFit  <conf>  <sig-pass>  <bkg-pass>  <sig-fail>  <bkg-fail>  <in-fname>  <outdir>  <doPU>  <charge>  <template-file> <resultsdir>
 ```
 
 where the arguments are:
@@ -82,7 +82,8 @@ where the arguments are:
 - **outdir:** output directory name
 - **doPU:** do pileup reweighting? (0 or 1)
 - **charge:** charge requirement on probe (0=none, +1, -1)
-- **template-file:** probes ntuple filename used to build templates (needed for some signal models)
+- **template-file:** probes ntuple filename used to build templates (needed for some signal models, otherwise use "none")
+- **resultsdir** directory with fit results used for some background models with fixed parameters, otherwise use "none"
 
 The model numbers corresponding to various signal and background models can be found in `CEffZFitter.hh`.
 

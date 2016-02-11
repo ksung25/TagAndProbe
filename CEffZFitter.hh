@@ -10,6 +10,7 @@
 //  2: MC template convolved with Gaussian
 //  3: Phil's Crystal Ball based "Voigtian" shape
 //  4: Unbinned MC data convolved with Gaussian
+//  5: BW convolved with Crystal Ball plus Voigtian
 //
 // Background Model
 //------------------
@@ -19,6 +20,7 @@
 //  3: double exponential model
 //  4: linear*exp model
 //  5: quadratic*exp model
+//  6: erfc*exp model with background params from <resultsdir>
 //
 //________________________________________________________________________________________________
 

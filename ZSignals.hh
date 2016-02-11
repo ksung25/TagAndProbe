@@ -160,12 +160,16 @@ CBWCBPlusVoigt::CBWCBPlusVoigt(RooRealVar &m, const Bool_t pass, double ptMin, d
   sprintf(vname,"bw%s",name);
   bw = new RooBreitWigner(vname,vname,m,*mass,*width);
   
+  bool electrons=false;
   double fsrPeak=80;
   double fsrSigma=6;
   double fsrSigmaMin=3;
   double fsrPeakRange=15;
   double fsrFracMin=0;
-  double fsrFracInit=0.3;
+  double fsrFracMax=0.3;
+  double fsrFracInit=0.1;
+  if(electrons) fsrFracInit = 0.3;
+  if(electrons) fsrFracMax = 0.8;
   if(ptMin >= 100) {
     fsrPeak=140;
   } else if(ptMin >= 70) {
@@ -173,24 +177,23 @@ CBWCBPlusVoigt::CBWCBPlusVoigt(RooRealVar &m, const Bool_t pass, double ptMin, d
   } else if(ptMin >= 50) {
     fsrPeak=105;
     fsrPeakRange=10;
-    fsrFracInit=0.41;
-    fsrFracMin=.1;
+    if(electrons) fsrFracInit=0.41;
+    if(electrons) fsrFracMin=.1;
     fsrSigma=7;
   } else if(ptMin >= 40) {
     fsrPeak=95;
-    fsrFracMin=.1;
+    if(electrons) fsrFracMin=.1;
   } else if(ptMin >= 30) {
     fsrPeak=80;
-    fsrFracMin=.1;
+    if(electrons) fsrFracMin=.1;
     fsrPeakRange=10;
   } else if(ptMin >= 20) {
     fsrPeak=75;
-    fsrFracMin=.2;
-    fsrFracInit=0.5;
+    if(electrons) fsrFracMin=.2;
   } else if(ptMin >= 10) {
     fsrPeak=65;
-    fsrFracMin=.2;
-    fsrPeakRange=50;
+    if(electrons) fsrFracMin=.2;
+    fsrPeakRange=10;
     fsrSigma=10;
     fsrSigmaMin=10;
   } else {
@@ -207,13 +210,13 @@ CBWCBPlusVoigt::CBWCBPlusVoigt(RooRealVar &m, const Bool_t pass, double ptMin, d
     sprintf(vname,"sigma%s",name);      sigma  = new RooRealVar(vname,vname,1,0.01,15);
     sprintf(vname,"alpha%s",name);      alpha  = new RooRealVar(vname,vname,5,-20,20);
     sprintf(vname,"n%s",name);          n      = new RooRealVar(vname,vname,1,0,10);
-    sprintf(vname,"fsrFrac%s",name);    fsrFrac= new RooRealVar(vname,vname, fsrFracInit, 0,.8);
+    sprintf(vname,"fsrFrac%s",name);    fsrFrac= new RooRealVar(vname,vname, fsrFracInit, 0,0.8);
   } else {
     sprintf(vname,"mean%s",name);       mean  = new RooRealVar(vname,vname,0,-10,10);
     sprintf(vname,"sigma%s",name);      sigma = new RooRealVar(vname,vname,1,0.01,15);
     sprintf(vname,"alpha%s",name);      alpha = new RooRealVar(vname,vname,5,-20,20);
     sprintf(vname,"n%s",name);          n     = new RooRealVar(vname,vname,1,0,10);
-    sprintf(vname,"fsrFrac%s",name);    fsrFrac= new RooRealVar(vname,vname, fsrFracInit, fsrFracMin,.8);
+    sprintf(vname,"fsrFrac%s",name);    fsrFrac= new RooRealVar(vname,vname, fsrFracInit, fsrFracMin,fsrFracMax);
   }
   sprintf(formula, "1 - fsrFrac%s", name);
   sprintf(vname,"oneMinusFsrFrac%s",name);    oneMinusFsrFrac= new RooFormulaVar(vname,vname,formula, *fsrFrac);

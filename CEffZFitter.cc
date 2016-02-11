@@ -1477,20 +1477,21 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
   double NsigMax     = doBinned ? histPass.Integral()+histFail.Integral() : passTree->GetEntries()+failTree->GetEntries();
   double NbkgFailMax = doBinned ? histFail.Integral() : failTree->GetEntries();
   double NbkgPassMax = doBinned ? histPass.Integral() : passTree->GetEntries();
-  if(name.compare("pt")==0) {
-    if(xbinLo>=30) NbkgFailMax = NbkgFailMax * 0.3;
-    else if(xbinLo>=50) NbkgFailMax = NbkgFailMax * 0.05;
-  } else if(name.compare("etapt")==0) {
-    if(ybinLo>=30) NbkgFailMax = NbkgFailMax * 0.3;
-    else if(ybinLo>=50) NbkgFailMax = NbkgFailMax * 0.05;
-  }
+  // Fine tuning constraints
+  //if(name.compare("pt")==0) {
+  //  if(xbinLo>=20) NbkgFailMax = NbkgFailMax * 0.3;
+  //  else if(xbinLo>=50) NbkgFailMax = NbkgFailMax * 0.05;
+  //} else if(name.compare("etapt")==0) {
+  //  if(ybinLo>=20) NbkgFailMax = NbkgFailMax * 0.3;
+  //  else if(ybinLo>=50) NbkgFailMax = NbkgFailMax * 0.05;
+  //}
   NbkgPassMax = NbkgPassMax * 0.05;
   RooRealVar Nsig("Nsig","Signal Yield",0.80*NsigMax,0,NsigMax);
   RooRealVar eff("eff","Efficiency",0.6,0,1.0);
   //RooRealVar NbkgPass("NbkgPass","Background count in PASS sample",50,0,NbkgPassMax);
   RooRealVar NbkgPass("NbkgPass","Background count in PASS sample",0.001*NbkgPassMax,0,0.1*NbkgPassMax);
   if(fBkgPass==0) NbkgPass.setVal(0);
-  RooRealVar NbkgFail("NbkgFail","Background count in FAIL sample",0.01*NbkgFailMax,0.01,NbkgFailMax);  
+  RooRealVar NbkgFail("NbkgFail","Background count in FAIL sample",0.2*NbkgFailMax,0.01,NbkgFailMax);  
     
   RooFormulaVar NsigPass("NsigPass","eff*Nsig",RooArgList(eff,Nsig));
   RooFormulaVar NsigFail("NsigFail","(1.0-eff)*Nsig",RooArgList(eff,Nsig));

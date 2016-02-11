@@ -74,8 +74,7 @@ void make_tnp_skim(
   int          qtag, qprobe;              // tag, probe charge
   int          truth_tag, truth_probe;              // tag, probe truth
   TLorentzVector *p4_tag=0, *p4_probe=0;        // tag, probe 4-vector 
-  int out_n_jets;
-  double out_met;
+  //float        min_probe_gen_deltaR=0;
 
   TFile *electron_outfile;
   TTree *electron_pair_tree;
@@ -142,6 +141,7 @@ void make_tnp_skim(
     if(!real_data) {
       tau_pair_tree->Branch("truth_tag",     &truth_tag,     "truth_tag/I"     );  
       tau_pair_tree->Branch("truth_probe",   &truth_probe,   "truth_probe/I"   );  
+      //tau_pair_tree->Branch("min_probe_gen_deltaR",   &min_probe_gen_deltaR,   "min_probe_gen_deltaR/F"   );  
     }
   }
 
@@ -394,9 +394,12 @@ void make_tnp_skim(
         //printf("event # %lld, scale1fb=%f\b",eventNum,scale1fb);
       }
       unsigned int n_lep = lepPdgId->size();
-      unsigned int n_tau = tauQ->size();
+      unsigned int n_tau;
+      if(do_taus) n_tau = tauQ->size();
       //printf("%d leptons in event %lld\n",n_lep,eventNum);
 
+      //###################################################################################################
+      // Commented out code to veto events with jets and met for now
 
       // Get the number of tight leptons
       // if it's 0, there are no tags, so we should nopt waste any more time
@@ -455,13 +458,14 @@ void make_tnp_skim(
       //} else {
       //  if(verbose) printf("event passed Njets cut with %lu jets\n", idJet.size());
       //}
+      //###################################################################################################
       
       std::vector<TLorentzVector> p4_ele_tag_, p4_ele_passing_probe_, p4_ele_failing_probe_, p4_mu_tag_, p4_mu_passing_probe_, p4_mu_failing_probe_;
       std::vector<int> q_ele_tag_, q_ele_passing_probe_, q_ele_failing_probe_, q_mu_tag_, q_mu_passing_probe_, q_mu_failing_probe_;
       // record truth info as 1 or 0
       std::vector<int> truth_ele_tag_, truth_ele_passing_probe_, truth_ele_failing_probe_, truth_mu_tag_, truth_mu_passing_probe_, truth_mu_failing_probe_;
       // Loop over the electrons and muons
-      if(n_lep != 0 && (do_electrons || do_muons || do_taus)) { for(unsigned int il=0; il<n_lep; il++) {
+      if(n_lep != 0 && (do_electrons || do_muons)) { for(unsigned int il=0; il<n_lep; il++) {
         if(verbose) {
           printf("pdg ID %d:\n",(*lepPdgId)[il] );
           for(int ij = 0; ij<32; ij++) {
@@ -474,8 +478,8 @@ void make_tnp_skim(
         TLorentzVector *P4=(TLorentzVector*)lepP4->At(il);
         if( P4->Pt() >= 10.) {
           int truth=0;
-          int charge=-1;
-          if((*lepPdgId)[il] > 0)  charge=1;
+          int charge=1;
+          if((*lepPdgId)[il] > 0)  charge=-1;
 
           // Loop over gen level info and try to do delta-R match to the lepton
           if(!real_data) {
@@ -570,7 +574,7 @@ void make_tnp_skim(
               truth_mu_passing_probe_.push_back(truth);
             }
           }
-          if(abs( (*lepPdgId)[il] ) == 13 && (do_muons || do_taus)) {
+          if(abs( (*lepPdgId)[il] ) == 13 && (do_muons)) {
             if(
               //P4->Pt() >= 40 &&
               selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), tag_id, tag_iso) &&
@@ -593,92 +597,139 @@ void make_tnp_skim(
       std::vector<TLorentzVector> p4_tau_tag_, p4_tau_passing_probe_, p4_tau_failing_probe_;
       std::vector<int> q_tau_tag_, q_tau_passing_probe_, q_tau_failing_probe_;
       std::vector<int> truth_tau_tag_, truth_tau_passing_probe_, truth_tau_failing_probe_;
+      double visibleTauDeltaRCut = 0.1;
       // Loop over the taus
       if(n_tau ==0 && verbose) printf(" no taus in this event\n");
+      
       if(n_tau != 0 && do_taus) { for(unsigned int it=0; it<n_tau; it++) {
-        //if(verbose) {
-        //  printf("pdg ID %d:\n",(*lepPdgId)[il] );
-        //  for(int ij = 0; ij<32; ij++) {
-        //    if (((*triggerLeps)[il] & (0x1 << abs(ij))) != 0) printf("passed trigger #%d\n",ij);
-        //    //if (((*triggerFired)[ij] != 0)) printf("passed trigger #%d\n",ij);
-        //  }
-        //}
+        // Now find probes
+        TLorentzVector *P4=(TLorentzVector*)tauP4->At(it);
+        if( P4->Pt() < 18. || P4->Eta() > 2.3) continue;
+        int truth_hadronic=0;
+        int charge=(*tauQ)[it];
+        if(!real_data) {
+          // Loop over gen level info and try to truth match to tau+nu (hadronic)
+          if(verbose) printf("\tTrying to truth-match a tau\n");
+          unsigned int n_gen = genPdgId->size();
+          if(n_gen != 0) { for(unsigned int i_gen=0; i_gen<n_gen; i_gen++) {
+            // Try to find a gen tau that could be this particle; if we do, then look for neutrino daughter states
+            if ( (*genPdgId)[i_gen] == -15 * charge ) { // Hadronic taus
+              TLorentzVector *genTauP4 = (TLorentzVector*)genP4->At(i_gen);
+              if(verbose) printf("\t\tFound a gen. tau [%d] with pdg ID %d, (pT, eta, phi) = (%f, %f, %f)\n",i_gen, (*genPdgId)[i_gen], genTauP4->Pt(), genTauP4->Eta(), genTauP4->Phi());
+              for(unsigned int i_nu=0; i_nu < n_gen; i_nu++) {
+                if( (*genPdgId)[i_nu] != -16 * charge ) continue; // an ID=15 particle has - charge and should decay to tau neutrino ID=16
+                TLorentzVector *genNuP4 = (TLorentzVector*)genP4->At(i_nu);
+                if(verbose) printf("\t\tFound a gen. nu [%d] with pdg ID %d, (pT, eta, phi) = (%f, %f, %f)\n",i_nu, (*genPdgId)[i_nu], genNuP4->Pt(), genNuP4->Eta(), genNuP4->Phi());
+                TLorentzVector visibleGenTauP4 = (*genTauP4) - (*genNuP4); 
+                if(verbose) printf("\t\tConstructing visible hadronic gen. tau with (pT, eta, phi) = (%f, %f, %f)\n", visibleGenTauP4.Pt(), visibleGenTauP4.Eta(), visibleGenTauP4.Phi());
+                if( visibleGenTauP4.DeltaR( *P4) < visibleTauDeltaRCut) {
+                  truth_hadronic=1;
+                  if(verbose) printf("\t\tSUCCESS: Event tau with (pT, eta, phi) = (%f, %f, %f) passed delta-R cut of %f with visible hadronic gen. tau!\n", P4->Pt(), P4->Eta(), P4->Phi(), visibleTauDeltaRCut);
+                } else {
+                  if(verbose) printf("\t\tFAILURE: Event tau with (pT, eta, phi) = (%f, %f, %f) failed delta-R cut of %f with visible hadronic gen. tau!\n", P4->Pt(), P4->Eta(), P4->Phi(), visibleTauDeltaRCut);
+                }
+              }
+            }
+          }}
+          if(truth_hadronic==0&& !real_data && truth_matching) continue;
+        }
+        
+        // Record Tau probes
+        if(
+          (passing_probe_id > 0 && (
+            selector((*tauSelBits)[it], (*tauIsoDeltaBetaCorr)[it], P4->Eta(), 15, probe_id, probe_iso) &&
+            !selector((*tauSelBits)[it], (*tauIsoDeltaBetaCorr)[it], P4->Eta(), 15, passing_probe_id, passing_probe_iso)
+          ))
+        ) { // make probe selection but fail test selection
+          if(verbose) printf("probe failed test ID, tauSelBits = %d, iso = %f, probe iso %f, test iso %f\n", (*tauSelBits)[it], (*tauIsoDeltaBetaCorr)[it], selectIsoCut(probe_id, 15, P4->Eta()), selectIsoCut(passing_probe_id, 15, P4->Eta()));
+          p4_tau_failing_probe_.push_back((*P4));
+          q_tau_failing_probe_.push_back(charge);
+          truth_tau_failing_probe_.push_back(truth_hadronic);
+        }
+        
+        if(!selector((*tauSelBits)[it], (*tauIsoDeltaBetaCorr)[it], P4->Eta(), 15, probe_id, probe_iso) && verbose) printf("failed probe selection, tauSelBits = %d, iso = %f, probe iso %f\n", (*tauSelBits)[it], (*tauIsoDeltaBetaCorr)[it], selectIsoCut(probe_id, 15, P4->Eta()));
+        if(
+          (passing_probe_id > 0 && (
+            selector((*tauSelBits)[it], (*tauIsoDeltaBetaCorr)[it], P4->Eta(), 15, probe_id, probe_iso) &&
+            selector((*tauSelBits)[it], (*tauIsoDeltaBetaCorr)[it], P4->Eta(), 15, passing_probe_id, passing_probe_iso)
+          ))
+          //)) ||
+          //(passing_probe_id < 0 && ( // trigger efficiency
+          //  selector((*lepSelBits)[it], (*tauIsoDeltaBetaCorr)[it] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[it]), probe_id, probe_iso) &&
+          //  (((*triggerLeps)[it] & (0x1 << abs(passing_probe_id))) != 0)
+          //))
+        ) { // make probe selection and pass the test selection
+          p4_tau_passing_probe_.push_back((*P4));
+          if(verbose) printf("passed test ID, iso = %f < %f\n",(*tauIsoDeltaBetaCorr)[it], selectIsoCut(passing_probe_id, 15, P4->Eta()));
+          q_tau_passing_probe_.push_back(charge);
+          truth_tau_passing_probe_.push_back(truth_hadronic);
+        }
+      }}
+      
+      // Find Muonic tau tags
+      if(n_lep != 0 && (do_taus)) { for(unsigned int il=0; il<n_lep; il++) {
+        if(verbose) {
+          printf("pdg ID %d:\n",(*lepPdgId)[il] );
+          for(int ij = 0; ij<32; ij++) {
+            if (((*triggerLeps)[il] & (0x1 << abs(ij))) != 0) printf("passed trigger #%d\n",ij);
+          }
+        }
         
         // Now find tags and probes
-        TLorentzVector *P4=(TLorentzVector*)tauP4->At(it);
-        if( P4->Pt() >= 18. && P4->Eta() <= 2.3) {
-          int truth=0;
-          int charge=(*tauQ)[it];
+        TLorentzVector *P4=(TLorentzVector*)lepP4->At(il);
+        if( P4->Pt() >= 30. || (abs( (*lepPdgId)[il] ) != 13)) continue;
+        int truth_muonic=0;
+        int charge=1;
+        if((*lepPdgId)[il] > 0)  charge=-1;
 
-          // Loop over gen level info and try to do delta-R match to the lepton
-          if(!real_data) {
-            unsigned int n_gen = genPdgId->size();
-            if(n_gen != 0) { for(unsigned int ig=0; ig<n_gen; ig++) {
-              TLorentzVector *gP4 = (TLorentzVector*)genP4->At(ig);
-              if(
-                ( (*genPdgId)[ig] == -15 * charge ) && 
-                ( gP4->DeltaR( *P4) < .1)
-              ) truth=1;
-            }}
-            if(truth==0 && !real_data && truth_matching) continue;
-          }
-          
-          // Record Tau probes
-          if(
-            (passing_probe_id > 0 && (
-              selector((*tauSelBits)[it], (*tauIsoDeltaBetaCorr)[it], P4->Eta(), 15, probe_id, probe_iso) &&
-              !selector((*tauSelBits)[it], (*tauIsoDeltaBetaCorr)[it], P4->Eta(), 15, passing_probe_id, passing_probe_iso)
-            ))
-            //)) ||
-            //(passing_probe_id < 0 && ( // trigger efficiency
-            //  selector((*lepSelBits)[it], (*tauIsoDeltaBetaCorr)[it] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[it]), probe_id, probe_iso) &&
-            //  !(((*triggerLeps)[it] & abs(passing_probe_id)) != 0)
-            //))
-          ) { // make probe selection but fail test selection
-            if(verbose) printf("probe failed test ID, tauSelBits = %d, iso = %f, probe iso %f, test iso %f\n", (*tauSelBits)[it], (*tauIsoDeltaBetaCorr)[it], selectIsoCut(probe_id, 15, P4->Eta()), selectIsoCut(passing_probe_id, 15, P4->Eta()));
-            p4_tau_failing_probe_.push_back((*P4));
-            q_tau_failing_probe_.push_back(charge);
-            truth_tau_failing_probe_.push_back(truth);
-          }
-          
-          if(!selector((*tauSelBits)[it], (*tauIsoDeltaBetaCorr)[it], P4->Eta(), 15, probe_id, probe_iso) && verbose) printf("failed probe selection, tauSelBits = %d, iso = %f, probe iso %f\n", (*tauSelBits)[it], (*tauIsoDeltaBetaCorr)[it], selectIsoCut(probe_id, 15, P4->Eta()));
-          if(
-            (passing_probe_id > 0 && (
-              selector((*tauSelBits)[it], (*tauIsoDeltaBetaCorr)[it], P4->Eta(), 15, probe_id, probe_iso) &&
-              selector((*tauSelBits)[it], (*tauIsoDeltaBetaCorr)[it], P4->Eta(), 15, passing_probe_id, passing_probe_iso)
-            ))
-            //)) ||
-            //(passing_probe_id < 0 && ( // trigger efficiency
-            //  selector((*lepSelBits)[it], (*tauIsoDeltaBetaCorr)[it] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[it]), probe_id, probe_iso) &&
-            //  (((*triggerLeps)[it] & (0x1 << abs(passing_probe_id))) != 0)
-            //))
-          ) { // make probe selection and pass the test selection
-            p4_tau_passing_probe_.push_back((*P4));
-            if(verbose) printf("passed test ID, iso = %f < %f\n",(*tauIsoDeltaBetaCorr)[it], selectIsoCut(passing_probe_id, 15, P4->Eta()));
-            q_tau_passing_probe_.push_back(charge);
-            truth_tau_passing_probe_.push_back(truth);
-          }
-          /*if(
-            // additional cuts on tag
-            //P4->Pt() >= 40 &&
-            //selector((*tauSelBits)[it], (*tauIsoDeltaBetaCorr)[it], P4->Eta(), 15, tag_id, tag_iso) &&
-            //( (((*triggerTaus)[it] & (0x1 << tau_trigger)) != 0) || !real_data)
-            
-            
-            // use leptonic taus (muons) for tag
-            selector((*lepSelBits)[it], (*lepIso)[it] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[it]), tag_id, tag_iso) &&
-            ( (((*triggerLeps)[it] & (0x1 << muon_trigger)) != 0) || !real_data)
-          ) { // pass tag ID, and trigger matching
-            if(verbose) printf("passed tag ID, relIso = %f < %f\n",(*lepIso)[it] / P4->Pt(), selectIsoCut(tag_id, (*lepPdgId)[it], P4->Eta()));
-            p4_tau_tag_.push_back((*P4));
-            //if(verbose) printf("passed tag ID, relIso = %f < %f\n",(*tauIsoDeltaBetaCorr)[it], selectIsoCut(tag_id, 15, P4->Eta()));
-            q_tau_tag_.push_back(charge);
-            truth_tau_tag_.push_back(truth);
-          } else {
-            if(! ( (((*triggerTaus)[it] & (0x1 << tau_trigger)) != 0) || !real_data) && verbose) printf("failed tag selection: trigger matching. triggerTaus = %d \n", (*triggerTaus)[it]);
-          }*/
-          
+        // Loop over gen level info and try to do delta-R match to the lepton
+        if(!real_data) {
+        // Loop over gen level info and try to truth match to mu+nu+nu (muonic)
+          if(verbose) printf("\tTrying to truth-match a tau\n");
+          unsigned int n_gen = genPdgId->size();
+          if(n_gen != 0) { for(unsigned int i_gen=0; i_gen<n_gen; i_gen++) {
+            // Try to find a gen tau that could be this particle; if we do, then look for neutrino daughter states
+            if ( (*genPdgId)[i_gen] == -15 * charge ) { // Muonic taus
+              TLorentzVector *genTauP4 = (TLorentzVector*)genP4->At(i_gen);
+              if(verbose) printf("\t\tFound a gen. tau [%d] with pdg ID %d, (pT, eta, phi) = (%f, %f, %f)\n",i_gen, (*genPdgId)[i_gen], genTauP4->Pt(), genTauP4->Eta(), genTauP4->Phi());
+              for(unsigned int i_nu_tau=0; i_nu_tau < n_gen; i_nu_tau++) {
+                if( (*genPdgId)[i_nu_tau] != -16 * charge ) continue; // an ID=15 particle has - charge and should decay to tau neutrino ID=16
+                TLorentzVector *genNuTauP4 = (TLorentzVector*)genP4->At(i_nu_tau);
+                if(verbose) printf("\t\tFound a gen. tau neutrino [%d] with pdg ID %d, (pT, eta, phi) = (%f, %f, %f)\n",i_nu_tau, (*genPdgId)[i_nu_tau], genNuTauP4->Pt(), genNuTauP4->Eta(), genNuTauP4->Phi());
+                for(unsigned int i_nu_mu=0; i_nu_mu < n_gen; i_nu_mu++) {
+                  if( (*genPdgId)[i_nu_mu] != 14 * charge ) continue; // an ID=15 muonic tau should decay to muon antineutrino ID = -14
+                  TLorentzVector *genNuMuP4 = (TLorentzVector*)genP4->At(i_nu_mu);
+                  if(verbose) printf("\t\tFound a gen. muon neutrino [%d] with pdg ID %d, (pT, eta, phi) = (%f, %f, %f)\n",i_nu_mu, (*genPdgId)[i_nu_mu], genNuMuP4->Pt(), genNuMuP4->Eta(), genNuMuP4->Phi());
+                  TLorentzVector visibleGenTauP4 = (*genTauP4) - (*genNuTauP4) - (*genNuMuP4); 
+                  if(verbose) printf("\t\tConstructing visible muonic gen. tau with (pT, eta, phi) = (%f, %f, %f)\n", visibleGenTauP4.Pt(), visibleGenTauP4.Eta(), visibleGenTauP4.Phi());
+                  if( visibleGenTauP4.DeltaR( *P4) < visibleTauDeltaRCut) {
+                    truth_muonic=1;
+                    if(verbose) printf("\t\tSUCCESS: Event muon with (pT, eta, phi) = (%f, %f, %f) passed delta-R cut of %f with visible muonic gen. tau!\n", P4->Pt(), P4->Eta(), P4->Phi(), visibleTauDeltaRCut);
+                  } else {
+                    if(verbose) printf("\t\tFAILURE: Event muon with (pT, eta, phi) = (%f, %f, %f) failed delta-R cut of %f with visible muonic gen. tau!\n", P4->Pt(), P4->Eta(), P4->Phi(), visibleTauDeltaRCut);
+                  }
+                }
+              }
+            }
+          }}
+          if(truth_muonic==0 && truth_matching) continue;
         }
+        
+        //Record Muonic Tau tags
+        if(
+          //P4->Pt() >= 40 &&
+          selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), tag_id, tag_iso) &&
+          ( (((*triggerLeps)[il] & (0x1 << muon_trigger)) != 0) || !real_data)
+        ) { // pass tag muon ID, and trigger matching
+          if(verbose) printf("passed tag ID, relIso = %f < %f\n",(*lepIso)[il] / P4->Pt(), selectIsoCut(tag_id, (*lepPdgId)[il], P4->Eta()));
+          p4_tau_tag_.push_back((*P4));
+          q_tau_tag_.push_back(charge);
+          truth_tau_tag_.push_back(truth_muonic);
+        } else {
+          //if(P4->Pt() < 40 && verbose) printf("failed tag selection: pT = %f < 40\n", P4->Pt());
+          if(! ( (((*triggerLeps)[il] & (0x1 << muon_trigger)) != 0) || !real_data) && verbose) printf("failed tag selection: trigger matching. triggerLeps = %d \n", (*triggerLeps)[il]);
+        }
+        
       }}
 
       //demote some integers to unsigned
@@ -703,7 +754,7 @@ void make_tnp_skim(
           if(!( pow((p4_tag->Pt() - p4_probe->Pt()), 2) + pow((p4_tag->Eta() - p4_probe->Eta()), 2) < .000001) ) {
             TLorentzVector systemP4 = (*p4_tag) + (*p4_probe);
             mass = systemP4.M();
-            if(verbose) printf("made a PASSING electron pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
+            if(verbose) printf("\t\tmade a PASSING electron pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
             electron_pair_tree->Fill();
           }
         }
@@ -717,10 +768,10 @@ void make_tnp_skim(
           truth_tag    = truth_ele_tag_[iTag];
           truth_probe  = truth_ele_failing_probe_[iProbe];
           // make sure they aren't the same particle with tiny delta R veto
-          if(!( pow((p4_tag->Pt() - p4_probe->Pt()), 2) + pow((p4_tag->Eta() - p4_probe->Eta()), 2) < .000001) ) {
+          if(!( p4_tag->DeltaR(*p4_probe) < .0001) ) {
             TLorentzVector systemP4 = (*p4_tag) + (*p4_probe);
             mass = systemP4.M();
-            if(verbose) printf("made a FAILING electron pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
+            if(verbose) printf("\t\tmade a FAILING electron pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
             electron_pair_tree->Fill();
           }
         }
@@ -739,10 +790,10 @@ void make_tnp_skim(
           truth_tag    = truth_mu_tag_[iTag];
           truth_probe  = truth_mu_passing_probe_[iProbe];
           // make sure they aren't the same particle with tiny delta R veto
-          if(!( pow((p4_tag->Pt() - p4_probe->Pt()), 2) + pow((p4_tag->Eta() - p4_probe->Eta()), 2) < .000001) ) {
+          if(!( p4_tag->DeltaR(*p4_probe) < .0001) ) {
             TLorentzVector systemP4 = (*p4_tag) + (*p4_probe);
             mass = systemP4.M();
-            if(verbose) printf("made a PASSING muon pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
+            if(verbose) printf("\t\tmade a PASSING muon pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
             muon_pair_tree->Fill();
           }
         }
@@ -756,10 +807,10 @@ void make_tnp_skim(
           truth_tag    = truth_mu_tag_[iTag];
           truth_probe  = truth_mu_failing_probe_[iProbe];
           // make sure they aren't the same particle with tiny delta R veto
-          if(!( pow((p4_tag->Pt() - p4_probe->Pt()), 2) + pow((p4_tag->Eta() - p4_probe->Eta()), 2) < .000001) ) {
+          if(!( p4_tag->DeltaR(*p4_probe) < .0001) ) {
             TLorentzVector systemP4 = (*p4_tag) + (*p4_probe);
             mass = systemP4.M();
-            if(verbose) printf("made a FAILING muon pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
+            if(verbose) printf("\t\tmade a FAILING muon pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
             muon_pair_tree->Fill();
           }
         }
@@ -767,38 +818,38 @@ void make_tnp_skim(
       }}
 
       // associate pairs: taus (use leptonic tau for tag particle)
-      if(do_taus) { for(unsigned int iTag=0; iTag < p4_mu_tag_.size(); iTag++) {
+      if(do_taus) { for(unsigned int iTag=0; iTag < p4_tau_tag_.size(); iTag++) {
         // passing probes for taus
         for(unsigned int iProbe=0; iProbe < p4_tau_passing_probe_.size(); iProbe++) {
           pass = 1;
-          *p4_tag     = p4_mu_tag_[iTag];
+          *p4_tag     = p4_tau_tag_[iTag];
           *p4_probe   = p4_tau_passing_probe_[iProbe];
-          qtag    = q_mu_tag_[iTag];
+          qtag    = q_tau_tag_[iTag];
           qprobe  = q_tau_passing_probe_[iProbe];
-          truth_tag    = truth_mu_tag_[iTag];
+          truth_tag    = truth_tau_tag_[iTag];
           truth_probe  = truth_tau_passing_probe_[iProbe];
           // make sure they aren't the same particle with tiny delta R veto
-          if(!( pow((p4_tag->Pt() - p4_probe->Pt()), 2) + pow((p4_tag->Eta() - p4_probe->Eta()), 2) < .000001) ) {
+          if(!( p4_tag->DeltaR(*p4_probe) < .0001) ) {
             TLorentzVector systemP4 = (*p4_tag) + (*p4_probe);
             mass = systemP4.M();
-            if(verbose) printf("made a PASSING tau pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
+            if(verbose) printf("\t\tmade a PASSING tau pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
             tau_pair_tree->Fill();
           }
         }
         // failing probes for taus
         for(unsigned int iProbe=0; iProbe < p4_tau_failing_probe_.size(); iProbe++) {
           pass = 0;
-          *p4_tag     = p4_mu_tag_[iTag];
+          *p4_tag     = p4_tau_tag_[iTag];
           *p4_probe   = p4_tau_failing_probe_[iProbe];
-          qtag    = q_mu_tag_[iTag];
+          qtag    = q_tau_tag_[iTag];
           qprobe  = q_tau_failing_probe_[iProbe];
-          truth_tag    = truth_mu_tag_[iTag];
+          truth_tag    = truth_tau_tag_[iTag];
           truth_probe  = truth_tau_failing_probe_[iProbe];
           // make sure they aren't the same particle with tiny delta R veto
-          if(!( pow((p4_tag->Pt() - p4_probe->Pt()), 2) + pow((p4_tag->Eta() - p4_probe->Eta()), 2) < .000001) ) {
+          if(!( p4_tag->DeltaR(*p4_probe) < .0001) ) {
             TLorentzVector systemP4 = (*p4_tag) + (*p4_probe);
             mass = systemP4.M();
-            if(verbose) printf("made a FAILING tau pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
+            if(verbose) printf("\t\tmade a FAILING tau pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
             tau_pair_tree->Fill();
           }
         }
@@ -1200,7 +1251,7 @@ void make_tnp_skim(
           if(!( pow((p4_tag->Pt() - p4_probe->Pt()), 2) + pow((p4_tag->Eta() - p4_probe->Eta()), 2) < .000001) ) {
             TLorentzVector systemP4 = (*p4_tag) + (*p4_probe);
             mass = systemP4.M();
-            if(verbose) printf("made a PASSING electron pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
+            if(verbose) printf("\t\tmade a PASSING electron pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
             electron_pair_tree->Fill();
           }
         }
@@ -1217,7 +1268,7 @@ void make_tnp_skim(
           if(!( pow((p4_tag->Pt() - p4_probe->Pt()), 2) + pow((p4_tag->Eta() - p4_probe->Eta()), 2) < .000001) ) {
             TLorentzVector systemP4 = (*p4_tag) + (*p4_probe);
             mass = systemP4.M();
-            if(verbose) printf("made a FAILING electron pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
+            if(verbose) printf("\t\tmade a FAILING electron pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
             electron_pair_tree->Fill();
           }
         }
@@ -1239,7 +1290,7 @@ void make_tnp_skim(
           if(!( pow((p4_tag->Pt() - p4_probe->Pt()), 2) + pow((p4_tag->Eta() - p4_probe->Eta()), 2) < .000001) ) {
             TLorentzVector systemP4 = (*p4_tag) + (*p4_probe);
             mass = systemP4.M();
-            if(verbose) printf("made a PASSING muon pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
+            if(verbose) printf("\t\tmade a PASSING muon pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
             muon_pair_tree->Fill();
           }
         }
@@ -1256,7 +1307,7 @@ void make_tnp_skim(
           if(!( pow((p4_tag->Pt() - p4_probe->Pt()), 2) + pow((p4_tag->Eta() - p4_probe->Eta()), 2) < .000001) ) {
             TLorentzVector systemP4 = (*p4_tag) + (*p4_probe);
             mass = systemP4.M();
-            if(verbose) printf("made a FAILING muon pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
+            if(verbose) printf("\t\tmade a FAILING muon pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
             muon_pair_tree->Fill();
           }
         }
@@ -1769,7 +1820,7 @@ void make_tnp_skim(
           if(!( pow((p4_tag->Pt() - p4_probe->Pt()), 2) + pow((p4_tag->Eta() - p4_probe->Eta()), 2) < .000001) ) {
             TLorentzVector systemP4 = (*p4_tag) + (*p4_probe);
             mass = systemP4.M();
-            if(verbose) printf("made a PASSING electron pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
+            if(verbose) printf("\t\tmade a PASSING electron pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
             electron_pair_tree->Fill();
           }
         }
@@ -1786,7 +1837,7 @@ void make_tnp_skim(
           if(!( pow((p4_tag->Pt() - p4_probe->Pt()), 2) + pow((p4_tag->Eta() - p4_probe->Eta()), 2) < .000001) ) {
             TLorentzVector systemP4 = (*p4_tag) + (*p4_probe);
             mass = systemP4.M();
-            if(verbose) printf("made a FAILING electron pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
+            if(verbose) printf("\t\tmade a FAILING electron pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
             electron_pair_tree->Fill();
           }
         }
@@ -1808,7 +1859,7 @@ void make_tnp_skim(
           if(!( pow((p4_tag->Pt() - p4_probe->Pt()), 2) + pow((p4_tag->Eta() - p4_probe->Eta()), 2) < .000001) ) {
             TLorentzVector systemP4 = (*p4_tag) + (*p4_probe);
             mass = systemP4.M();
-            if(verbose) printf("made a PASSING muon pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
+            if(verbose) printf("\t\tmade a PASSING muon pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
             muon_pair_tree->Fill();
           }
         }
@@ -1825,7 +1876,7 @@ void make_tnp_skim(
           if(!( pow((p4_tag->Pt() - p4_probe->Pt()), 2) + pow((p4_tag->Eta() - p4_probe->Eta()), 2) < .000001) ) {
             TLorentzVector systemP4 = (*p4_tag) + (*p4_probe);
             mass = systemP4.M();
-            if(verbose) printf("made a FAILING muon pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
+            if(verbose) printf("\t\tmade a FAILING muon pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
             muon_pair_tree->Fill();
           }
         }
@@ -2723,7 +2774,7 @@ void reweighted_electron_skim(
           if(!( pow((p4_tag->Pt() - p4_probe->Pt()), 2) + pow((p4_tag->Eta() - p4_probe->Eta()), 2) < .000001) ) {
             TLorentzVector systemP4 = (*p4_tag) + (*p4_probe);
             mass = systemP4.M();
-            // if(verbose) printf("made a PASSING electron pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
+            // if(verbose) printf("\t\tmade a PASSING electron pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
             npairs++;
             reweighted_tt_tree->Fill();
           }
@@ -2739,7 +2790,7 @@ void reweighted_electron_skim(
           if(!( pow((p4_tag->Pt() - p4_probe->Pt()), 2) + pow((p4_tag->Eta() - p4_probe->Eta()), 2) < .000001) ) {
             TLorentzVector systemP4 = (*p4_tag) + (*p4_probe);
             mass = systemP4.M();
-            // if(verbose) printf("made a FAILING electron pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
+            // if(verbose) printf("\t\tmade a FAILING electron pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
             npairs++;
             reweighted_tt_tree->Fill();
           }
@@ -2908,7 +2959,7 @@ void reweighted_electron_skim(
           if(!( pow((p4_tag->Pt() - p4_probe->Pt()), 2) + pow((p4_tag->Eta() - p4_probe->Eta()), 2) < .000001) ) {
             TLorentzVector systemP4 = (*p4_tag) + (*p4_probe);
             mass = systemP4.M();
-            // if(verbose) printf("made a PASSING electron pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
+            if(verbose) printf("\t\tmade a PASSING electron pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
             reweighted_dy_tree->Fill();
             npairs++;
           }
@@ -2924,7 +2975,7 @@ void reweighted_electron_skim(
           if(!( pow((p4_tag->Pt() - p4_probe->Pt()), 2) + pow((p4_tag->Eta() - p4_probe->Eta()), 2) < .000001) ) {
             TLorentzVector systemP4 = (*p4_tag) + (*p4_probe);
             mass = systemP4.M();
-            // if(verbose) printf("made a FAILING electron pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
+            if(verbose) printf("\t\tmade a FAILING electron pair! pTs %f, %f; system mass %f, total charge %d e\n", p4_tag->Pt(), p4_probe->Pt(), mass, qtag+qprobe);
             reweighted_dy_tree->Fill();
             npairs++;
           }

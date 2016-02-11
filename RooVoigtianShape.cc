@@ -64,7 +64,6 @@ Double_t RooVoigtianShape::voigtian(double iX) const {
   std::complex<double> v(0.,0.);
 
   if (_doFast) {
-    //v = RooMath::FastComplexErrFunc(z); // deprecated
     v = RooMath::erfc_fast(z);
   } else {
     // v = RooMath::ComplexErrFunc(z); // deprecated

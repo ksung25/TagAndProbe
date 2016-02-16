@@ -1231,10 +1231,10 @@ void CEffZFitter::performCount(double &resEff, double &resErrl, double &resErrh,
     sprintf(binlabely,"%i GeV < p_{T} < %i GeV",int(ybinLo),int(ybinHi));
   
   } else if(name.compare("etaphi")==0) {
-    if(fDoAbsEta) { sprintf(binlabelx,"%.1f < |#eta| < %.1f",xbinLo,xbinHi); }
-    else          { sprintf(binlabelx,"%.1f < #eta < %.1f",  xbinLo,xbinHi); }                                  
-    if(fDoAbsPhi) { sprintf(binlabely,"%.1f < |#phi| < %.1f",ybinLo,ybinHi); }
-    else          { sprintf(binlabely,"%.1f < #phi < %.1f",  ybinLo,ybinHi); }
+    if(fDoAbsEta) { sprintf(binlabelx,"%.4f < |#eta| < %.4f",xbinLo,xbinHi); }
+    else          { sprintf(binlabelx,"%.4f < #eta < %.4f",  xbinLo,xbinHi); }                                  
+    if(fDoAbsPhi) { sprintf(binlabely,"%.4f < |#phi| < %.4f",ybinLo,ybinHi); }
+    else          { sprintf(binlabely,"%.4f < #phi < %.4f",  ybinLo,ybinHi); }
   
   } else if(name.compare("npv")==0) { 
     sprintf(binlabelx,"%i #leq N_{PV} < %i",(int)xbinLo,(int)xbinHi);   
@@ -1373,7 +1373,16 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
   CBackgroundModel *bkgModPass = 0;
   CSignalModel     *sigModFail = 0;
   CBackgroundModel *bkgModFail = 0;
-  
+  double ptMax=8000;
+  double ptMin=0;
+  if(name.compare("pt")==0) {
+    ptMax=xbinHi;
+    ptMin=xbinLo;
+  } else if(name.compare("etapt")==0) {
+    ptMax=ybinHi;
+    ptMin=ybinLo;
+  }
+ 
   if(fSigPass==1) {
     sigModPass = new CBreitWignerConvCrystalBall(m,true);
   
@@ -1394,15 +1403,6 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
     assert(t);
     sigModPass = new CMCDatasetConvGaussian(m,t,true);
   } else if(fSigPass==5) {
-    double ptMax=8000;
-    double ptMin=0;
-    if(name.compare("pt")==0) {
-      ptMax=xbinHi;
-      ptMin=xbinLo;
-    } else if(name.compare("etapt")==0) {
-      ptMax=ybinHi;
-      ptMin=ybinLo;
-    }
     sigModPass = new CBWCBPlusVoigt(m, true, ptMin, ptMax);
   }
 
@@ -1444,15 +1444,6 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
     assert(t);
     sigModFail = new CMCDatasetConvGaussian(m,t,false);
   } else if(fSigFail==5) {
-    double ptMax=8000;
-    double ptMin=0;
-    if(name.compare("pt")==0) {
-      ptMax=xbinHi;
-      ptMin=xbinLo;
-    } else if(name.compare("etapt")==0) {
-      ptMax=ybinHi;
-      ptMin=ybinLo;
-    }
     sigModFail = new CBWCBPlusVoigt(m, false, ptMin, ptMax);
   }
   if(fBkgFail==1) { 
@@ -1491,7 +1482,7 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
   RooRealVar NbkgPass("NbkgPass","Background count in PASS sample",0.01*NbkgPassMax,0,NbkgPassMax);
   if(fBkgPass==0) NbkgPass.setVal(0);
   RooRealVar NbkgFail("NbkgFail","Background count in FAIL sample",0.2*NbkgFailMax,0.01,NbkgFailMax);  
-    
+  if(ptMin<30) NbkgFail.setVal(0.8*NbkgFailMax);  
   RooFormulaVar NsigPass("NsigPass","eff*Nsig",RooArgList(eff,Nsig));
   RooFormulaVar NsigFail("NsigFail","(1.0-eff)*Nsig",RooArgList(eff,Nsig));
   RooAddPdf *modelPass=0, *modelFail=0;

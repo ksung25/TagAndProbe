@@ -1530,23 +1530,23 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
     sprintf(binlabelx,"%i GeV < p_{T} < %i GeV",int(xbinLo),int(xbinHi));
   
   } else if(name.compare("eta")==0) { 
-    if(fDoAbsEta) { sprintf(binlabelx,"%.1f < |#eta| < %.1f",xbinLo,xbinHi); }
-    else          { sprintf(binlabelx,"%.1f < #eta < %.1f",  xbinLo,xbinHi); }
+    if(fDoAbsEta) { sprintf(binlabelx,"%.4f < |#eta| < %.4f",xbinLo,xbinHi); }
+    else          { sprintf(binlabelx,"%.4f < #eta < %.4f",  xbinLo,xbinHi); }
   
   } else if(name.compare("phi")==0) { 
-    if(fDoAbsPhi) { sprintf(binlabelx,"%.1f < |#phi| < %.1f",xbinLo,xbinHi); }
-    else          { sprintf(binlabelx,"%.1f < #phi < %.1f",  xbinLo,xbinHi); }
+    if(fDoAbsPhi) { sprintf(binlabelx,"%.4f < |#phi| < %.4f",xbinLo,xbinHi); }
+    else          { sprintf(binlabelx,"%.4f < #phi < %.4f",  xbinLo,xbinHi); }
   
   } else if(name.compare("etapt")==0) {
-    if(fDoAbsEta) { sprintf(binlabelx,"%.1f < |#eta| < %.1f",xbinLo,xbinHi); }
-    else          { sprintf(binlabelx,"%.1f < #eta < %.1f",  xbinLo,xbinHi); } 
+    if(fDoAbsEta) { sprintf(binlabelx,"%.4f < |#eta| < %.4f",xbinLo,xbinHi); }
+    else          { sprintf(binlabelx,"%.4f < #eta < %.4f",  xbinLo,xbinHi); } 
     sprintf(binlabely,"%i GeV < p_{T} < %i GeV",int(ybinLo),int(ybinHi));
   
   } else if(name.compare("etaphi")==0) {
-    if(fDoAbsEta) { sprintf(binlabelx,"%.1f < |#eta| < %.1f",xbinLo,xbinHi); }
-    else          { sprintf(binlabelx,"%.1f < #eta < %.1f",  xbinLo,xbinHi); }                                  
-    if(fDoAbsPhi) { sprintf(binlabely,"%.1f < |#phi| < %.1f",ybinLo,ybinHi); }
-    else          { sprintf(binlabely,"%.1f < #phi < %.1f",  ybinLo,ybinHi); }
+    if(fDoAbsEta) { sprintf(binlabelx,"%.4f < |#eta| < %.4f",xbinLo,xbinHi); }
+    else          { sprintf(binlabelx,"%.4f < #eta < %.4f",  xbinLo,xbinHi); }                                  
+    if(fDoAbsPhi) { sprintf(binlabely,"%.4f < |#phi| < %.4f",ybinLo,ybinHi); }
+    else          { sprintf(binlabely,"%.4f < #phi < %.4f",  ybinLo,ybinHi); }
   
   } else if(name.compare("npv")==0) { 
     sprintf(binlabelx,"%i #leq N_{PV} < %i",(int)xbinLo,(int)xbinHi); 

@@ -48,7 +48,9 @@ void make_tnp_skim(
   bool truth_matching = false,
   int electron_trigger=3,
   int muon_trigger=6,
-  int tau_trigger=6
+  int tau_trigger=6,
+  double tag_pt_min = 30,
+  double tag_eta_max = 2.1
 ) {	
   ifstream ifs(list_of_files.c_str());
   if (!ifs) {
@@ -287,6 +289,7 @@ void make_tnp_skim(
 
   TFile *puFile = TFile::Open("~/leptonScaleFactors/puWeights_13TeV_25ns.root","READ");
   TH1D *puWeights = (TH1D*)puFile->Get("puWeights");
+  Long64_t totalWeights=0;
   while(getline(ifs,input_file_name)) {
 
     printf("Opening file \"%s\"\n",input_file_name.c_str());
@@ -370,16 +373,22 @@ void make_tnp_skim(
     events->SetBranchAddress("triggerPhotons",&triggerPhotons);
     events->SetBranchAddress("npv",&npv);
     
-    Float_t sum_mc_weights=1;
-    Long64_t nentries = events->GetEntries();
+    Long64_t sum_mc_weights=0;
+    Long64_t nentries;
     if(!real_data) {
-      sum_mc_weights=0;
+      
+      TTree* all_tree=(TTree*)input_file->Get("nero/all");
+      all_tree->SetBranchAddress("mcWeight", &mcWeight);
+      nentries=all_tree->GetEntries();
       for (Long64_t i=0; i<nentries;i++) {
-        events->GetEntry(i);
-        sum_mc_weights+=mcWeight;
+        all_tree->GetEntry(i);
+        sum_mc_weights+=mcWeight / TMath::Abs(mcWeight);
       }
+      printf("%lld events in this file\n", sum_mc_weights);
     }
+
     Long64_t nbytes = 0;
+    nentries = events->GetEntries();
     for (Long64_t i=0; i<nentries;i++) {
       nbytes += events->GetEntry(i);
       //printf("runNum %d lumiNum %d\n", runNum, lumiNum);
@@ -464,8 +473,9 @@ void make_tnp_skim(
       std::vector<int> q_ele_tag_, q_ele_passing_probe_, q_ele_failing_probe_, q_mu_tag_, q_mu_passing_probe_, q_mu_failing_probe_;
       // record truth info as 1 or 0
       std::vector<int> truth_ele_tag_, truth_ele_passing_probe_, truth_ele_failing_probe_, truth_mu_tag_, truth_mu_passing_probe_, truth_mu_failing_probe_;
+      unsigned int il;
       // Loop over the electrons and muons
-      if(n_lep != 0 && (do_electrons || do_muons)) { for(unsigned int il=0; il<n_lep; il++) {
+      if(n_lep != 0 && (do_electrons || do_muons)) { for(il=0; il<n_lep; il++) {
         if(verbose) {
           printf("pdg ID %d:\n",(*lepPdgId)[il] );
           for(int ij = 0; ij<32; ij++) {
@@ -497,13 +507,13 @@ void make_tnp_skim(
           // Record Electron tags and probes
           if(abs( (*lepPdgId)[il]) == 11 && do_electrons) {
             if(
-              (passing_probe_id > 0 && (
+              (passing_probe_iso >= 0 && (
                 selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), probe_id, probe_iso) &&
                 !selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), passing_probe_id, passing_probe_iso)
               )) ||
-              (passing_probe_id < 0 && ( // trigger efficiency
+              (passing_probe_iso < 0 && ( // trigger efficiency
                 selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), probe_id, probe_iso) &&
-                !(((*triggerLeps)[il] & abs(passing_probe_id)) != 0)
+                ((*triggerLeps)[il] & (0x1 << abs(passing_probe_id))) == 0
               ))
             ) { // make probe selection but fail test selection
               if(verbose) printf("probe failed test ID, relIso = %f, probe iso %f, test iso %f\n",(*lepIso)[il] / P4->Pt(), selectIsoCut(probe_id, (*lepPdgId)[il], P4->Eta()), selectIsoCut(passing_probe_id, (*lepPdgId)[il], P4->Eta()));
@@ -512,11 +522,11 @@ void make_tnp_skim(
               truth_ele_failing_probe_.push_back(truth);
             }
             if(
-              (passing_probe_id > 0 && (
+              (passing_probe_iso >= 0 && (
                 selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), probe_id, probe_iso) &&
                 selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), passing_probe_id, passing_probe_iso)
               )) ||
-              (passing_probe_id < 0 && ( // trigger efficiency
+              (passing_probe_iso < 0 && ( // trigger efficiency
                 selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), probe_id, probe_iso) &&
                 (((*triggerLeps)[il] & (0x1 << abs(passing_probe_id))) != 0)
               ))
@@ -528,7 +538,8 @@ void make_tnp_skim(
             }
             if(
               // additional cuts on tag
-              //P4->Pt() >= 40 &&
+              P4->Pt() >= tag_pt_min &&
+              TMath::Abs(P4->Eta()) <= tag_eta_max &&
               selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), tag_id, tag_iso) &&
               ( (((*triggerLeps)[il] & (0x1 << electron_trigger)) != 0) || !real_data)
             ) { // pass tag ID, and trigger matching
@@ -537,7 +548,7 @@ void make_tnp_skim(
               q_ele_tag_.push_back(charge);
               truth_ele_tag_.push_back(truth);
             } else {
-              if(P4->Pt() < 40 && verbose) printf("failed tag selection: pT = %f < 40\n", P4->Pt());
+              if((P4->Pt() < tag_pt_min || TMath::Abs(P4->Eta()) > tag_eta_max)  && verbose) printf("failed tag selection: (pT, eta) = (%f, %f)\n", P4->Pt(), P4->Eta());
               if(! ( (((*triggerLeps)[il] & (0x1 << electron_trigger)) != 0) || !real_data) && verbose) printf("failed tag selection: trigger matching. triggerLeps = %d \n", (*triggerLeps)[il]);
             }
           }
@@ -545,12 +556,13 @@ void make_tnp_skim(
           //Record Muon tags and probes
           if(abs( (*lepPdgId)[il] ) == 13 && do_muons) {
             if(
-              (passing_probe_id > 0 && (
+              (passing_probe_iso >= 0 && (
+                selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), probe_id, probe_iso) &&
                 !selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), passing_probe_id, passing_probe_iso)
               )) ||
-              (passing_probe_id < 0 && ( // trigger efficiency
+              (passing_probe_iso < 0 && ( // trigger efficiency
                 selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), probe_id, probe_iso) &&
-                !(((*triggerLeps)[il] & (0x1 << abs(passing_probe_id))) != 0)
+                ((*triggerLeps)[il] & (0x1 << abs(passing_probe_id))) == 0
               ))
             ) { // make probe selection but fail passing probe selection
               if(verbose) printf("probe failed test ID, relIso = %f, probe iso %f, test iso %f\n",(*lepIso)[il] / P4->Pt(), selectIsoCut(probe_id, (*lepPdgId)[il], P4->Eta()), selectIsoCut(passing_probe_id, (*lepPdgId)[il], P4->Eta()));
@@ -559,11 +571,11 @@ void make_tnp_skim(
               truth_mu_failing_probe_.push_back(truth);
             }
             if(
-              (passing_probe_id > 0 && (
+              (passing_probe_iso >= 0 && (
                 selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), probe_id, probe_iso) &&
                 selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), passing_probe_id, passing_probe_iso)
               )) ||
-              (passing_probe_id < 0 && ( // trigger efficiency
+              (passing_probe_iso < 0 && ( // trigger efficiency
                 selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), probe_id, probe_iso) &&
                 (((*triggerLeps)[il] & (0x1 << abs(passing_probe_id))) != 0)
               ))
@@ -576,7 +588,8 @@ void make_tnp_skim(
           }
           if(abs( (*lepPdgId)[il] ) == 13 && (do_muons)) {
             if(
-              //P4->Pt() >= 40 &&
+              P4->Pt() >= tag_pt_min &&
+              TMath::Abs(P4->Eta()) <= tag_eta_max &&
               selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), tag_id, tag_iso) &&
               ( (((*triggerLeps)[il] & (0x1 << muon_trigger)) != 0) || !real_data)
             ) { // pass tag muon ID, and trigger matching
@@ -585,7 +598,7 @@ void make_tnp_skim(
               q_mu_tag_.push_back(charge);
               truth_mu_tag_.push_back(truth);
             } else {
-              //if(P4->Pt() < 40 && verbose) printf("failed tag selection: pT = %f < 40\n", P4->Pt());
+              if((P4->Pt() < tag_pt_min || TMath::Abs(P4->Eta()) > tag_eta_max)  && verbose) printf("failed tag selection: (pT, eta) = (%f, %f)\n", P4->Pt(), P4->Eta());
               if(! ( (((*triggerLeps)[il] & (0x1 << muon_trigger)) != 0) || !real_data) && verbose) printf("failed tag selection: trigger matching. triggerLeps = %d \n", (*triggerLeps)[il]);
             }
           }
@@ -598,8 +611,9 @@ void make_tnp_skim(
       std::vector<int> q_tau_tag_, q_tau_passing_probe_, q_tau_failing_probe_;
       std::vector<int> truth_tau_tag_, truth_tau_passing_probe_, truth_tau_failing_probe_;
       double visibleTauDeltaRCut = 0.1;
+      double emVetoDeltaRCut= 0.3;
       // Loop over the taus
-      if(n_tau ==0 && verbose) printf(" no taus in this event\n");
+      if(n_tau ==0 && verbose && do_taus) printf(" no taus in this event\n");
       
       if(n_tau != 0 && do_taus) { for(unsigned int it=0; it<n_tau; it++) {
         // Now find probes
@@ -607,6 +621,37 @@ void make_tnp_skim(
         if( P4->Pt() < 18. || P4->Eta() > 2.3) continue;
         int truth_hadronic=0;
         int charge=(*tauQ)[it];
+        bool emVeto=false;
+        
+        // veto taus that match to a loose electron or muon
+        if( ((((*tauSelBits)[it] & (0x1 << 8)) == 0) || ((*tauSelBits)[it] & (0x1 << 10)) == 0) ) {
+          if(verbose) printf("\tVetoing event tau with (pT, eta, phi) = (%f, %f, %f) that failed an anti-e or anti-mu discriminator (tauSelBits=%d)\n", P4->Pt(), P4->Eta(), P4->Phi(), (*tauSelBits)[it]);
+          emVeto=true;
+        }
+        il=0;
+        while(!emVeto && il<n_lep) {
+          TLorentzVector *emP4 = (TLorentzVector*)lepP4->At(il);
+          if(
+            selector((*lepSelBits)[il], (*lepIso)[il] / emP4->Pt(), emP4->Eta(), abs( (*lepPdgId)[il]), 4,4) &&
+            P4->DeltaR(*emP4) < emVetoDeltaRCut
+          ) {
+            emVeto=true;
+            if(verbose) printf(
+              "\tVetoing event tau with (pT, eta, phi) = (%f, %f, %f) that passed delta-R cut of %f with a lepton (ID=%d) (%f, %f, %f)\n",
+              P4->Pt(),
+              P4->Eta(),
+              P4->Phi(),
+              emVetoDeltaRCut,
+              (*lepPdgId)[il],
+              emP4->Pt(),
+              emP4->Eta(),
+              emP4->Phi()
+            );
+          }
+          il++;
+        }
+        if(emVeto) continue;
+        
         if(!real_data) {
           // Loop over gen level info and try to truth match to tau+nu (hadronic)
           if(verbose) printf("\tTrying to truth-match a tau\n");
@@ -675,14 +720,16 @@ void make_tnp_skim(
           }
         }
         
-        // Now find tags and probes
         TLorentzVector *P4=(TLorentzVector*)lepP4->At(il);
-        if( P4->Pt() >= 30. || (abs( (*lepPdgId)[il] ) != 13)) continue;
+        if(!(
+          P4->Pt() >= tag_pt_min &&
+          TMath::Abs(P4->Eta()) <= tag_eta_max &&
+          (abs( (*lepPdgId)[il] ) != 13)
+        )) continue;
         int truth_muonic=0;
         int charge=1;
         if((*lepPdgId)[il] > 0)  charge=-1;
 
-        // Loop over gen level info and try to do delta-R match to the lepton
         if(!real_data) {
         // Loop over gen level info and try to truth match to mu+nu+nu (muonic)
           if(verbose) printf("\tTrying to truth-match a tau\n");
@@ -857,6 +904,7 @@ void make_tnp_skim(
       }}
     }
     input_file->Close();
+    totalWeights+=sum_mc_weights;
   }
   //save tnp trees
   if(do_electrons) {
@@ -877,7 +925,7 @@ void make_tnp_skim(
     printf("%lld tau pair events\n", tau_pair_tree->GetEntries());
     tau_outfile->Close();
   }
-  printf("Complete. %lld events processed\n", n_events);
+  printf("Complete. %lld events processed, total MC events %lld\n", n_events, totalWeights);
   printf("run num [%d,%d] \n", min_runNum, max_runNum); 
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -22,15 +22,17 @@
 #include <iostream>
 using namespace std;
 
-Float_t ele_pt_bins[] = {10,20,30,40,50,70,100,8000};
-Float_t ele_eta_bins[] = {0, 1.479, 2.4};
-Int_t n_ele_pt_bins=7;
-Int_t n_ele_eta_bins=2;
+Float_t ele_pt_bins[] = {10,20,30,40,50,200};
+Float_t ele_eta_bins[] = {0., 0.8, 1.4442, 1.566, 2., 2.5};
+Int_t n_ele_pt_bins=5;
+Int_t n_ele_eta_bins=5;
 Float_t mu_pt_bins[] = {10,20,30,40,50,70,100,8000};
 Float_t mu_eta_bins[] = {0, 1.479, 2.4};
 Int_t n_mu_pt_bins=7;
 Int_t n_mu_eta_bins=2;
 
+Int_t mit_red  = 1861; 
+Int_t mit_gray = 1862; 
 
 // Function to get MIT colors for the 2D plots
 void mitPalette()
@@ -51,6 +53,87 @@ void mitPalette()
 
 }
 
+void data_style (TH1D *histo) {
+  histo->SetLineColor(1);
+  histo->SetMarkerColor(1);
+  histo->SetMarkerStyle(20);
+  histo->SetMarkerSize(0.8);
+}
+void mc_style (TH1D *histo) {
+  //histo->SetMinimum(.1);
+  //histo->SetMaximum(pow(10,5));
+  histo->SetFillColor(mit_red);
+  histo->SetFillStyle(1001);
+  histo->SetLineColor(1);
+}
+
+TCanvas *ratio_plot(
+  string basename,
+  string canvas_title,
+  string xlabel,
+  TH1D *histo_data,
+  TH1D *histo_mc
+) {
+  TCanvas *canvas = new TCanvas(("c_"+basename).c_str(), canvas_title.c_str(), 800,600);
+  canvas->SetMargin(0,0,0,0);
+  TPad *pad1 = new TPad(("pad1_"+basename).c_str(), "pad1", 0, .3, 1, 1);
+  pad1->SetGrid(0,1);
+  pad1->SetMargin(0.1,0.04,0.04,.1);
+  pad1->Draw();
+  pad1->cd();
+  pad1->SetLogy();
+  mc_style(histo_mc);
+  data_style(histo_data);
+  histo_mc->SetTitle(canvas_title.c_str());
+  histo_mc->Draw("B HIST");
+  histo_mc->GetYaxis()->SetTitle("Events");
+  histo_data->Draw("P E0 X0 SAME");
+
+  TLegend *legend = new TLegend(0.75, 0.7, 0.92, 0.85);
+  legend->AddEntry(histo_data, "Data", "lp");
+  legend->AddEntry(histo_mc, "DY MC", "f");
+  legend->SetFillColor(0);
+  legend->Draw("SAME");
+  TPad *pad2 = new TPad(("pad2_"+basename).c_str(), "pad2", 0, 0.05, 1, 0.3);
+  canvas->cd();
+  pad2->SetMargin(0.1,0.04,0.3,0.04);
+  pad2->Draw();
+  pad2->cd();
+  TH1D *histo_ratio = (TH1D*)histo_data->Clone();
+  histo_ratio->Divide( histo_mc);
+  data_style(histo_ratio);
+  histo_ratio->SetMaximum(1.5);
+  histo_ratio->SetMinimum(0.5);
+  histo_ratio->Draw("P E0 X0");
+  histo_ratio->GetXaxis()->SetTitle(xlabel.c_str());
+  histo_ratio->GetYaxis()->SetTitle("Data/MC");
+  histo_ratio->GetYaxis()->SetNdivisions(5);
+  histo_ratio->GetYaxis()->SetTitleSize(15);
+  histo_ratio->GetYaxis()->SetTitleFont(43);
+  histo_ratio->GetYaxis()->SetTitleOffset(1.55);
+  histo_ratio->GetYaxis()->SetLabelFont(43); 
+  histo_ratio->GetYaxis()->SetLabelSize(15);
+  histo_ratio->GetXaxis()->SetTitleSize(15);
+  histo_ratio->GetXaxis()->SetTitleFont(43);
+  histo_ratio->GetXaxis()->SetTitleOffset(4.);
+  histo_ratio->GetXaxis()->SetLabelFont(43);
+  histo_ratio->GetXaxis()->SetLabelSize(15);
+  double xlow = histo_data->GetBinLowEdge(1);
+  double xhi = xlow + histo_data->GetNbinsX() * histo_data->GetBinWidth(1);
+  
+  TLine *oneline = new TLine(xlow,1,xhi,1);
+  oneline->SetLineColor(1);
+  oneline->SetLineWidth(1);
+  oneline->Draw("SAME");
+  printf("%s : data integral %f, mc integral %f \n", basename.c_str(), histo_data->Integral(), histo_mc->Integral());
+  return canvas;
+
+}
+
+
+
+
+
 void uncertainties(
   string plots_dir,
   string root_dir,
@@ -58,15 +141,15 @@ void uncertainties(
 ) {
   gStyle->SetOptStat(0); 
   //open files
-  TFile *f_mu_sf_BWCBPlusVoigt_erfcexp       = TFile::Open("~/leptonScaleFactors/root/02-02-2016/BWCBPlusVoigt_erfcexp/scalefactors_mu.root","READ");
-  TFile *f_mu_sf_template_erfcexp = TFile::Open("~/leptonScaleFactors/root/02-02-2016/template_erfcexp/scalefactors_mu.root","READ");
-  TFile *f_mu_sf_template_exp     = TFile::Open("~/leptonScaleFactors/root/02-02-2016/template_exp/scalefactors_mu.root","READ");
-  TFile *f_ele_sf_BWCBPlusVoigt_erfcexp       = TFile::Open("~/leptonScaleFactors/root/02-02-2016/BWCBPlusVoigt_erfcexp/scalefactors_ele.root","READ");
-  TFile *f_ele_sf_template_erfcexp = TFile::Open("~/leptonScaleFactors/root/02-02-2016/template_erfcexp/scalefactors_ele.root","READ");
-  TFile *f_ele_sf_template_exp     = TFile::Open("~/leptonScaleFactors/root/02-02-2016/template_exp/scalefactors_ele.root","READ");
+  TFile *f_mu_sf_BWCBPlusVoigt_erfcexp       = TFile::Open("~/leptonScaleFactors/root/16-02-2016/BWCBPlusVoigt_erfcexp/scalefactors_mu.root","READ");
+  TFile *f_mu_sf_template_erfcexp = TFile::Open("~/leptonScaleFactors/root/16-02-2016/template_erfcexp/scalefactors_mu.root","READ");
+  TFile *f_mu_sf_template_exp     = TFile::Open("~/leptonScaleFactors/root/16-02-2016/template_exp/scalefactors_mu.root","READ");
+  TFile *f_ele_sf_BWCBPlusVoigt_erfcexp       = TFile::Open("~/leptonScaleFactors/root/16-02-2016/BWCBPlusVoigt_erfcexp/scalefactors_ele.root","READ");
+  TFile *f_ele_sf_template_erfcexp = TFile::Open("~/leptonScaleFactors/root/16-02-2016/template_erfcexp/scalefactors_ele.root","READ");
+  TFile *f_ele_sf_template_exp     = TFile::Open("~/leptonScaleFactors/root/16-02-2016/template_exp/scalefactors_ele.root","READ");
   
-  TFile *f_ele_eff_data = TFile::Open("~/leptonScaleFactors/root/02-02-2016/template_erfcexp/SingleElectron_efficiencies_electronTnP.root","READ");
-  TFile *f_ele_eff_mc = TFile::Open("~/leptonScaleFactors/root/02-02-2016/template_erfcexp/DYJetsToLL_efficiencies_electronTnP.root","READ");
+  TFile *f_ele_eff_data = TFile::Open("~/leptonScaleFactors/root/16-02-2016/template_erfcexp/SingleElectron_efficiencies_electronTnP.root","READ");
+  TFile *f_ele_eff_mc = TFile::Open("~/leptonScaleFactors/root/16-02-2016/template_erfcexp/DYJetsToLL_efficiencies_electronTnP.root","READ");
   // systematic uncertainties on factorized electron efficiency from data due to factorization
   TH2D *syst_ele_eff_fact_veto  = (TH2D*) f_ele_eff_data->Get("absdiff_Veto_ele");
   TH2D *syst_ele_eff_fact_tight = (TH2D*) f_ele_eff_data->Get("absdiff_Tight_ele");
@@ -674,7 +757,12 @@ void propagate_to_Zpt(
   nentries= t_tnp_ele_veto->GetEntries();
   for (Long64_t i=0; i<nentries; i++) {
     t_tnp_ele_veto->GetEntry(i);
-    if(pass!=1) continue;
+    if(!(
+      pass==1 &&
+      p4_tag->Pt() >= 30 &&
+      TMath::Abs(mass - 90) <= 30 &&
+      qtag + qprobe == 0
+    )) continue;
     double syst_tag   = syst_ele_sf_combined_veto->GetBinContent(syst_ele_sf_combined_veto->FindBin(TMath::Abs(p4_tag->Eta()), p4_tag->Pt()));
     double syst_probe = syst_ele_sf_combined_veto->GetBinContent(syst_ele_sf_combined_veto->FindBin(TMath::Abs(p4_probe->Eta()), p4_probe->Pt()));
     double syst_Z = syst_tag+syst_probe;
@@ -697,7 +785,12 @@ void propagate_to_Zpt(
   nentries= t_tnp_ele_tight->GetEntries();
   for (Long64_t i=0; i<nentries; i++) {
     t_tnp_ele_tight->GetEntry(i);
-    if(pass!=1) continue;
+    if(!(
+      pass==1 &&
+      p4_tag->Pt() >= 30 &&
+      TMath::Abs(mass - 90) <= 30 &&
+      qtag + qprobe == 0
+    )) continue;
     double syst_tag   = syst_ele_sf_combined_tight->GetBinContent(syst_ele_sf_combined_tight->FindBin(TMath::Abs(p4_tag->Eta()), p4_tag->Pt()));
     double syst_probe = syst_ele_sf_combined_tight->GetBinContent(syst_ele_sf_combined_tight->FindBin(TMath::Abs(p4_probe->Eta()), p4_probe->Pt()));
     double syst_Z = syst_tag+syst_probe;
@@ -719,7 +812,12 @@ void propagate_to_Zpt(
   nentries= t_tnp_mu_loose->GetEntries();
   for (Long64_t i=0; i<nentries; i++) {
     t_tnp_mu_loose->GetEntry(i);
-    if(pass!=1) continue;
+    if(!(
+      pass==1 &&
+      p4_tag->Pt() >= 30 &&
+      TMath::Abs(mass - 90) <= 30 &&
+      qtag + qprobe == 0
+    )) continue;
     double syst_tag   = syst_mu_sf_combined_loose->GetBinContent(syst_mu_sf_combined_loose->FindBin(TMath::Abs(p4_tag->Eta()), p4_tag->Pt()));
     double syst_probe = syst_mu_sf_combined_loose->GetBinContent(syst_mu_sf_combined_loose->FindBin(TMath::Abs(p4_probe->Eta()), p4_probe->Pt()));
     double syst_Z = syst_tag+syst_probe;
@@ -741,7 +839,12 @@ void propagate_to_Zpt(
   nentries= t_tnp_mu_tight->GetEntries();
   for (Long64_t i=0; i<nentries; i++) {
     t_tnp_mu_tight->GetEntry(i);
-    if(pass!=1) continue;
+    if(!(
+      pass==1 &&
+      p4_tag->Pt() >= 30 &&
+      TMath::Abs(mass - 90) <= 30 &&
+      qtag + qprobe == 0
+    )) continue;
     double syst_tag   = syst_mu_sf_combined_tight->GetBinContent(syst_mu_sf_combined_tight->FindBin(TMath::Abs(p4_tag->Eta()), p4_tag->Pt()));
     double syst_probe = syst_mu_sf_combined_tight->GetBinContent(syst_mu_sf_combined_tight->FindBin(TMath::Abs(p4_probe->Eta()), p4_probe->Pt()));
     double syst_Z = syst_tag+syst_probe;
@@ -878,28 +981,28 @@ void uncertainties_no_fact(
 ) {
   gStyle->SetOptStat(0); 
   //open files
-  TFile *f_mu_sf_BWCBPlusVoigt_erfcexp       = TFile::Open("~/leptonScaleFactors/root_local/02-02-2016/BWCBPlusVoigt_erfcexp/scalefactors_mu.root","READ");
-  TFile *f_mu_sf_template_erfcexp = TFile::Open("~/leptonScaleFactors/root_local/02-02-2016/template_erfcexp/scalefactors_mu.root","READ");
-  TFile *f_mu_sf_template_exp     = TFile::Open("~/leptonScaleFactors/root_local/02-02-2016/template_exp/scalefactors_mu.root","READ");
-  TFile *f_ele_sf_BWCBPlusVoigt_erfcexp       = TFile::Open("~/leptonScaleFactors/root_local/02-02-2016/BWCBPlusVoigt_erfcexp/scalefactors_ele.root","READ");
-  TFile *f_ele_sf_template_erfcexp = TFile::Open("~/leptonScaleFactors/root_local/02-02-2016/template_erfcexp/scalefactors_ele.root","READ");
-  TFile *f_ele_sf_template_exp     = TFile::Open("~/leptonScaleFactors/root_local/02-02-2016/template_exp/scalefactors_ele.root","READ");
+  TFile *f_mu_sf_BWCBPlusVoigt_erfcexp       = TFile::Open("~/leptonScaleFactors/root_local/16-02-2016/BWCBPlusVoigt_erfcexp/scalefactors_mu.root","READ");
+  TFile *f_mu_sf_template_erfcexp = TFile::Open("~/leptonScaleFactors/root_local/16-02-2016/template_erfcexp/scalefactors_mu.root","UPDATE");
+  TFile *f_mu_sf_template_exp     = TFile::Open("~/leptonScaleFactors/root_local/16-02-2016/template_exp/scalefactors_mu.root","READ");
+  TFile *f_ele_sf_BWCBPlusVoigt_erfcexp       = TFile::Open("~/leptonScaleFactors/root_local/16-02-2016/BWCBPlusVoigt_erfcexp/scalefactors_ele.root","READ");
+  TFile *f_ele_sf_template_erfcexp = TFile::Open("~/leptonScaleFactors/root_local/16-02-2016/template_erfcexp/scalefactors_ele.root","UPDATE");
+  TFile *f_ele_sf_template_exp     = TFile::Open("~/leptonScaleFactors/root_local/16-02-2016/template_exp/scalefactors_ele.root","READ");
   
   // systematic uncertainty from signal model choice
-  TH2D *syst_ele_sf_signal_veto   = (TH2D*) f_ele_sf_BWCBPlusVoigt_erfcexp->Get("absDiff_factorized_scalefactors_Veto_ele");
-  TH2D *syst_ele_sf_signal_loose  = (TH2D*) f_ele_sf_BWCBPlusVoigt_erfcexp->Get("absDiff_factorized_scalefactors_Loose_ele");
-  TH2D *syst_ele_sf_signal_medium = (TH2D*) f_ele_sf_BWCBPlusVoigt_erfcexp->Get("absDiff_factorized_scalefactors_Medium_ele");
-  TH2D *syst_ele_sf_signal_tight  = (TH2D*) f_ele_sf_BWCBPlusVoigt_erfcexp->Get("absDiff_factorized_scalefactors_Tight_ele");
+  TH2D *syst_ele_sf_signal_veto   = (TH2D*) f_ele_sf_BWCBPlusVoigt_erfcexp->Get("absDiff_unfactorized_scalefactors_Veto_ele");
+  TH2D *syst_ele_sf_signal_loose  = (TH2D*) f_ele_sf_BWCBPlusVoigt_erfcexp->Get("absDiff_unfactorized_scalefactors_Loose_ele");
+  TH2D *syst_ele_sf_signal_medium = (TH2D*) f_ele_sf_BWCBPlusVoigt_erfcexp->Get("absDiff_unfactorized_scalefactors_Medium_ele");
+  TH2D *syst_ele_sf_signal_tight  = (TH2D*) f_ele_sf_BWCBPlusVoigt_erfcexp->Get("absDiff_unfactorized_scalefactors_Tight_ele");
   TH2D *syst_mu_sf_signal_veto   = (TH2D*) f_mu_sf_BWCBPlusVoigt_erfcexp->Get("absDiff_unfactorized_scalefactors_Veto_mu");
   TH2D *syst_mu_sf_signal_loose  = (TH2D*) f_mu_sf_BWCBPlusVoigt_erfcexp->Get("absDiff_unfactorized_scalefactors_Loose_mu");
   TH2D *syst_mu_sf_signal_medium = (TH2D*) f_mu_sf_BWCBPlusVoigt_erfcexp->Get("absDiff_unfactorized_scalefactors_Medium_mu");
   TH2D *syst_mu_sf_signal_tight  = (TH2D*) f_mu_sf_BWCBPlusVoigt_erfcexp->Get("absDiff_unfactorized_scalefactors_Tight_mu");
   
   // systematic uncertainty from background model choice
-  TH2D *syst_ele_sf_background_veto   = (TH2D*) f_ele_sf_template_exp->Get("absDiff_factorized_scalefactors_Veto_ele");
-  TH2D *syst_ele_sf_background_loose  = (TH2D*) f_ele_sf_template_exp->Get("absDiff_factorized_scalefactors_Loose_ele");
-  TH2D *syst_ele_sf_background_medium = (TH2D*) f_ele_sf_template_exp->Get("absDiff_factorized_scalefactors_Medium_ele");
-  TH2D *syst_ele_sf_background_tight  = (TH2D*) f_ele_sf_template_exp->Get("absDiff_factorized_scalefactors_Tight_ele");
+  TH2D *syst_ele_sf_background_veto   = (TH2D*) f_ele_sf_template_exp->Get("absDiff_unfactorized_scalefactors_Veto_ele");
+  TH2D *syst_ele_sf_background_loose  = (TH2D*) f_ele_sf_template_exp->Get("absDiff_unfactorized_scalefactors_Loose_ele");
+  TH2D *syst_ele_sf_background_medium = (TH2D*) f_ele_sf_template_exp->Get("absDiff_unfactorized_scalefactors_Medium_ele");
+  TH2D *syst_ele_sf_background_tight  = (TH2D*) f_ele_sf_template_exp->Get("absDiff_unfactorized_scalefactors_Tight_ele");
   TH2D *syst_mu_sf_background_veto   = (TH2D*) f_mu_sf_template_exp->Get("absDiff_unfactorized_scalefactors_Veto_mu");
   TH2D *syst_mu_sf_background_loose  = (TH2D*) f_mu_sf_template_exp->Get("absDiff_unfactorized_scalefactors_Loose_mu");
   TH2D *syst_mu_sf_background_medium = (TH2D*) f_mu_sf_template_exp->Get("absDiff_unfactorized_scalefactors_Medium_mu");
@@ -916,14 +1019,14 @@ void uncertainties_no_fact(
   TH2D *syst_mu_sf_combined_tight  = new TH2D("syst_mu_sf_combined_tight", "Combined syst. unc. on muon tight scalefactor",  n_mu_eta_bins, mu_eta_bins, n_mu_pt_bins, mu_pt_bins);
   
   // statistical uncertainty
-  TH2D *ele_sf_veto        = (TH2D*) f_ele_sf_template_erfcexp ->Get("factorized_scalefactors_Veto_ele"); 
-  TH2D *ele_sf_loose       = (TH2D*) f_ele_sf_template_erfcexp ->Get("factorized_scalefactors_Loose_ele"); 
-  TH2D *ele_sf_medium      = (TH2D*) f_ele_sf_template_erfcexp ->Get("factorized_scalefactors_Medium_ele"); 
-  TH2D *ele_sf_tight       = (TH2D*) f_ele_sf_template_erfcexp ->Get("factorized_scalefactors_Tight_ele"); 
-  TH2D *mu_sf_veto         = (TH2D*) f_mu_sf_template_erfcexp  ->Get("unfactorized_scalefactors_Veto_mu");
-  TH2D *mu_sf_loose        = (TH2D*) f_mu_sf_template_erfcexp  ->Get("unfactorized_scalefactors_Loose_mu");
-  TH2D *mu_sf_medium       = (TH2D*) f_mu_sf_template_erfcexp  ->Get("unfactorized_scalefactors_Medium_mu");
-  TH2D *mu_sf_tight        = (TH2D*) f_mu_sf_template_erfcexp  ->Get("unfactorized_scalefactors_Tight_mu");
+  TH2D *ele_sf_veto        = (TH2D*) f_ele_sf_template_erfcexp ->Get("unfactorized_scalefactors_Veto_ele;1"); 
+  TH2D *ele_sf_loose       = (TH2D*) f_ele_sf_template_erfcexp ->Get("unfactorized_scalefactors_Loose_ele;1"); 
+  TH2D *ele_sf_medium      = (TH2D*) f_ele_sf_template_erfcexp ->Get("unfactorized_scalefactors_Medium_ele;1"); 
+  TH2D *ele_sf_tight       = (TH2D*) f_ele_sf_template_erfcexp ->Get("unfactorized_scalefactors_Tight_ele;1"); 
+  TH2D *mu_sf_veto         = (TH2D*) f_mu_sf_template_erfcexp  ->Get("unfactorized_scalefactors_Veto_mu;1");
+  TH2D *mu_sf_loose        = (TH2D*) f_mu_sf_template_erfcexp  ->Get("unfactorized_scalefactors_Loose_mu;1");
+  TH2D *mu_sf_medium       = (TH2D*) f_mu_sf_template_erfcexp  ->Get("unfactorized_scalefactors_Medium_mu;1");
+  TH2D *mu_sf_tight        = (TH2D*) f_mu_sf_template_erfcexp  ->Get("unfactorized_scalefactors_Tight_mu;1");
   TH2D *stat_ele_sf_veto   = new TH2D("stat_ele_sf_veto",   "Stat. unc. on electron veto scalefactor",  n_ele_eta_bins, ele_eta_bins, n_ele_pt_bins, ele_pt_bins);
   TH2D *stat_ele_sf_loose  = new TH2D("stat_ele_sf_loose",  "Stat. unc. on electron loose scalefactor",  n_ele_eta_bins, ele_eta_bins, n_ele_pt_bins, ele_pt_bins);
   TH2D *stat_ele_sf_medium = new TH2D("stat_ele_sf_medium", "Stat. unc. on electron medium scalefactor",  n_ele_eta_bins, ele_eta_bins, n_ele_pt_bins, ele_pt_bins);
@@ -957,6 +1060,23 @@ void uncertainties_no_fact(
     stat_ele_sf_loose->SetBinContent(n, ele_sf_loose->GetBinError(n));
     stat_ele_sf_medium->SetBinContent(n, ele_sf_medium->GetBinError(n));
     stat_ele_sf_tight->SetBinContent(n, ele_sf_tight->GetBinError(n));
+
+    ele_sf_veto->SetBinError(n, sqrt(
+      pow(stat_ele_sf_veto->GetBinContent(n), 2) +
+      pow(syst_ele_sf_combined_veto->GetBinContent(n) , 2)
+    ));
+    ele_sf_loose->SetBinError(n, sqrt(
+      pow(stat_ele_sf_loose->GetBinContent(n), 2) +
+      pow(syst_ele_sf_combined_loose->GetBinContent(n) , 2)
+    ));
+    ele_sf_medium->SetBinError(n, sqrt(
+      pow(stat_ele_sf_medium->GetBinContent(n), 2) +
+      pow(syst_ele_sf_combined_medium->GetBinContent(n) , 2)
+    ));
+    ele_sf_tight->SetBinError(n, sqrt(
+      pow(stat_ele_sf_tight->GetBinContent(n), 2) +
+      pow(syst_ele_sf_combined_tight->GetBinContent(n) , 2)
+    ));
   }}
   for(int i_eta = 1; i_eta <= n_mu_eta_bins; i_eta++) { for(int i_pt = 1; i_pt <= n_mu_pt_bins; i_pt++) {
     int n = syst_mu_sf_signal_veto->GetBin(i_eta, i_pt);
@@ -982,15 +1102,40 @@ void uncertainties_no_fact(
     stat_mu_sf_loose  ->SetBinContent(n, mu_sf_loose->GetBinError(n));
     stat_mu_sf_medium ->SetBinContent(n, mu_sf_medium->GetBinError(n));
     stat_mu_sf_tight  ->SetBinContent(n, mu_sf_tight->GetBinError(n));
+
+    mu_sf_veto->SetBinError(n, sqrt(
+      pow(stat_mu_sf_veto->GetBinContent(n), 2) +
+      pow(syst_mu_sf_combined_veto->GetBinContent(n) , 2)
+    ));
+    mu_sf_loose->SetBinError(n, sqrt(
+      pow(stat_mu_sf_loose->GetBinContent(n), 2) +
+      pow(syst_mu_sf_combined_loose->GetBinContent(n) , 2)
+    ));
+    mu_sf_medium->SetBinError(n, sqrt(
+      pow(stat_mu_sf_medium->GetBinContent(n), 2) +
+      pow(syst_mu_sf_combined_medium->GetBinContent(n) , 2)
+    ));
+    mu_sf_tight->SetBinError(n, sqrt(
+      pow(stat_mu_sf_tight->GetBinContent(n), 2) +
+      pow(syst_mu_sf_combined_tight->GetBinContent(n) , 2)
+    ));
+
   }}
-  
+  f_ele_sf_template_erfcexp->cd();
+  ele_sf_veto->Write("unfactorized_scalefactors_Veto_ele");
+  ele_sf_loose->Write("unfactorized_scalefactors_Loose_ele");
+  ele_sf_medium->Write("unfactorized_scalefactors_Medium_ele");
+  ele_sf_tight->Write("unfactorized_scalefactors_Tight_ele");
+  f_mu_sf_template_erfcexp->cd();
+  mu_sf_veto->Write();
+  mu_sf_loose->Write();
+  mu_sf_medium->Write();
+  mu_sf_tight->Write();
   if(draw) {
     gStyle->SetOptStat(0);
     gStyle->SetPaintTextFormat("4.3f");
     mitPalette();
     TPaletteAxis *palette_axis;
-    Int_t mit_red  = 1861; 
-    Int_t mit_gray = 1862; 
     TColor *col_mit_red  = new TColor(mit_red,  163/255., 31/255.,  52/255.);
     TColor *col_mit_gray = new TColor(mit_gray, 138/255., 139/255., 140/255.);
     TLine *bin1line=new TLine(20,0,20,0.1);
@@ -2030,13 +2175,15 @@ void flavor_yield_ratio(
 ) {
   gStyle->SetOptStat(0); 
   int n_skims=4; 
-  int nbins=16;
+  int nbins=10;
+  Float_t Z_pT_bins[] = {50., 75., 100., 125., 150., 175., 200., 250., 300., 350., 400.};
   int max_pT = 400;
   TFile *f_sf_ele  = TFile::Open((root_dir+"scalefactors_ele.root").c_str(),"READ");
   TFile *f_sf_mu   = TFile::Open((root_dir+"scalefactors_mu.root").c_str(),"READ");
   TFile *f_uncertainties_ele_tight  = TFile::Open((root_dir+"combined_uncertainties_ele_tight.root").c_str(),"READ");
   TFile *f_uncertainties_mu_tight   = TFile::Open((root_dir+"combined_uncertainties_mu_tight.root").c_str(),"READ");
-  TFile *f_triggers = TFile::Open("/home/ceballos/root/tag_and_probe_files/efficiency.root", "READ");
+  TFile *f_mu_triggers = TFile::Open("/home/dhsu/TagAndProbe/Data_Triggers/IsoMu27/eff.root", "READ");
+  TFile *f_ele_triggers = TFile::Open("/home/dhsu/TagAndProbe/Data_Triggers/Ele27_eta2p1_WPLoose_Gsf/eff.root", "READ");
   
   TClonesArray skim_files ("TFile", n_skims);
   new(skim_files[0]) TFile("~/leptonScaleFactors/root_local/DYJetsToLL_genMatching_BaselineToTight_electronTnP.root","READ");
@@ -2049,47 +2196,49 @@ void flavor_yield_ratio(
   TH2D *syst_mu_sf_tight     = (TH2D*) f_uncertainties_mu_tight  ->Get("syst_mu_sf_combined_tight");
   TH2D *stat_mu_sf_tight     = (TH2D*) f_uncertainties_mu_tight  ->Get("stat_mu_sf_tight");
 
-  TH2D *trig_eff_ele = (TH2D*) f_triggers->Get("h2_results_electron_single");
-  TH2D *trig_eff_mu  = (TH2D*) f_triggers->Get("h2_results_muon_single");
+  TH2D *trig_eff_ele = (TH2D*) f_ele_triggers->Get("hEffEtaPt");
+  TH2D *trig_eff_mu  = (TH2D*) f_mu_triggers->Get("hEffEtaPt");
+  TH2D *unc_trig_eff_ele = (TH2D*) f_ele_triggers->Get("hErrhEtaPt");
+  TH2D *unc_trig_eff_mu  = (TH2D*) f_mu_triggers->Get("hErrhEtaPt");
   TH2D *sf_ele_tight = (TH2D*) f_sf_ele->Get("unfactorized_scalefactors_Tight_ele");
   TH2D *sf_mu_tight  = (TH2D*) f_sf_mu->Get("unfactorized_scalefactors_Tight_mu");
   //printf("%f %f\n", sf_ele_tight->GetBinContent(sf_ele_tight->FindBin(1.3,45)), sf_mu_tight->GetRMS());
   //return;
   TClonesArray dN_dZpT_ ("TH1D", n_skims);
-  new(dN_dZpT_[0]) TH1D("ZpT_mc_dN_dZpT_ele_tight",   "p_{T}^{ll} distribution of Z #rightarrow ee events in MC", nbins, 0, max_pT);
-  new(dN_dZpT_[1]) TH1D("ZpT_mc_dN_dZpT_mu_tight",    "p_{T}^{ll} distribution of Z #rightarrow #mu#mu events in MC", nbins, 0, max_pT);
-  new(dN_dZpT_[2]) TH1D("ZpT_data_dN_dZpT_ele_tight", "p_{T}^{ll} distribution of Z #rightarrow ee events in data", nbins, 0, max_pT);
-  new(dN_dZpT_[3]) TH1D("ZpT_data_dN_dZpT_mu_tight",  "p_{T}^{ll} distribution of Z #rightarrow #mu#mu events in data", nbins, 0, max_pT);
+  new(dN_dZpT_[0]) TH1D("ZpT_mc_dN_dZpT_ele_tight",   "p_{T}^{ll} distribution of Z #rightarrow ee events in MC", nbins, Z_pT_bins);
+  new(dN_dZpT_[1]) TH1D("ZpT_mc_dN_dZpT_mu_tight",    "p_{T}^{ll} distribution of Z #rightarrow #mu#mu events in MC", nbins, Z_pT_bins);
+  new(dN_dZpT_[2]) TH1D("ZpT_data_dN_dZpT_ele_tight", "p_{T}^{ll} distribution of Z #rightarrow ee events in data", nbins, Z_pT_bins);
+  new(dN_dZpT_[3]) TH1D("ZpT_data_dN_dZpT_mu_tight",  "p_{T}^{ll} distribution of Z #rightarrow #mu#mu events in data", nbins, Z_pT_bins);
   TClonesArray syst_sf_ZpT_ ("TH1D", n_skims);
-  new(syst_sf_ZpT_[0]) TH1D("ZpT_mc_syst_sf_ele_tight",   "S.F. systematics as p_{T} of Z #rightarrow ee events in MC", nbins, 0, max_pT);
-  new(syst_sf_ZpT_[1]) TH1D("ZpT_mc_syst_sf_mu_tight",    "S.F. systematics as p_{T} of Z #rightarrow #mu#mu events in MC", nbins, 0, max_pT);
-  new(syst_sf_ZpT_[2]) TH1D("ZpT_data_syst_sf_ele_tight", "S.F. systematics as p_{T} of Z #rightarrow ee events in data", nbins, 0, max_pT);
-  new(syst_sf_ZpT_[3]) TH1D("ZpT_data_syst_sf_mu_tight",  "S.F. systematics as p_{T} of Z #rightarrow #mu#mu events in data", nbins, 0, max_pT);
+  new(syst_sf_ZpT_[0]) TH1D("ZpT_mc_syst_sf_ele_tight",   "S.F. systematics as p_{T} of Z #rightarrow ee events in MC", nbins, Z_pT_bins);
+  new(syst_sf_ZpT_[1]) TH1D("ZpT_mc_syst_sf_mu_tight",    "S.F. systematics as p_{T} of Z #rightarrow #mu#mu events in MC", nbins, Z_pT_bins);
+  new(syst_sf_ZpT_[2]) TH1D("ZpT_data_syst_sf_ele_tight", "S.F. systematics as p_{T} of Z #rightarrow ee events in data", nbins, Z_pT_bins);
+  new(syst_sf_ZpT_[3]) TH1D("ZpT_data_syst_sf_mu_tight",  "S.F. systematics as p_{T} of Z #rightarrow #mu#mu events in data", nbins, Z_pT_bins);
   TClonesArray stat_sf_ZpT_ ("TH1D", n_skims);
-  new(stat_sf_ZpT_[0]) TH1D("ZpT_mc_stat_sf_ele_tight",   "S.F. stat. unc. as p_{T} of Z #rightarrow ee events in MC", nbins, 0, max_pT);
-  new(stat_sf_ZpT_[1]) TH1D("ZpT_mc_stat_sf_mu_tight",    "S.F. stat. unc. as p_{T} of Z #rightarrow #mu#mu events in MC", nbins, 0, max_pT);
-  new(stat_sf_ZpT_[2]) TH1D("ZpT_data_stat_sf_ele_tight", "S.F. stat. unc. as p_{T} of Z #rightarrow ee events in data", nbins, 0, max_pT);
-  new(stat_sf_ZpT_[3]) TH1D("ZpT_data_stat_sf_mu_tight",  "S.F. stat. unc. as p_{T} of Z #rightarrow #mu#mu events in data", nbins, 0, max_pT);
+  new(stat_sf_ZpT_[0]) TH1D("ZpT_mc_stat_sf_ele_tight",   "S.F. stat. unc. as p_{T} of Z #rightarrow ee events in MC", nbins, Z_pT_bins);
+  new(stat_sf_ZpT_[1]) TH1D("ZpT_mc_stat_sf_mu_tight",    "S.F. stat. unc. as p_{T} of Z #rightarrow #mu#mu events in MC", nbins, Z_pT_bins);
+  new(stat_sf_ZpT_[2]) TH1D("ZpT_data_stat_sf_ele_tight", "S.F. stat. unc. as p_{T} of Z #rightarrow ee events in data", nbins, Z_pT_bins);
+  new(stat_sf_ZpT_[3]) TH1D("ZpT_data_stat_sf_mu_tight",  "S.F. stat. unc. as p_{T} of Z #rightarrow #mu#mu events in data", nbins, Z_pT_bins);
   TClonesArray trig_unc_ZpT_ ("TH1D", n_skims);
-  new(trig_unc_ZpT_[0]) TH1D("ZpT_mc_trig_unc_ele_tight",   "Trigger uncertainty as p_{T} of Z #rightarrow ee events in MC", nbins, 0, max_pT);
-  new(trig_unc_ZpT_[1]) TH1D("ZpT_mc_trig_unc_mu_tight",    "Trigger uncertainty as p_{T} of Z #rightarrow #mu#mu events in MC", nbins, 0, max_pT);
-  new(trig_unc_ZpT_[2]) TH1D("ZpT_data_trig_unc_ele_tight", "Trigger uncertainty as p_{T} of Z #rightarrow ee events in data", nbins, 0, max_pT);
-  new(trig_unc_ZpT_[3]) TH1D("ZpT_data_trig_unc_mu_tight",  "Trigger uncertainty as p_{T} of Z #rightarrow #mu#mu events in data", nbins, 0, max_pT);
+  new(trig_unc_ZpT_[0]) TH1D("ZpT_mc_trig_unc_ele_tight",   "Trigger uncertainty as p_{T} of Z #rightarrow ee events in MC", nbins, Z_pT_bins);
+  new(trig_unc_ZpT_[1]) TH1D("ZpT_mc_trig_unc_mu_tight",    "Trigger uncertainty as p_{T} of Z #rightarrow #mu#mu events in MC", nbins, Z_pT_bins);
+  new(trig_unc_ZpT_[2]) TH1D("ZpT_data_trig_unc_ele_tight", "Trigger uncertainty as p_{T} of Z #rightarrow ee events in data", nbins, Z_pT_bins);
+  new(trig_unc_ZpT_[3]) TH1D("ZpT_data_trig_unc_mu_tight",  "Trigger uncertainty as p_{T} of Z #rightarrow #mu#mu events in data", nbins, Z_pT_bins);
   TClonesArray stat_events_ZpT_ ("TH1D", n_skims);
-  new(stat_events_ZpT_[0]) TH1D("ZpT_mc_stat_events_ele_tight",   "Stat. unc. as p_{T} of Z #rightarrow ee events in MC", nbins, 0, max_pT);
-  new(stat_events_ZpT_[1]) TH1D("ZpT_mc_stat_events_mu_tight",    "Stat. unc. as p_{T} of Z #rightarrow #mu#mu events in MC", nbins, 0, max_pT);
-  new(stat_events_ZpT_[2]) TH1D("ZpT_data_stat_events_ele_tight", "Stat. unc. as p_{T} of Z #rightarrow ee events in data", nbins, 0, max_pT);
-  new(stat_events_ZpT_[3]) TH1D("ZpT_data_stat_events_mu_tight",  "Stat. unc. as p_{T} of Z #rightarrow #mu#mu events in data", nbins, 0, max_pT);
+  new(stat_events_ZpT_[0]) TH1D("ZpT_mc_stat_events_ele_tight",   "Stat. unc. as p_{T} of Z #rightarrow ee events in MC", nbins, Z_pT_bins);
+  new(stat_events_ZpT_[1]) TH1D("ZpT_mc_stat_events_mu_tight",    "Stat. unc. as p_{T} of Z #rightarrow #mu#mu events in MC", nbins, Z_pT_bins);
+  new(stat_events_ZpT_[2]) TH1D("ZpT_data_stat_events_ele_tight", "Stat. unc. as p_{T} of Z #rightarrow ee events in data", nbins, Z_pT_bins);
+  new(stat_events_ZpT_[3]) TH1D("ZpT_data_stat_events_mu_tight",  "Stat. unc. as p_{T} of Z #rightarrow #mu#mu events in data", nbins, Z_pT_bins);
   TClonesArray unc_ZpT_ ("TH1D", n_skims);
-  new(unc_ZpT_[0]) TH1D("ZpT_mc_unc_ele_tight",   "Uncertainty as p_{T} of Z #rightarrow ee events in MC", nbins, 0, max_pT);
-  new(unc_ZpT_[1]) TH1D("ZpT_mc_unc_mu_tight",    "Uncertainty as p_{T} of Z #rightarrow #mu#mu events in MC", nbins, 0, max_pT);
-  new(unc_ZpT_[2]) TH1D("ZpT_data_unc_ele_tight", "Uncertainty as p_{T} of Z #rightarrow ee events in data", nbins, 0, max_pT);
-  new(unc_ZpT_[3]) TH1D("ZpT_data_unc_mu_tight",  "Uncertainty as p_{T} of Z #rightarrow #mu#mu events in data", nbins, 0, max_pT);
+  new(unc_ZpT_[0]) TH1D("ZpT_mc_unc_ele_tight",   "Uncertainty as p_{T} of Z #rightarrow ee events in MC", nbins, Z_pT_bins);
+  new(unc_ZpT_[1]) TH1D("ZpT_mc_unc_mu_tight",    "Uncertainty as p_{T} of Z #rightarrow #mu#mu events in MC", nbins, Z_pT_bins);
+  new(unc_ZpT_[2]) TH1D("ZpT_data_unc_ele_tight", "Uncertainty as p_{T} of Z #rightarrow ee events in data", nbins, Z_pT_bins);
+  new(unc_ZpT_[3]) TH1D("ZpT_data_unc_mu_tight",  "Uncertainty as p_{T} of Z #rightarrow #mu#mu events in data", nbins, Z_pT_bins);
   //TClonesArray sum_weights_vs_ZpT_ ("TH1D", n_skims);
-  //new(sum_weights_vs_ZpT_[0]) TH1D("h_mc_sum_weights_ele_tight",   "p_{T} distribution of Z #rightarrow ee events in MC", nbins, 0, max_pT);
-  //new(sum_weights_vs_ZpT_[1]) TH1D("h_mc_sum_weights_mu_tight",    "p_{T} distribution of Z #rightarrow {#mu}{#mu} events in MC", nbins, 0, max_pT);
-  //new(sum_weights_vs_ZpT_[2]) TH1D("h_data_sum_weights_ele_tight", "p_{T} distribution of Z #rightarrow ee events in data", nbins, 0, max_pT);
-  //new(sum_weights_vs_ZpT_[3]) TH1D("h_data_sum_weights_mu_tight",  "p_{T} distribution of Z #rightarrow {#mu}{#mu} events in data", nbins, 0, max_pT);
+  //new(sum_weights_vs_ZpT_[0]) TH1D("h_mc_sum_weights_ele_tight",   "p_{T} distribution of Z #rightarrow ee events in MC", nbins, Z_pT_bins);
+  //new(sum_weights_vs_ZpT_[1]) TH1D("h_mc_sum_weights_mu_tight",    "p_{T} distribution of Z #rightarrow {#mu}{#mu} events in MC", nbins, Z_pT_bins);
+  //new(sum_weights_vs_ZpT_[2]) TH1D("h_data_sum_weights_ele_tight", "p_{T} distribution of Z #rightarrow ee events in data", nbins, Z_pT_bins);
+  //new(sum_weights_vs_ZpT_[3]) TH1D("h_data_sum_weights_mu_tight",  "p_{T} distribution of Z #rightarrow {#mu}{#mu} events in data", nbins, Z_pT_bins);
   
   // read from tnp skim
   unsigned int runNum, // event ID
@@ -2125,6 +2274,8 @@ void flavor_yield_ratio(
       if(!(
         pass==1 &&
         p4_tag->Pt() >= 30 &&
+        TMath::Abs(p4_tag->Eta()) <= 2.1 &&
+        TMath::Abs(mass - 90) <= 30 &&
         qtag + qprobe == 0
       )) continue;
       TLorentzVector systemP4 = (*p4_tag) + (*p4_probe);
@@ -2135,12 +2286,21 @@ void flavor_yield_ratio(
       double tag_pT = p4_tag->Pt();
       double probe_eta = p4_probe->Eta();
       double probe_pT = p4_probe->Pt();
-      if(tag_eta >= 2.4) tag_eta = 2.39;
-      if(tag_eta <= -2.4) tag_eta = -2.39;
-      if(probe_eta >= 2.4) probe_eta = 2.39;
-      if(probe_eta <= -2.4) probe_eta = -2.39;
+      double mc_reweighting=1;
+      if(tag_eta >= 2.5)    continue;
+      if(tag_eta <= -2.5)   continue;
+      if(probe_eta >= 2.5)  continue;
+      if(probe_eta <= -2.5) continue;
+      //if(tag_pT >= 200) tag_pT = 199.9;
+      //if(probe_pT >= 200) probe_pT = 199.9;
+      //if(tag_eta >= 2.5) tag_eta = 2.49;
+      //if(tag_eta <= -2.5) tag_eta = -2.49;
+      //if(probe_eta >= 2.5) probe_eta = 2.49;
+      //if(probe_eta <= -2.5) probe_eta = -2.49;
       switch(skim) {
         case 0:
+          if(probe_pT >= 200) probe_pT = 199.9;
+          if(tag_pT >= 200) tag_pT = 199.9;
           sf_tag = sf_ele_tight->GetBinContent( sf_ele_tight->FindBin( TMath::Abs(tag_eta), tag_pT ));
           sf_probe = sf_ele_tight->GetBinContent( sf_ele_tight->FindBin( TMath::Abs(probe_eta), probe_pT ));
           
@@ -2149,15 +2309,20 @@ void flavor_yield_ratio(
           syst_sf_tag   = syst_ele_sf_tight->GetBinContent(syst_ele_sf_tight->FindBin( TMath::Abs(tag_eta), tag_pT));
           syst_sf_probe = syst_ele_sf_tight->GetBinContent(syst_ele_sf_tight->FindBin( TMath::Abs(probe_eta), probe_pT));
           
-          trig_eff_tag   = trig_eff_ele->GetBinContent( trig_eff_ele->FindBin( tag_eta, TMath::Min(99.9, tag_pT) ) );
-          if(probe_pT < 25) trig_eff_probe = 0;
-          else              trig_eff_probe = trig_eff_ele->GetBinContent( trig_eff_ele->FindBin( probe_eta, TMath::Min(99.9, probe_pT) ) );
+          trig_eff_tag   = trig_eff_ele->GetBinContent( trig_eff_ele->FindBin( TMath::Abs(tag_eta), tag_pT ) );
+          if(probe_pT < 30 || TMath::Abs(probe_eta) > 2.1) trig_eff_probe = 0;
+          else              trig_eff_probe = trig_eff_ele->GetBinContent( trig_eff_ele->FindBin( TMath::Abs(probe_eta), probe_pT ) );
 
-          unc_trig_tag   = trig_eff_ele->GetBinError( trig_eff_ele->FindBin( tag_eta, TMath::Min(99.9, tag_pT) ) );
-          if(probe_pT < 25) unc_trig_probe = 0;
-          else              unc_trig_probe = trig_eff_ele->GetBinError( trig_eff_ele->FindBin( probe_eta, TMath::Min(99.9, probe_pT) ) );
+          unc_trig_tag   = unc_trig_eff_ele->GetBinContent( trig_eff_ele->FindBin( TMath::Abs(tag_eta),  tag_pT ) );
+          if(probe_pT < 30 || TMath::Abs(probe_eta) > 2.1) unc_trig_probe = 0;
+          else              unc_trig_probe = unc_trig_eff_ele->GetBinContent( trig_eff_ele->FindBin( TMath::Abs(probe_eta), probe_pT ) );
+          mc_reweighting = 2151*6025.2/19312436.;
           break;
         case 1:
+          if(tag_eta >= 2.4) tag_eta = 2.39;
+          if(tag_eta <= -2.4) tag_eta = -2.39;
+          if(probe_eta >= 2.4) probe_eta = 2.39;
+          if(probe_eta <= -2.4) probe_eta = -2.39;
           sf_tag = sf_mu_tight->GetBinContent( sf_mu_tight->FindBin( TMath::Abs(tag_eta), tag_pT ));
           sf_probe = sf_mu_tight->GetBinContent( sf_mu_tight->FindBin( TMath::Abs(probe_eta), probe_pT ));
           stat_sf_tag   = stat_mu_sf_tight->GetBinContent(stat_mu_sf_tight->FindBin( TMath::Abs(tag_eta), tag_pT)); 
@@ -2165,13 +2330,14 @@ void flavor_yield_ratio(
           syst_sf_tag   = syst_mu_sf_tight->GetBinContent(syst_mu_sf_tight->FindBin( TMath::Abs(tag_eta), tag_pT));
           syst_sf_probe = syst_mu_sf_tight->GetBinContent(syst_mu_sf_tight->FindBin( TMath::Abs(probe_eta), probe_pT));
 
-          trig_eff_tag   = trig_eff_mu->GetBinContent( trig_eff_mu->FindBin( tag_eta, TMath::Min(199.9, tag_pT) ) );
-          if(probe_pT < 20) trig_eff_probe = 0;
-          else              trig_eff_probe = trig_eff_mu->GetBinContent( trig_eff_mu->FindBin( probe_eta, TMath::Min(199.9, probe_pT) ) );
+          trig_eff_tag   = trig_eff_mu->GetBinContent( trig_eff_mu->FindBin( TMath::Abs(tag_eta), tag_pT) );
+          if(probe_pT < 30 || TMath::Abs(probe_eta) > 2.1) trig_eff_probe = 0;
+          else              trig_eff_probe = trig_eff_mu->GetBinContent( trig_eff_mu->FindBin( TMath::Abs(probe_eta), probe_pT) );
 
-          unc_trig_tag   = trig_eff_mu->GetBinError( trig_eff_mu->FindBin( tag_eta, TMath::Min(199.9, tag_pT) ) );
-          if(probe_pT < 20) unc_trig_probe = 0;
-          else              unc_trig_probe = trig_eff_mu->GetBinError( trig_eff_mu->FindBin( probe_eta, TMath::Min(199.9, probe_pT) ) );
+          unc_trig_tag   = unc_trig_eff_mu->GetBinContent( trig_eff_mu->FindBin( TMath::Abs(tag_eta), tag_pT) );
+          if(probe_pT < 30 || TMath::Abs(probe_eta) > 2.1) unc_trig_probe = 0;
+          else              unc_trig_probe = unc_trig_eff_mu->GetBinContent( trig_eff_mu->FindBin( TMath::Abs(probe_eta), probe_pT) );
+          mc_reweighting = 2106*6025.2/19312436. * 36.67/46.38;
           break;
         case 2:
           break;
@@ -2180,8 +2346,10 @@ void flavor_yield_ratio(
         default:
           break;
       }
+      //if(trig_eff_tag==0 || !(unc_trig_tag < 1) || !(unc_trig_tag>0)) continue;
       // scale1fb encapsulates pileup reweighting and generator weights
-      double weight = sf_tag * sf_probe * (1 - (1 - trig_eff_tag)*(1 - trig_eff_probe)) * scale1fb;
+      double weight = sf_tag * sf_probe * (1 - (1 - trig_eff_tag)*(1 - trig_eff_probe)) * scale1fb * mc_reweighting;
+      if(skim>1) weight=1; //lumi
       if(trig_eff_tag==0) printf("tag trig eff = 0 for tag (%f, %f)  probe (%f, %f)\n", p4_tag->Eta(), p4_tag->Pt(), p4_probe->Eta(), p4_probe->Pt());
       //if(trig_eff_probe==0) printf("probe trig eff = 0 for tag (%f, %f)  probe (%f, %f)\n", p4_tag->Eta(), p4_tag->Pt(), p4_probe->Eta(), p4_probe->Pt());
       if(sf_tag == 0) printf("sf_tag = 0 for tag (%f, %f)  probe (%f, %f)\n", p4_tag->Eta(), p4_tag->Pt(), p4_probe->Eta(), p4_probe->Pt());
@@ -2196,22 +2364,36 @@ void flavor_yield_ratio(
       ( (TH1D*) stat_events_ZpT_[skim] )->Fill(Z_pT, weight*weight);
       ( (TH1D*) stat_sf_ZpT_[skim] )->Fill(Z_pT, weight*weight*( pow(stat_sf_tag/sf_tag,2) + pow(stat_sf_probe/sf_probe,2) ));
       
-      // add trigger uncertainties linearly (correlated) to be conservative
-      if(trig_eff_probe!=0) ( (TH1D*) trig_unc_ZpT_[skim] )->Fill(Z_pT, weight*( unc_trig_tag + unc_trig_probe) / (trig_eff_tag * trig_eff_probe) );
-      else                  ( (TH1D*) trig_unc_ZpT_[skim] )->Fill(Z_pT, weight* unc_trig_tag / trig_eff_tag);
+      // trigger uncertainties
+      if(trig_eff_probe!=0) ( (TH1D*) trig_unc_ZpT_[skim] )->Fill(Z_pT, weight*weight*( pow(unc_trig_tag/trig_eff_tag, 2) + pow(unc_trig_probe/trig_eff_probe, 2)));
+      else                  ( (TH1D*) trig_unc_ZpT_[skim] )->Fill(Z_pT, pow(weight* unc_trig_tag / trig_eff_tag,2));
     }
+  }
+  double ele_scale = ((TH1D*)dN_dZpT_[2])->Integral() /  ((TH1D*)dN_dZpT_[0])->Integral();
+  double mu_scale  = ((TH1D*)dN_dZpT_[3])->Integral() /  ((TH1D*)dN_dZpT_[1])->Integral();
+  printf("Scaling ele MC by factor of %f\n", ele_scale);
+  printf("Scaling mu MC by factor of %f\n", mu_scale);
+
+  //((TH1D*)dN_dZpT_[0])->Scale(ele_scale);
+  //((TH1D*)dN_dZpT_[1])->Scale(mu_scale);
+  
+  for(int skim=0; skim<n_skims; skim++) {
     for(int j=1; j<=nbins; j++) {
       ((TH1D*)unc_ZpT_[skim])->SetBinContent(j,
         sqrt(
           pow(((TH1D*)syst_sf_ZpT_[skim])->GetBinContent(j),2) +
-          pow(((TH1D*)trig_unc_ZpT_[skim])->GetBinContent(j),2) +
+          ((TH1D*)trig_unc_ZpT_[skim])->GetBinContent(j) +
           ((TH1D*)stat_sf_ZpT_[skim])->GetBinContent(j) +
           ((TH1D*)stat_events_ZpT_[skim])->GetBinContent(j) 
         ) /
         ((TH1D*)dN_dZpT_[skim])->GetBinContent(j)
       );
+      ((TH1D*)trig_unc_ZpT_[skim])->SetBinContent(j,
+        sqrt(((TH1D*)trig_unc_ZpT_[skim])->GetBinContent(j)) / ((TH1D*)dN_dZpT_[skim])->GetBinContent(j) );
       ((TH1D*)stat_sf_ZpT_[skim])->SetBinContent(j,
         sqrt(((TH1D*)stat_sf_ZpT_[skim])->GetBinContent(j)) / ((TH1D*)dN_dZpT_[skim])->GetBinContent(j) );
+      ((TH1D*)stat_events_ZpT_[skim])->SetBinContent(j,
+        sqrt(((TH1D*)stat_events_ZpT_[skim])->GetBinContent(j)) / ((TH1D*)dN_dZpT_[skim])->GetBinContent(j) );
       ((TH1D*)dN_dZpT_[skim])->SetBinError(j, 
         ((TH1D*)dN_dZpT_[skim])->GetBinContent(j) *  ((TH1D*)unc_ZpT_[skim])->GetBinContent(j) 
       );
@@ -2219,7 +2401,6 @@ void flavor_yield_ratio(
 
     }
     ((TH1D*)syst_sf_ZpT_[skim])->Divide(((TH1D*)dN_dZpT_[skim]));
-    ((TH1D*)trig_unc_ZpT_[skim])->Divide(((TH1D*)dN_dZpT_[skim]));
   }
   TClonesArray c_dN_dZpT_ ("TCanvas", n_skims);
   new(c_dN_dZpT_[0]) TCanvas("c_mc_dN_dZpT_ele_tight",   "p_{T}^{ll} distribution of Z #rightarrow ee events in MC");
@@ -2286,8 +2467,8 @@ void flavor_yield_ratio(
     ((TCanvas*)c_unc_ZpT_[skim])->Print(histo_file_name);
   }
   
-  TH1D *flavor_ratio_mc   = new TH1D("flavor_ratio_mc",   "", nbins, 0, max_pT);
-  TH1D *flavor_ratio_data = new TH1D("flavor_ratio_data", "", nbins, 0, max_pT);
+  TH1D *flavor_ratio_mc   = new TH1D("flavor_ratio_mc",   "", nbins, Z_pT_bins);
+  TH1D *flavor_ratio_data = new TH1D("flavor_ratio_data", "", nbins, Z_pT_bins);
   (*flavor_ratio_mc)   = (* ((TH1D*)dN_dZpT_[1])) / (* ((TH1D*)dN_dZpT_[0]));
   (*flavor_ratio_data) = (* ((TH1D*)dN_dZpT_[3])) / (* ((TH1D*)dN_dZpT_[2]));
   flavor_ratio_mc->SetTitle("Ratio of Z #rightarrow #mu#mu / Z #rightarrow ee events");
@@ -2303,6 +2484,8 @@ void flavor_yield_ratio(
   flavor_ratio_data->SetMarkerColor(1);
   flavor_ratio_data->SetMarkerStyle(21);
   TCanvas *c_flavor_ratio=new TCanvas("c_flavor_ratio", "c_flavor_ratio"); 
+  flavor_ratio_mc->SetMinimum(0);
+  flavor_ratio_mc->SetMaximum(5);
   flavor_ratio_mc->Draw("E1 P0 L");
   flavor_ratio_mc->GetXaxis()->SetTitle("Z p_{T} [GeV]");
   flavor_ratio_data->Draw("E1 P0 L SAME");
@@ -2312,6 +2495,285 @@ void flavor_yield_ratio(
   l_flavor_ratio->SetFillColor(0);
   l_flavor_ratio->Draw("SAME");
   c_flavor_ratio->Print((plots_dir+"ZpT_flavor_ratio.png").c_str());
+   
+  printf("Done! \n");
+}
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void electron_closure(
+  string plots_dir,
+  string root_dir,
+  bool verbose=false
+) {
+  gStyle->SetOptStat(0); 
+  int n_skims=4; 
+  int nbins=8;
+  Float_t Z_pT_bins[] = {50., 75., 100., 125., 150., 175., 200., 300., 400.};
+  int max_pT = 400;
+  TFile *f_sf_ele  = TFile::Open((root_dir+"scalefactors_ele.root").c_str(),"READ");
+  TFile *f_uncertainties_ele_tight  = TFile::Open((root_dir+"combined_uncertainties_ele_tight.root").c_str(),"READ");
+  TFile *f_ele_triggers = TFile::Open("/home/dhsu/TagAndProbe/Data_Triggers/Ele27_eta2p1_WPLoose_Gsf/eff.root", "READ");
+  
+  TFile *f_ele_mc = TFile::Open("~/leptonScaleFactors/root_local/DYJetsToLL_genMatching_BaselineToTight_electronTnP.root","READ");
+  TFile *f_ele_data = TFile::Open("~/leptonScaleFactors/root_local/SingleElectron_2100pb_BaselineToTight_electronTnP.root","READ");
+
+  TH2D *syst_ele_sf_tight    = (TH2D*) f_uncertainties_ele_tight ->Get("syst_ele_sf_combined_tight");
+  TH2D *stat_ele_sf_tight    = (TH2D*) f_uncertainties_ele_tight ->Get("stat_ele_sf_tight");
+
+  TH2D *trig_eff_ele = (TH2D*) f_ele_triggers->Get("hEffEtaPt");
+  TH2D *unc_trig_eff_ele = (TH2D*) f_ele_triggers->Get("hErrhEtaPt");
+  TH2D *sf_ele_tight = (TH2D*) f_sf_ele->Get("unfactorized_scalefactors_Tight_ele");
+  
+  // read from tnp skim
+  unsigned int runNum, // event ID
+  lumiSec,
+  evtNum,
+  npv, // number of primary vertices
+  pass; // whether probe passes requirements
+  float        npu=1;                     // mean number of expected pileup
+  float        scale1fb=1;                  // event weight per 1/fb
+  float        mass;                      // tag-probe mass
+  int          qtag, qprobe;              // tag, probe charge
+  int          truth_tag, truth_probe;              // tag, probe truth
+  TLorentzVector *p4_tag=0, *p4_probe=0;        // tag, probe 4-vector 
+  
+  TTree *mc_tree = (TTree*) f_ele_mc->Get("Events");
+  mc_tree->SetBranchAddress("runNum",   &runNum   );  
+  mc_tree->SetBranchAddress("lumiSec",  &lumiSec  );  
+  mc_tree->SetBranchAddress("evtNum",   &evtNum   );  
+  mc_tree->SetBranchAddress("npv",      &npv      );  
+  mc_tree->SetBranchAddress("pass",     &pass     );  
+  mc_tree->SetBranchAddress("npu",      &npu      );  
+  mc_tree->SetBranchAddress("scale1fb", &scale1fb );
+  mc_tree->SetBranchAddress("mass",     &mass     );  
+  mc_tree->SetBranchAddress("qtag",     &qtag     );  
+  mc_tree->SetBranchAddress("qprobe",   &qprobe   );  
+  mc_tree->SetBranchAddress("tag",      &p4_tag   );  
+  mc_tree->SetBranchAddress("probe",    &p4_probe );     
+  TTree *data_tree = (TTree*) f_ele_data->Get("Events");
+  data_tree->SetBranchAddress("runNum",   &runNum   );  
+  data_tree->SetBranchAddress("lumiSec",  &lumiSec  );  
+  data_tree->SetBranchAddress("evtNum",   &evtNum   );  
+  data_tree->SetBranchAddress("npv",      &npv      );  
+  data_tree->SetBranchAddress("pass",     &pass     );  
+  data_tree->SetBranchAddress("npu",      &npu      );  
+  data_tree->SetBranchAddress("scale1fb", &scale1fb );
+  data_tree->SetBranchAddress("mass",     &mass     );  
+  data_tree->SetBranchAddress("qtag",     &qtag     );  
+  data_tree->SetBranchAddress("qprobe",   &qprobe   );  
+  data_tree->SetBranchAddress("tag",      &p4_tag   );  
+  data_tree->SetBranchAddress("probe",    &p4_probe );     
+  gStyle->SetOptStat(0);
+  gStyle->SetPaintTextFormat("4.3f");
+  mitPalette();
+  TPaletteAxis *palette_axis;
+  TColor *col_mit_red  = new TColor(mit_red,  163/255., 31/255.,  52/255.);
+  TColor *col_mit_gray = new TColor(mit_gray, 138/255., 139/255., 140/255.);
+  
+  TH1D *probe_pt_mc_EBEB = new TH1D("probe_pt_mc_EBEB", "", 95,10,200);
+  probe_pt_mc_EBEB->Sumw2(kTRUE);
+  probe_pt_mc_EBEB->SetDefaultSumw2(kTRUE);
+  TH1D *probe_pt_mc_EEEE = new TH1D("probe_pt_mc_EEEE", "", 95,10,200);
+  TH1D *tag_pt_mc_EBEB = new TH1D("tag_pt_mc_EBEB", "", 85,30,200);
+  TH1D *tag_pt_mc_EEEE = new TH1D("tag_pt_mc_EEEE", "", 85,30,200);
+  TH1D *probe_pt_data_EBEB = new TH1D("probe_pt_data_EBEB", "", 95,10,200);
+  TH1D *probe_pt_data_EEEE = new TH1D("probe_pt_data_EEEE", "", 95,10,200);
+  TH1D *tag_pt_data_EBEB = new TH1D("tag_pt_data_EBEB", "", 85,30,200);
+  TH1D *tag_pt_data_EEEE = new TH1D("tag_pt_data_EEEE", "", 85,30,200);
+
+  TH1D *tag_eta_mc   = new TH1D("tag_eta_mc", "", 42, -2.1, 2.1);
+  TH1D *tag_eta_data   = new TH1D("tag_eta_data", "", 42, -2.1, 2.1);
+  TH1D *probe_eta_mc = new TH1D("probe_eta_mc", "", 50, -2.5, 2.5);
+  TH1D *probe_eta_data = new TH1D("probe_eta_data", "", 50, -2.5, 2.5);
+
+  TH1D *dilepton_pt_mc_EBEB = new TH1D("dilepton_pt_mc_EBEB", "", 100,0,200);
+  TH1D *dilepton_pt_mc_EBEE = new TH1D("dilepton_pt_mc_EBEE", "", 100,0,200);
+  TH1D *dilepton_pt_mc_EEEE = new TH1D("dilepton_pt_mc_EEEE", "", 100,0,200);
+  TH1D *dilepton_pt_data_EBEB = new TH1D("dilepton_pt_data_EBEB", "", 100,0,200);
+  TH1D *dilepton_pt_data_EBEE = new TH1D("dilepton_pt_data_EBEE", "", 100,0,200);
+  TH1D *dilepton_pt_data_EEEE = new TH1D("dilepton_pt_data_EEEE", "", 100,0,200);
+
+  TH1D *dilepton_M_mc_EBEB = new TH1D("dilepton_M_mc_EBEB", "", 60,60,120);
+  TH1D *dilepton_M_mc_EBEE = new TH1D("dilepton_M_mc_EBEE", "", 60,60,120);
+  TH1D *dilepton_M_mc_EEEE = new TH1D("dilepton_M_mc_EEEE", "", 60,60,120);
+  TH1D *dilepton_M_data_EBEB = new TH1D("dilepton_M_data_EBEB", "", 60,60,120);
+  TH1D *dilepton_M_data_EBEE = new TH1D("dilepton_M_data_EBEE", "", 60,60,120);
+  TH1D *dilepton_M_data_EEEE = new TH1D("dilepton_M_data_EEEE", "", 60,60,120);
+  Long64_t nentries;
+  double mc_reweighting = 2151*6025.2/19312436.;
+  printf("mc reweighting factor is %f\n", mc_reweighting);
+  // dont handle mc xs error for now
+  nentries = mc_tree->GetEntries();
+  for (Long64_t i=0; i<nentries; i++) {
+    mc_tree->GetEntry(i);
+    if(!(
+      pass==1 &&
+      qtag + qprobe == 0 && 
+      TMath::Abs(mass-90.) <= 30
+    )) continue;
+    TLorentzVector systemP4 = (*p4_tag) + (*p4_probe);
+    double Z_pT = systemP4.Pt();
+    double trig_eff_tag=1, trig_eff_probe=1, sf_tag=1, sf_probe=1;
+    double stat_sf_tag=0, stat_sf_probe=0, syst_sf_tag=0, syst_sf_probe=0, unc_trig_tag=0, unc_trig_probe;
+    double tag_eta = p4_tag->Eta();
+    double tag_pT = p4_tag->Pt();
+    double probe_eta = p4_probe->Eta();
+    double probe_pT = p4_probe->Pt();
+    if(tag_pT < 30) continue;
+    if(tag_eta >= 2.1)    continue;
+    if(tag_eta <= -2.1)   continue;
+    if(probe_eta >= 2.5)  continue;
+    if(probe_eta <= -2.5) continue;
+    sf_tag = sf_ele_tight->GetBinContent( sf_ele_tight->FindBin( TMath::Abs(tag_eta), tag_pT ));
+    sf_probe = sf_ele_tight->GetBinContent( sf_ele_tight->FindBin( TMath::Abs(probe_eta), probe_pT ));
+    
+    stat_sf_tag   = stat_ele_sf_tight->GetBinContent(stat_ele_sf_tight->FindBin( TMath::Abs(tag_eta), tag_pT)); 
+    stat_sf_probe = stat_ele_sf_tight->GetBinContent(stat_ele_sf_tight->FindBin( TMath::Abs(probe_eta), probe_pT));
+    syst_sf_tag   = syst_ele_sf_tight->GetBinContent(syst_ele_sf_tight->FindBin( TMath::Abs(tag_eta), tag_pT));
+    syst_sf_probe = syst_ele_sf_tight->GetBinContent(syst_ele_sf_tight->FindBin( TMath::Abs(probe_eta), probe_pT));
+    
+    trig_eff_tag   = trig_eff_ele->GetBinContent( trig_eff_ele->FindBin( TMath::Abs(tag_eta), TMath::Min(199.9, tag_pT) ) );
+    if(probe_pT < 30 || TMath::Abs(probe_eta) > 2.1) trig_eff_probe = 0;
+    else              trig_eff_probe = trig_eff_ele->GetBinContent( trig_eff_ele->FindBin( TMath::Abs(probe_eta), TMath::Min(199.9, probe_pT) ) );
+
+    unc_trig_tag   = unc_trig_eff_ele->GetBinContent( trig_eff_ele->FindBin( TMath::Abs(tag_eta),  tag_pT ) );
+    if(probe_pT < 30 || TMath::Abs(probe_eta) > 2.1) unc_trig_probe = 0;
+    else              unc_trig_probe = unc_trig_eff_ele->GetBinContent( trig_eff_ele->FindBin( TMath::Abs(probe_eta), TMath::Min(199.9, probe_pT) ) );
+    double weight = scale1fb*mc_reweighting;
+    //double weight = sf_tag * sf_probe * (1 - (1 - trig_eff_tag)*(1 - trig_eff_probe)) * scale1fb * mc_reweighting;
+
+    // EB EB
+    if(TMath::Abs(tag_eta) < 1.4442 && TMath::Abs(probe_eta) < 1.4442) {
+      probe_pt_mc_EBEB    ->Fill(probe_pT,  weight);
+      probe_eta_mc        ->Fill(probe_eta, weight);
+      tag_pt_mc_EBEB      ->Fill(tag_pT,    weight);
+      tag_eta_mc          ->Fill(tag_eta,   weight);
+      dilepton_M_mc_EBEB  ->Fill(mass,      weight);
+      dilepton_pt_mc_EBEB ->Fill(Z_pT,      weight);
+    }
+    // EB EE
+    else if(
+      (TMath::Abs(tag_eta) < 1.4442 && TMath::Abs(probe_eta) > 1.566) ||
+      (TMath::Abs(tag_eta) > 1.566  && TMath::Abs(probe_eta) < 1.4442)
+    ) {
+      probe_eta_mc        ->Fill(probe_eta, weight);
+      tag_eta_mc          ->Fill(tag_eta,   weight);
+      dilepton_M_mc_EBEE  ->Fill(mass,      weight);
+      dilepton_pt_mc_EBEE ->Fill(Z_pT,      weight);
+      
+    }
+    // EE EE
+    else if(TMath::Abs(tag_eta) > 1.566  && TMath::Abs(probe_eta) > 1.566) {
+      probe_pt_mc_EEEE    ->Fill(probe_pT,  weight);
+      probe_eta_mc        ->Fill(probe_eta, weight);
+      tag_pt_mc_EEEE      ->Fill(tag_pT,    weight);
+      tag_eta_mc          ->Fill(tag_eta,   weight);
+      dilepton_M_mc_EEEE  ->Fill(mass,      weight);
+      dilepton_pt_mc_EEEE ->Fill(Z_pT,      weight);
+
+    }
+
+  }
+  printf("done reading MC skim\n");
+  nentries = data_tree->GetEntries();
+  for (Long64_t i=0; i<nentries; i++) {
+    data_tree->GetEntry(i);
+    if(!(
+      pass==1 &&
+      qtag + qprobe == 0 &&
+      TMath::Abs(mass-90.) <= 30
+    )) continue;
+    TLorentzVector systemP4 = (*p4_tag) + (*p4_probe);
+    double Z_pT = systemP4.Pt();
+    double tag_eta = p4_tag->Eta();
+    double tag_pT = p4_tag->Pt();
+    double probe_eta = p4_probe->Eta();
+    double probe_pT = p4_probe->Pt();
+    if(tag_pT < 30) continue;
+    if(tag_eta >= 2.1)    continue;
+    if(tag_eta <= -2.1)   continue;
+    if(probe_eta >= 2.5)  continue;
+    if(probe_eta <= -2.5) continue;
+
+    double weight=1;
+    // EB EB
+    if(TMath::Abs(tag_eta) < 1.4442 && TMath::Abs(probe_eta) < 1.4442) {
+      probe_pt_data_EBEB    ->Fill(probe_pT,  weight);
+      probe_eta_data        ->Fill(probe_eta, weight);
+      tag_pt_data_EBEB      ->Fill(tag_pT,    weight);
+      tag_eta_data          ->Fill(tag_eta,   weight);
+      dilepton_M_data_EBEB  ->Fill(mass,      weight);
+      dilepton_pt_data_EBEB ->Fill(Z_pT,      weight);
+    }
+    // EB EE
+    else if(
+      (TMath::Abs(tag_eta) < 1.4442 && TMath::Abs(probe_eta) > 1.566) ||
+      (TMath::Abs(tag_eta) > 1.566  && TMath::Abs(probe_eta) < 1.4442)
+    ) {
+      probe_eta_data        ->Fill(probe_eta, weight);
+      tag_eta_data          ->Fill(tag_eta,   weight);
+      dilepton_M_data_EBEE  ->Fill(mass,      weight);
+      dilepton_pt_data_EBEE ->Fill(Z_pT,      weight);
+      
+    }
+    // EE EE
+    else if(TMath::Abs(tag_eta) > 1.566  && TMath::Abs(probe_eta) > 1.566) {
+      probe_pt_data_EEEE    ->Fill(probe_pT,  weight);
+      probe_eta_data        ->Fill(probe_eta, weight);
+      tag_pt_data_EEEE      ->Fill(tag_pT,    weight);
+      tag_eta_data          ->Fill(tag_eta,   weight);
+      dilepton_M_data_EEEE  ->Fill(mass,      weight);
+      dilepton_pt_data_EEEE ->Fill(Z_pT,      weight);
+
+    }
+
+  }
+  printf("done reading data skim\n");
+  //mc_tree  ->Draw("probe.Pt() >> probe_pt_mc_EBEB", "scale1fb*(pass==1 && (qtag + qprobe == 0) && tag.Pt() > 30 && probe.Eta() < 1.4442 && tag.Eta() < 1.4442)");
+  //mc_tree  ->Draw("probe.Pt() >> probe_pt_mc_EEEE", "scale1fb*(pass==1 && (qtag + qprobe == 0) && tag.Pt() > 30 && probe.Eta() > 1.566 && tag.Eta() > 1.566)");
+  //mc_tree  ->Draw("tag.Pt() >> tag_pt_mc_EBEB", "scale1fb*(pass==1 && (qtag + qprobe == 0) && tag.Pt() > 30 && probe.Eta() < 1.4442 && tag.Eta() < 1.4442)");
+  //mc_tree  ->Draw("tag.Pt() >> tag_pt_mc_EEEE", "scale1fb*(pass==1 && (qtag + qprobe == 0) && tag.Pt() > 30 && probe.Eta() > 1.566 && tag.Eta() > 1.566)");
+  //data_tree->Draw("probe.Pt() >> probe_pt_data_EBEB", "scale1fb*(pass==1 && (qtag + qprobe == 0) && tag.Pt() > 30 && probe.Eta() < 1.4442 && tag.Eta() < 1.4442)");
+  //data_tree->Draw("probe.Pt() >> probe_pt_data_EEEE", "scale1fb*(pass==1 && (qtag + qprobe == 0) && tag.Pt() > 30 && probe.Eta() > 1.566 && tag.Eta() > 1.566)");
+  //data_tree->Draw("tag.Pt()   >> tag_pt_data_EBEB",   "scale1fb*(pass==1 && (qtag + qprobe == 0) && tag.Pt() > 30 && probe.Eta() < 1.4442 && tag.Eta() < 1.4442)");
+  //data_tree->Draw("tag.Pt()   >> tag_pt_data_EEEE",   "scale1fb*(pass==1 && (qtag + qprobe == 0) && tag.Pt() > 30 && probe.Eta() > 1.566 && tag.Eta() > 1.566)");
+  //data_tree->Draw("probe.Eta() >> probe_eta_data", "scale1fb*(pass==1 && (qtag + qprobe == 0) && tag.Pt() > 30)");
+  //data_tree->Draw("tag.Eta() >> tag_eta_data", "scale1fb*(pass==1 && (qtag + qprobe == 0) && tag.Pt() > 30)");
+  //
+  //data_tree->Draw("(probe+tag).Pt() >> dilepton_pt_data_EBEB", "scale1fb*(pass==1 && (qtag + qprobe == 0) && tag.Pt() > 30 && probe.Eta() < 1.4442 && tag.Eta() < 1.4442)");
+  //data_tree->Draw("(probe+tag).Pt() >> dilepton_pt_data_EBEE", "scale1fb*(pass==1 && (qtag + qprobe == 0) && tag.Pt() > 30 && ((probe.Eta() < 1.4442 && tag.Eta() > 1.566) || (probe.Eta() > 1.566 && tag.Eta() < 1.4442)))");
+  //data_tree->Draw("(probe+tag).Pt() >> dilepton_pt_data_EEEE", "scale1fb*(pass==1 && (qtag + qprobe == 0) && tag.Pt() > 30 && probe.Eta() > 1.566 && tag.Eta() > 1.566)");
+  //
+  //data_tree->Draw("(probe+tag).M() >> dilepton_M_data_EBEB", "scale1fb*(pass==1 && (qtag + qprobe == 0) && tag.Pt() > 30 && probe.Eta() < 1.4442 && tag.Eta() < 1.4442)");
+  //data_tree->Draw("(probe+tag).M() >> dilepton_M_data_EBEE", "scale1fb*(pass==1 && (qtag + qprobe == 0) && tag.Pt() > 30 && ((probe.Eta() < 1.4442 && tag.Eta() > 1.566) || (probe.Eta() > 1.566 && tag.Eta() < 1.4442)))");
+  //data_tree->Draw("(probe+tag).M() >> dilepton_M_data_EEEE", "scale1fb*(pass==1 && (qtag + qprobe == 0) && tag.Pt() > 30 && probe.Eta() > 1.566 && tag.Eta() > 1.566)");
+  
+  TCanvas *Zee_probe_pt_EBEB    = ratio_plot("probe_pt_EBEB", "Probe p_{T} (EB-EB)", "p_{T} [GeV]", probe_pt_data_EBEB, probe_pt_mc_EBEB);
+  TCanvas *Zee_probe_pt_EEEE    = ratio_plot("probe_pt_EEEE", "Probe p_{T} (EE-EE)", "p_{T} [GeV]", probe_pt_data_EEEE, probe_pt_mc_EEEE);
+  TCanvas *Zee_tag_pt_EBEB      = ratio_plot("tag_pt_EBEB",   "Tag p_{T} (EB-EB)", "p_{T} [GeV]", tag_pt_data_EBEB, tag_pt_mc_EBEB);
+  TCanvas *Zee_tag_pt_EEEE      = ratio_plot("tag_pt_EEEE",   "Tag p_{T} (EE-EE)", "p_{T} [GeV]", tag_pt_data_EEEE, tag_pt_mc_EEEE);
+  TCanvas *Zee_tag_eta          = ratio_plot("tag_eta",   "Tag #eta", "#eta", tag_eta_data, tag_eta_mc);
+  TCanvas *Zee_probe_eta        = ratio_plot("probe_eta", "Probe #eta", "#eta", probe_eta_data, probe_eta_mc);
+  TCanvas *Zee_dilepton_pt_EBEB = ratio_plot("dilepton_pt_EBEB", "p_{T}^{ll} (EB-EB)", "p_{T} [GeV]", dilepton_pt_data_EBEB, dilepton_pt_mc_EBEB);
+  TCanvas *Zee_dilepton_pt_EBEE = ratio_plot("dilepton_pt_EBEE", "p_{T}^{ll} (EB-EE)", "p_{T} [GeV]", dilepton_pt_data_EBEE, dilepton_pt_mc_EBEE);
+  TCanvas *Zee_dilepton_pt_EEEE = ratio_plot("dilepton_pt_EEEE", "p_{T}^{ll} (EE-EE)", "p_{T} [GeV]", dilepton_pt_data_EEEE, dilepton_pt_mc_EEEE);
+  TCanvas *Zee_dilepton_M_EBEB  = ratio_plot("dilepton_M_EBEB",  "m^{ll} (EB-EB)", "invariant mass [GeV]", dilepton_M_data_EBEB, dilepton_M_mc_EBEB);
+  TCanvas *Zee_dilepton_M_EBEE  = ratio_plot("dilepton_M_EBEE",  "m^{ll} (EB-EE)", "invariant mass [GeV]", dilepton_M_data_EBEE, dilepton_M_mc_EBEE);
+  TCanvas *Zee_dilepton_M_EEEE  = ratio_plot("dilepton_M_EEEE",  "m^{ll} (EE-EE)", "invariant mass [GeV]", dilepton_M_data_EEEE, dilepton_M_mc_EEEE);
+
+  Zee_probe_pt_EBEB    ->Print( (plots_dir + string(Zee_probe_pt_EBEB    ->GetName()) + ".png").c_str());
+  Zee_probe_pt_EEEE    ->Print( (plots_dir + string(Zee_probe_pt_EEEE    ->GetName()) + ".png").c_str());
+  Zee_tag_pt_EBEB      ->Print( (plots_dir + string(Zee_tag_pt_EBEB      ->GetName()) + ".png").c_str());
+  Zee_tag_pt_EEEE      ->Print( (plots_dir + string(Zee_tag_pt_EEEE      ->GetName()) + ".png").c_str());
+  Zee_tag_eta          ->Print( (plots_dir + string(Zee_tag_eta          ->GetName()) + ".png").c_str());
+  Zee_probe_eta        ->Print( (plots_dir + string(Zee_probe_eta        ->GetName()) + ".png").c_str());
+  Zee_dilepton_pt_EBEB ->Print( (plots_dir + string(Zee_dilepton_pt_EBEB ->GetName()) + ".png").c_str());
+  Zee_dilepton_pt_EBEE ->Print( (plots_dir + string(Zee_dilepton_pt_EBEE ->GetName()) + ".png").c_str());
+  Zee_dilepton_pt_EEEE ->Print( (plots_dir + string(Zee_dilepton_pt_EEEE ->GetName()) + ".png").c_str());
+  Zee_dilepton_M_EBEB  ->Print( (plots_dir + string(Zee_dilepton_M_EBEB  ->GetName()) + ".png").c_str());
+  Zee_dilepton_M_EBEE  ->Print( (plots_dir + string(Zee_dilepton_M_EBEE  ->GetName()) + ".png").c_str());
+  Zee_dilepton_M_EEEE  ->Print( (plots_dir + string(Zee_dilepton_M_EEEE  ->GetName()) + ".png").c_str());
+
+
    
   printf("Done! \n");
 }

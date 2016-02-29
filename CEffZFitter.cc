@@ -94,7 +94,8 @@ void CEffZFitter::initialize(const std::string conf, const int sigpass, const in
   fMassHi    = massHi;
   fFitMassLo = fitMassLo;
   fFitMassHi = fitMassHi;
-  
+  templateFile = temfname; 
+
   // set up output directory
   fOutputDir = outdir;
   fRefDir = refDir;
@@ -574,6 +575,16 @@ void CEffZFitter::computeEff()
   delete hErrlEtaPhi;
   delete hErrhEtaPhi;
   hEffEtaPt=0, hErrlEtaPt=0, hErrhEtaPt=0, hEffEtaPhi=0, hErrlEtaPhi=0, hErrhEtaPhi=0;  
+
+  // delete temporary templates file
+  if(fSigPass==2 || fSigFail==2) {
+    string outfile_name = fOutputDir + "_binnedTemplates.root";
+    remove(outfile_name.c_str());
+  } else if(fSigPass==4 || fSigFail==4) {
+    string outfile_name = fOutputDir + "_unbinnedTemplates.root";
+    remove(outfile_name.c_str());
+  }
+
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -788,8 +799,8 @@ void CEffZFitter::makeBinnedTemplates(const std::string temfname, const int char
     }    
   }
   infile->Close();
- 
-  TFile outfile("binnedTemplates.root", "RECREATE");
+  string outfile_name = fOutputDir + "_binnedTemplates.root";
+  TFile outfile(outfile_name.c_str(), "RECREATE");
   for(unsigned int ibin=0; ibin<NBINS_PT; ibin++) {
     passPt[ibin]->Write();
     failPt[ibin]->Write();
@@ -1011,8 +1022,8 @@ void CEffZFitter::makeUnbinnedTemplates(const std::string temfname, const int ch
     }    
   }
   infile->Close();
-
-  TFile outfile("unbinnedTemplates.root", "RECREATE");
+  string outfile_name = fOutputDir + "_unbinnedTemplates.root";
+  TFile outfile(outfile_name.c_str(), "RECREATE");
   for(unsigned int ibin=0; ibin<NBINS_PT; ibin++) {
     passPt[ibin]->Write();
     failPt[ibin]->Write();
@@ -1321,15 +1332,16 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
   char nsigstr[1000];
   char nbkgstr[1000];
   char chi2str[1000];
-  
   TFile *histfile = 0;
   if(fSigPass==2 || fSigFail==2) {
-    histfile = new TFile("binnedTemplates.root");
+    string outfile_name = fOutputDir + "_binnedTemplates.root";
+    histfile = new TFile(outfile_name.c_str());
     assert(histfile);
   }
   TFile *datfile = 0;
   if(fSigPass==4 || fSigFail==4) {
-    datfile = new TFile("unbinnedTemplates.root");
+    string outfile_name = fOutputDir + "_unbinnedTemplates.root";
+    datfile = new TFile(outfile_name.c_str());
     assert(datfile);
   }
   

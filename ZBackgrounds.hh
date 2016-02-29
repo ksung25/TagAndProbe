@@ -105,13 +105,13 @@ CErfcExpo::CErfcExpo(RooRealVar &m, const Bool_t pass)
   char vname[50];
 
   if(pass) {
-    sprintf(vname,"alfa%s",name);  alfa  = new RooRealVar(vname,vname,50,5,200);
-    sprintf(vname,"beta%s",name);  beta  = new RooRealVar(vname,vname,0.05,0,0.2);
-    sprintf(vname,"gamma%s",name); gamma = new RooRealVar(vname,vname,0.1,0,1);
+    sprintf(vname,"alfa%s",name);  alfa  = new RooRealVar(vname,vname,100,5,200);
+    sprintf(vname,"beta%s",name);  beta  = new RooRealVar(vname,vname,0.02,0,0.2);
+    sprintf(vname,"gamma%s",name); gamma = new RooRealVar(vname,vname,0.07,0,1);
   } else {
-    sprintf(vname,"alfa%s",name);  alfa  = new RooRealVar(vname,vname,50,5,200);
-    sprintf(vname,"beta%s",name);  beta  = new RooRealVar(vname,vname,0.05,0,0.2);
-    sprintf(vname,"gamma%s",name); gamma = new RooRealVar(vname,vname,0.1,0,1);
+    sprintf(vname,"alfa%s",name);  alfa  = new RooRealVar(vname,vname,100,5,200);
+    sprintf(vname,"beta%s",name);  beta  = new RooRealVar(vname,vname,0.02,0,0.2);
+    sprintf(vname,"gamma%s",name); gamma = new RooRealVar(vname,vname,0.07,0,1);
   }  
   
   sprintf(vname,"peak%s",name);  
@@ -150,7 +150,7 @@ CErfcExpoFixed::CErfcExpoFixed(RooRealVar &m, const Bool_t pass, const int ibin,
     paramNames.push_back("gammaFail");
   }
   std::vector<double> params = readBkgParams(ibin, fitname, paramNames, refDir);
-  sprintf(vname,"alfa%s",name);  alfa  = new RooRealVar(vname,vname,params[0]); alfa->setConstant(kTRUE);
+  sprintf(vname,"alfa%s",name);  alfa  = new RooRealVar(vname,vname,params[0]); //alfa->setConstant(kTRUE);
   sprintf(vname,"beta%s",name);  beta  = new RooRealVar(vname,vname,params[1]); beta->setConstant(kTRUE);
   sprintf(vname,"gamma%s",name); gamma = new RooRealVar(vname,vname,params[2]); gamma->setConstant(kTRUE);
   
@@ -272,7 +272,7 @@ CQuadraticExp::~CQuadraticExp()
   delete a2; a2=0;
   delete t;  t=0;
 }
-
+//--------------------------------------------------------------------------------------------------
 std::vector<double> CBackgroundModel::readBkgParams(
   const int ibin,
   const std::string fitname,
@@ -296,13 +296,14 @@ std::vector<double> CBackgroundModel::readBkgParams(
     bool found_param = false;
     printf("Looking for parameter %s...\n", paramNames[i].c_str());
     while(getline(rfile,line)) {
-      printf("%s\n", line.c_str());
-      size_t found = line.find(paramNames[i]);
+      //printf("%s\n", line.c_str());
+      size_t found = line.find(" "+paramNames[i]+" ");
       if(found!=string::npos) {
         std::string varname, initval, finalval, pmstr, error, corr;
         std::stringstream ss(line);
         ss >> varname >> initval >> finalval >> pmstr >> error >> corr;
         params.push_back(atof(finalval.c_str()));
+        printf("Got value %f\n", atof(finalval.c_str()));
         found_param=true;
         break;
       }

@@ -444,8 +444,6 @@ std::vector<double> CSignalModel::readSigParams(
     printf("Looking for parameter %s...\n", paramNames[i].c_str());
     while(getline(rfile,line)) {
       //printf("%s\n", line.c_str());
-      char search[64];
-
       size_t found = line.find(" "+paramNames[i]+" ");
       if(found!=string::npos) {
         std::string varname, initval, finalval, pmstr, error, corr;

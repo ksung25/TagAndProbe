@@ -1416,6 +1416,8 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
     sigModPass = new CMCDatasetConvGaussian(m,t,true);
   } else if(fSigPass==5) {
     sigModPass = new CBWCBPlusVoigt(m, true, ptMin, ptMax);
+  } else if(fSigPass==6) {
+    sigModPass = new CBWCBPlusVoigt(m, true, ptMin, ptMax, ibin, name, fRefDir);
   }
 
   if(fBkgPass==1) { 
@@ -1457,6 +1459,8 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
     sigModFail = new CMCDatasetConvGaussian(m,t,false);
   } else if(fSigFail==5) {
     sigModFail = new CBWCBPlusVoigt(m, false, ptMin, ptMax);
+  } else if(fSigFail==6) {
+    sigModFail = new CBWCBPlusVoigt(m, false, ptMin, ptMax, ibin, name, fRefDir);
   }
   if(fBkgFail==1) { 
     bkgModFail = new CExponential(m,false);
@@ -1492,9 +1496,17 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
   RooRealVar Nsig("Nsig","Signal Yield",0.80*NsigMax,0,NsigMax);
   RooRealVar eff("eff","Efficiency",0.8,0,1.0);
   RooRealVar NbkgPass("NbkgPass","Background count in PASS sample",0.01*NbkgPassMax,0,NbkgPassMax);
+  RooRealVar NbkgFail("NbkgFail","Background count in FAIL sample",0.2*NbkgFailMax,0,NbkgFailMax);  
+  if(ptMin<=10) {
+    NbkgFail.setVal(0.5*NbkgFailMax);
+    NbkgFail.setMin(0.5*NbkgFailMax);
+  }
+  if(ptMin>=40) {
+    NbkgFail.setVal(0);
+    NbkgFail.setMax(0.1*NbkgFailMax);
+  }
   if(fBkgPass==0) NbkgPass.setVal(0);
-  RooRealVar NbkgFail("NbkgFail","Background count in FAIL sample",0.2*NbkgFailMax,0.01,NbkgFailMax);  
-  if(ptMin<30) NbkgFail.setVal(0.8*NbkgFailMax);  
+  if(fBkgFail==0) NbkgFail.setVal(0);
   RooFormulaVar NsigPass("NsigPass","eff*Nsig",RooArgList(eff,Nsig));
   RooFormulaVar NsigFail("NsigFail","(1.0-eff)*Nsig",RooArgList(eff,Nsig));
   RooAddPdf *modelPass=0, *modelFail=0;
@@ -1515,7 +1527,10 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
                               (fBkgPass>0) ? RooArgList(*(sigModPass->model),*(bkgModPass->model)) :  RooArgList(*(sigModPass->model)),
                               (fBkgPass>0) ? RooArgList(NsigPass,NbkgPass) : RooArgList(NsigPass));
   
-    modelFail = new RooAddPdf("modelFail","Model for FAIL sample",RooArgList(*(sigModFail->model),*(bkgModFail->model)),RooArgList(NsigFail,NbkgFail));
+    //modelFail = new RooAddPdf("modelFail","Model for FAIL sample",RooArgList(*(sigModFail->model),*(bkgModFail->model)),RooArgList(NsigFail,NbkgFail));
+    modelFail = new RooAddPdf("modelFail","Model for FAIL sample",
+                              (fBkgFail>0) ? RooArgList(*(sigModFail->model),*(bkgModFail->model)) :  RooArgList(*(sigModFail->model)),
+                              (fBkgFail>0) ? RooArgList(NsigFail,NbkgFail) : RooArgList(NsigFail));
   }
   
   RooSimultaneous totalPdf("totalPdf","totalPdf",sample);

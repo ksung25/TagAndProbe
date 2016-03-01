@@ -169,12 +169,13 @@ CBWCBPlusVoigt::CBWCBPlusVoigt(RooRealVar &m, const Bool_t pass, double ptMin, d
   bw = new RooBreitWigner(vname,vname,m,*mass,*width);
   
   double fsrPeak=80;
-  double fsrSigma=20;
-  double fsrSigmaMin=3;
+  double fsrSigma=7;
+  double fsrSigmaMax=10;
+  double fsrSigmaMin=6;
   double fsrPeakRange=20;
-  double fsrFracMin=0.1;
-  double fsrFracMax=0.8;
-  double fsrFracInit=0.2;
+  double fsrFracMin=0.05;
+  double fsrFracMax=0.2;
+  double fsrFracInit=0.1;
   //fsrFracInit = 0.2;
   //fsrFracMax = 0.3;
   if(ptMin >= 100) {
@@ -206,9 +207,8 @@ CBWCBPlusVoigt::CBWCBPlusVoigt(RooRealVar &m, const Bool_t pass, double ptMin, d
     //fsrFracMin=.3;
     //fsrFracInit=.4;
     //fsrFracMax=.8;
-    //fsrPeakRange=10;
+    fsrPeakRange=10;
     //fsrSigma=10;
-    fsrSigmaMin=10;
   } else {
     fsrPeakRange=300;
   }
@@ -216,19 +216,19 @@ CBWCBPlusVoigt::CBWCBPlusVoigt(RooRealVar &m, const Bool_t pass, double ptMin, d
   //sprintf(vname,"vMean%s",name);      vMean  = new RooRealVar(vname,vname,60,5,150);
   //sprintf(vname,"vMean%s",name);      vMean  = new RooRealVar(vname,vname,fsrPeak,5,150);
   sprintf(vname,"vMean%s",name);      vMean  = new RooRealVar(vname,vname,fsrPeak,fsrPeak-fsrPeakRange,fsrPeak+fsrPeakRange);
-  sprintf(vname,"vWidth%s",name);     vWidth = new RooRealVar(vname,vname,0.01,0.001,10);
-  sprintf(vname,"vSigma%s",name);     vSigma = new RooRealVar(vname,vname,fsrSigma, fsrSigmaMin,50);
+  sprintf(vname,"vWidth%s",name);     vWidth = new RooRealVar(vname,vname,0.01,0.001,.1);
+  sprintf(vname,"vSigma%s",name);     vSigma = new RooRealVar(vname,vname,fsrSigma, fsrSigmaMin, fsrSigmaMax);
   if(pass) {
-    sprintf(vname,"mean%s",name);       mean   = new RooRealVar(vname,vname,0,-10,10);
+    sprintf(vname,"mean%s",name);       mean   = new RooRealVar(vname,vname,0,-5,5);
     sprintf(vname,"sigma%s",name);      sigma  = new RooRealVar(vname,vname,2,1,5);
-    sprintf(vname,"alpha%s",name);      alpha  = new RooRealVar(vname,vname,5,-20,20);
-    sprintf(vname,"n%s",name);          n      = new RooRealVar(vname,vname,1,0,10);
-    sprintf(vname,"fsrFrac%s",name);    fsrFrac= new RooRealVar(vname,vname, fsrFracInit, 0,0.8);
+    sprintf(vname,"alpha%s",name);      alpha  = new RooRealVar(vname,vname,.8, -1, 3);
+    sprintf(vname,"n%s",name);          n      = new RooRealVar(vname,vname,1.5,0,10);
+    sprintf(vname,"fsrFrac%s",name);    fsrFrac= new RooRealVar(vname,vname, 0.01, 0,fsrFracMax);
   } else {
-    sprintf(vname,"mean%s",name);       mean  = new RooRealVar(vname,vname,0,-10,10);
+    sprintf(vname,"mean%s",name);       mean  = new RooRealVar(vname,vname,0,-5,5);
     sprintf(vname,"sigma%s",name);      sigma = new RooRealVar(vname,vname,2,1,5);
-    sprintf(vname,"alpha%s",name);      alpha = new RooRealVar(vname,vname,5,-20,20);
-    sprintf(vname,"n%s",name);          n     = new RooRealVar(vname,vname,1,0,10);
+    sprintf(vname,"alpha%s",name);      alpha = new RooRealVar(vname,vname,.8,-1,3);
+    sprintf(vname,"n%s",name);          n     = new RooRealVar(vname,vname,1.5,0,10);
     sprintf(vname,"fsrFrac%s",name);    fsrFrac= new RooRealVar(vname,vname, fsrFracInit, fsrFracMin,fsrFracMax);
   }
   sprintf(formula, "1 - fsrFrac%s", name);
@@ -311,12 +311,12 @@ CMCTemplateConvGaussian::CMCTemplateConvGaussian(RooRealVar &m, TH1D* hist, cons
   if(pass) {
     sprintf(vname,"mean%s",name);  mean  = new RooRealVar(vname,vname,0,-5,5);
     if(sigma0) { sigma = sigma0; }
-    else       { sprintf(vname,"sigma%s",name); sigma = new RooRealVar(vname,vname,1,0.7,2); }
+    else       { sprintf(vname,"sigma%s",name); sigma = new RooRealVar(vname,vname,1,0.1,2); }
     sprintf(vname,"gaus%s",name);  gaus  = new RooGaussian(vname,vname,m,*mean,*sigma);
   } else {
     sprintf(vname,"mean%s",name);  mean  = new RooRealVar(vname,vname,0,-5,5);
     if(sigma0) { sigma = sigma0; }
-    else       { sprintf(vname,"sigma%s",name); sigma = new RooRealVar(vname,vname,1,0.7,2); }
+    else       { sprintf(vname,"sigma%s",name); sigma = new RooRealVar(vname,vname,1,0.1,2); }
     sprintf(vname,"gaus%s",name);  gaus  = new RooGaussian(vname,vname,m,*mean,*sigma);
   }
 

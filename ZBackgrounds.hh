@@ -27,6 +27,8 @@ public:
   CExponential(RooRealVar &m, const Bool_t pass);
   ~CExponential();
   RooRealVar *t;
+  RooRealVar *offset;
+  RooFormulaVar *mMinusOffset;
 };
 
 class CErfcExpo : public CBackgroundModel
@@ -78,21 +80,30 @@ CExponential::CExponential(RooRealVar &m, const Bool_t pass)
   else     sprintf(name,"%s","Fail");
   
   char vname[50];
+  char formula[256];
   
   sprintf(vname,"t%s",name);
   if(pass)
-    t = new RooRealVar(vname,vname,-0.04,-1.,-0.05);
+    t = new RooRealVar(vname,vname,-0.04,-1.,1);
   else
-    t = new RooRealVar(vname,vname,-0.04,-1.,-0.05);
+    t = new RooRealVar(vname,vname,-0.04,-1.,1);
+  sprintf(vname, "expOffset%s", name); offset = new RooRealVar(vname,vname, 0,-200,200);
+  sprintf(formula, "m - expOffset%s", name);
+  RooArgList *formulaVars = new RooArgList(m, *offset);
+  sprintf(vname, "mMinusOffset%s", name); mMinusOffset = new RooFormulaVar(vname, vname, formula, *formulaVars);
+
       
   sprintf(vname,"background%s",name);
-  model = new RooExponential(vname,vname,m,*t);
+  model = new RooExponential(vname,vname,*mMinusOffset,*t);
 }
 
 CExponential::~CExponential()
 {
   delete t;
+  delete offset;
+  delete mMinusOffset;
   t=0;
+  offset=0;
 }
 
 //--------------------------------------------------------------------------------------------------

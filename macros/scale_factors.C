@@ -35,14 +35,6 @@ Int_t n_mu_pt_bins=6;
 Int_t n_mu_eta_bins=6;
 int marker_colors[] = {1, mit_red, mit_gray, 9, 6, 4, 8};
 int marker_styles[] = {20, 21, 22, 23, 33, 34, 20};
-//Float_t ele_pt_bins[] = {10,20,30,40,50,70,100,8000};
-//Float_t ele_eta_bins[] = {0, 1.479, 2.4};
-//Int_t n_ele_pt_bins=7;
-//Int_t n_ele_eta_bins=2;
-//Float_t mu_pt_bins[] = {10,20,30,40,50,70,100,8000};
-//Float_t mu_eta_bins[] = {0, 1.479, 2.4};
-//Int_t n_mu_pt_bins=7;
-//Int_t n_mu_eta_bins=2;
 
 // Function to get MIT colors for the 2D plots
 void mitPalette()
@@ -75,26 +67,13 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
   if( plots_dir[plots_dir.size()-1]  != '/' ) plots_dir = plots_dir + "/";
   if( root_dir[plots_dir.size()-1]  != '/' )  root_dir  = root_dir + "/";
 
-  //unsigned int array_size=32;
-  // Set up arrays
-  //TObjArray f_mc_            (array_size);
-  //TObjArray h_eff_mc_        (array_size);
-  //TObjArray h_error_lo_mc_   (array_size);
-  //TObjArray h_error_hi_mc_   (array_size);
-  //TObjArray c_eff_mc_        (array_size);
-
-  //TObjArray f_data_            (array_size);
-  //TObjArray h_eff_data_        (array_size);
-  //TObjArray h_error_lo_data_   (array_size);
-  //TObjArray h_error_hi_data_   (array_size);
-  //TObjArray c_eff_data_        (array_size);
-
   // Open the output rootfile
   string output_rootfile_name;
   size_t ext_location = basename_config.find_last_of(".");
   if(ext_location != string::npos) output_rootfile_name = "scalefactors_"+basename_config.substr(0, ext_location)+".root";
   else output_rootfile_name = "scalefactors_"+basename_config+".root";
-  TFile *output_rootfile = TFile::Open(output_rootfile_name.c_str(), "RECREATE");
+  TFile *output_rootfile = TFile::Open((root_dir+output_rootfile_name).c_str(), "RECREATE");
+  assert(output_rootfile->IsOpen() && !output_rootfile->IsZombie());
 
   // Now read config file. Each line has
   // <data basename> <mc basename> <selection> <flavor>
@@ -152,11 +131,19 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
           pow(h_error_hi_mc->GetBinContent(nbin) / h_eff_mc->GetBinContent(nbin),2)
         )
       );
-      // Choose the max for the s.f. histogram errors
+      // Choose the max for the s.f. and eff. histogram errors
       // Analyzers who naively use this uncertainty value will just get worse sensitivity :^)
       h_sf->SetBinError(nbin, TMath::Max(
         h_sf_error_hi->GetBinContent(nbin),
         h_sf_error_lo->GetBinContent(nbin)
+      ));
+      h_eff_data->SetBinError(nbin, TMath::Max(
+        h_error_lo_data->GetBinContent(nbin),
+        h_error_hi_data->GetBinContent(nbin)
+      ));
+      h_eff_mc->SetBinError(nbin, TMath::Max(
+        h_error_lo_mc->GetBinContent(nbin),
+        h_error_hi_mc->GetBinContent(nbin)
       ));
     }} 
 
@@ -242,8 +229,181 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     f_mc->Close();
   }
   output_rootfile->Close();
+  printf("Saved efficiencies, scale factors, and statistical errors in %s\n", (root_dir+output_rootfile_name).c_str());
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void systematics(string methods_config, string basename_config) {
+  // This function calculates the systematic uncertainties by taking absolute differences of scale factor methods
+  // The methods_config file format is <systematic_source> <plots_dir> <root_dir>
+  // (use underscores instead of spaces in <systematic_source>
+  // Output from MIT TNP are saved in subdirectories of <plots_dir>
+  // Need to run scale_factors function first
+  //
+  // The first line of methods_config is the nominal method
+  // This loops over the basename_config file and for each selection within,
+  // finds the differences between the nominal method and the others,
+  // then updates the root file for the nominal method with systematic uncertainties
+  // and makes plots in the nominal methods plot directory <plots_dir>.
+
+
+  // Graphics settings 
+  gStyle->SetOptStat(0);
+  gStyle->SetPaintTextFormat("4.3f");
+  mitPalette();
+  TPaletteAxis *palette_axis;
+
+  // First read config file. Each line has
+  // <data basename> <mc basename> <selection> <flavor>
+  ifstream config_stream;
+  config_stream.open(basename_config.c_str());
+  assert(config_stream.is_open());
+  string line, data_basename, mc_basename, output_basename, selection, flavor;
+  while(getline(config_stream, line)) {
+    stringstream ss(line);
+    ss >> data_basename >> mc_basename >> selection >> flavor;
+
+    if(flavor == "electron")  output_basename = selection+"_ele";
+    else if(flavor == "muon")   output_basename = selection+"_mu";
+    else                    output_basename = selection+"_"+flavor;
+    
+    ifstream methods_stream;
+    methods_stream.open(methods_config.c_str());
+    assert(methods_stream.is_open());
+    string methods_line, systematic_source, plots_dir, root_dir, nominal_plots_dir, nominal_root_dir;
+    getline(methods_stream, methods_line);
+    ss.str(methods_line);
+    ss.clear();
+    ss >> systematic_source >> nominal_plots_dir >> nominal_root_dir;
+    
+    // Pad directories with a slash at the end if it's not there
+    if( nominal_plots_dir[plots_dir.size()-1]  != '/' ) nominal_plots_dir = nominal_plots_dir + "/";
+    if( nominal_root_dir[plots_dir.size()-1]  != '/' )  nominal_root_dir  = nominal_root_dir + "/";
+    
+    // Open the output rootfile
+    string output_rootfile_name;
+    size_t ext_location = basename_config.find_last_of(".");
+    if(ext_location != string::npos) output_rootfile_name = "scalefactors_"+basename_config.substr(0, ext_location)+".root";
+    else output_rootfile_name = "scalefactors_"+basename_config+".root";
+    TFile *output_rootfile = TFile::Open((nominal_root_dir+output_rootfile_name).c_str(), "UPDATE");
+    assert(output_rootfile->IsOpen() && !output_rootfile->IsZombie());
+
+    TH2D *h_nominal_sf = (TH2D*) output_rootfile->Get(("scalefactors_"+output_basename).c_str());
+    TH2D *h_syst_combined = (TH2D*) h_nominal_sf->Clone();
+    h_syst_combined->Scale(0.);
+    h_syst_combined->SetName(("scalefactors_"+output_basename+"_syst_error_combined").c_str());
+    h_syst_combined->SetTitle(("Combined systematics for "+selection+" "+flavor+" selection").c_str());
+    
+    // Now loop over the different methods and compute absolute differences in scale factors
+    while(getline(methods_stream, methods_line)) {
+      ss.str(methods_line);
+      ss.clear();
+      ss >> systematic_source >> plots_dir >> root_dir;
+      if( plots_dir[plots_dir.size()-1]  != '/' ) plots_dir = plots_dir + "/";
+      if( root_dir[plots_dir.size()-1]  != '/' )  root_dir  = root_dir + "/";
+
+      // replace underscores in the method name for the plots
+      string nice_method_name = systematic_source;
+      size_t pos = 0;
+      while((pos = nice_method_name.find("_", pos)) != std::string::npos){
+         nice_method_name.replace(pos, 1, " ");
+         pos += 1;
+      } 
+      TH2D *h_syst_method = (TH2D*) h_syst_combined->Clone(); 
+      h_syst_method->Scale(0);
+      h_syst_method->SetName(("scalefactors_"+output_basename+"_syst_error_"+systematic_source).c_str());
+      h_syst_method->SetTitle(("Systematics for "+selection+" "+flavor+" selection ("+nice_method_name+")").c_str());
+
+      // open the file with the alternate method scale factors
+      TFile *alternate_rootfile = TFile::Open((root_dir+output_rootfile_name).c_str(), "READ");
+      assert(alternate_rootfile->IsOpen() && !alternate_rootfile->IsZombie());
+
+      TH2D *h_alternate_sf = (TH2D*) alternate_rootfile->Get(("scalefactors_"+output_basename).c_str());
+      for(int i = 1; i <= h_nominal_sf->GetNbinsX(); i++) { for(int j = 1; j <= h_nominal_sf->GetNbinsY(); j++) {
+        unsigned int nbin = h_nominal_sf->GetBin(i,j);
+        h_syst_method->SetBinContent(nbin, TMath::Abs(h_nominal_sf->GetBinContent(nbin) - h_alternate_sf->GetBinContent(nbin)));
+        h_syst_combined->SetBinContent(nbin, h_syst_combined->GetBinContent(nbin) + pow( h_syst_method->GetBinContent(nbin), 2));
+      }}
+
+      TCanvas *canvas = new TCanvas("canvas", "canvas", 800,600);
+      h_syst_method->Draw("TEXTE COLZ");
+      canvas->Update();
+      h_syst_method->GetXaxis()->SetTitle("| #eta |");
+      h_syst_method->GetXaxis()->SetTitleOffset(0.9);
+      h_syst_method->GetXaxis()->SetTitleSize(0.04);
+      h_syst_method->GetXaxis()->SetLabelSize(0.02);
+      h_syst_method->GetYaxis()->SetTitle("p_{T} [GeV]");
+      h_syst_method->GetYaxis()->SetTitleOffset(0.9);
+      h_syst_method->GetYaxis()->SetTitleSize(0.04);
+      h_syst_method->GetYaxis()->SetLabelSize(0.02);
+      h_syst_method->GetYaxis()->SetRangeUser(10,200);
+      h_syst_method->SetMinimum(0);
+      h_syst_method->SetMaximum(.2);
+      h_syst_method->SetMarkerSize(.9);
+      palette_axis = (TPaletteAxis*) h_syst_method->GetListOfFunctions()->FindObject("palette"); 
+      palette_axis->SetLabelSize(0.02);
+      canvas->Update();
+      canvas->Print((nominal_plots_dir + string(h_syst_method->GetName()) + ".png").c_str());
+
+      output_rootfile->cd();
+      h_syst_method->Write();
+      alternate_rootfile->Close();
+      delete alternate_rootfile;
+      delete h_syst_method;
+      delete canvas;
+    }
+    for(int i = 1; i <= h_nominal_sf->GetNbinsX(); i++) { for(int j = 1; j <= h_nominal_sf->GetNbinsY(); j++) {
+      unsigned int nbin = h_nominal_sf->GetBin(i,j);
+      h_syst_combined->SetBinContent(nbin, sqrt(h_syst_combined->GetBinContent(nbin)));
+    }}
+
+    TCanvas *canvas = new TCanvas("canvas", "canvas", 800,600);
+    h_syst_combined->Draw("TEXTE COLZ");
+    canvas->Update();
+    h_syst_combined->GetXaxis()->SetTitle("| #eta |");
+    h_syst_combined->GetXaxis()->SetTitleOffset(0.9);
+    h_syst_combined->GetXaxis()->SetTitleSize(0.04);
+    h_syst_combined->GetXaxis()->SetLabelSize(0.02);
+    h_syst_combined->GetYaxis()->SetTitle("p_{T} [GeV]");
+    h_syst_combined->GetYaxis()->SetTitleOffset(0.9);
+    h_syst_combined->GetYaxis()->SetTitleSize(0.04);
+    h_syst_combined->GetYaxis()->SetLabelSize(0.02);
+    h_syst_combined->GetYaxis()->SetRangeUser(10,200);
+    h_syst_combined->SetMinimum(0);
+    h_syst_combined->SetMaximum(.2);
+    h_syst_combined->SetMarkerSize(.9);
+    palette_axis = (TPaletteAxis*) h_syst_combined->GetListOfFunctions()->FindObject("palette"); 
+    palette_axis->SetLabelSize(0.02);
+    canvas->Update();
+    canvas->Print((nominal_plots_dir + string(h_syst_combined->GetName()) + ".png").c_str());
+
+    // Write to file
+    output_rootfile->cd();
+    h_syst_combined->Write();
+    output_rootfile->Close();
+    printf("Saved systematic errors for %s %s selection in %s\n", selection.c_str(), flavor.c_str(), (nominal_root_dir+output_rootfile_name).c_str());
+    delete output_rootfile;
+
+    //delete palette_axis;
+    //delete h_syst_combined;
+    //delete h_nominal_sf;
+    delete canvas;
+  }
+}
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void wholething() {
+  scale_factors("plots/2016-02-26/2016-02-26_74x_BWCBPlusVoigt_erfcexp/",    "root/2016-02-26/2016-02-26_74x_BWCBPlusVoigt_erfcexp/",   "ele_74x.cfg");
+  scale_factors("plots/2016-02-26/2016-02-26_74x_template_erfcexp/",         "root/2016-02-26/2016-02-26_74x_template_erfcexp",         "ele_74x.cfg");
+  scale_factors("plots/2016-02-26/2016-02-26_74x_template_exp/",             "root/2016-02-26/2016-02-26_74x_template_exp",             "ele_74x.cfg");
+  //scale_factors("plots/2016-02-26/2016-02-26_74x_template_erfcexp_LO/",      "root/2016-02-26/2016-02-26_74x_template_erfcexp_LO",      "ele_74x.cfg");
+  //scale_factors("plots/2016-02-26/2016-02-26_74x_template_erfcexp_diffTag/", "root/2016-02-26/2016-02-26_74x_template_erfcexp_diffTag", "ele_74x.cfg");
+  scale_factors("plots/2016-02-26/2016-02-26_74x_BWCBPlusVoigt_erfcexp/",    "root/2016-02-26/2016-02-26_74x_BWCBPlusVoigt_erfcexp/",   "mu_74x.cfg");
+  scale_factors("plots/2016-02-26/2016-02-26_74x_template_erfcexp/",         "root/2016-02-26/2016-02-26_74x_template_erfcexp",         "mu_74x.cfg");
+  scale_factors("plots/2016-02-26/2016-02-26_74x_template_exp/",             "root/2016-02-26/2016-02-26_74x_template_exp",             "mu_74x.cfg");
+  //scale_factors("plots/2016-02-26/2016-02-26_74x_template_erfcexp_LO/",      "root/2016-02-26/2016-02-26_74x_template_erfcexp_LO",      "mu_74x.cfg");
+  //scale_factors("plots/2016-02-26/2016-02-26_74x_template_erfcexp_diffTag/", "root/2016-02-26/2016-02-26_74x_template_erfcexp_diffTag", "mu_74x.cfg");
+  systematics("methods_reduced_74x.cfg", "ele_74x.cfg");
+  systematics("methods_reduced_74x.cfg", "mu_74x.cfg");
+}
 // estimate systematic uncertainty by taking absolute difference in scale factors from two methods
 void estimate_systematics(string plots_dir_method1, string plots_dir_method2, string root_dir_method1, string root_dir_method2) {
   

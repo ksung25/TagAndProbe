@@ -22,6 +22,14 @@ public:
   CSignalModel():model(0){}
   virtual ~CSignalModel(){ delete model; }
   RooAbsPdf *model;
+protected:
+  std::vector<double> readSigParams(
+    const int ibin,
+    const std::string name,
+    std::vector<std::string> paramNames,
+    std::string refDir
+  );
+
 };
 
 class CBreitWignerConvCrystalBall : public CSignalModel
@@ -38,7 +46,7 @@ public:
 class CBWCBPlusVoigt : public CSignalModel
 {
 public:
-  CBWCBPlusVoigt(RooRealVar &m, const Bool_t pass, double ptMin, double ptMax);
+  CBWCBPlusVoigt(RooRealVar &m, const Bool_t pass, double ptMin, double ptMax, int ibin=0, const std::string fitname="", std::string refDir="");
   ~CBWCBPlusVoigt();
   RooRealVar     *mass, *width;
   RooBreitWigner *bw;
@@ -138,7 +146,7 @@ CBreitWignerConvCrystalBall::~CBreitWignerConvCrystalBall()
 }
 
 //--------------------------------------------------------------------------------------------------
-CBWCBPlusVoigt::CBWCBPlusVoigt(RooRealVar &m, const Bool_t pass, double ptMin, double ptMax)
+CBWCBPlusVoigt::CBWCBPlusVoigt(RooRealVar &m, const Bool_t pass, double ptMin, double ptMax, const int ibin, const std::string fitname, std::string refDir)
 {
   char name[10];
   if(pass) sprintf(name,"%s","Pass");
@@ -160,42 +168,47 @@ CBWCBPlusVoigt::CBWCBPlusVoigt(RooRealVar &m, const Bool_t pass, double ptMin, d
   sprintf(vname,"bw%s",name);
   bw = new RooBreitWigner(vname,vname,m,*mass,*width);
   
-  bool electrons=false;
   double fsrPeak=80;
-  double fsrSigma=6;
-  double fsrSigmaMin=3;
-  double fsrPeakRange=15;
-  double fsrFracMin=0;
-  double fsrFracMax=0.3;
+  double fsrSigma=7;
+  double fsrSigmaMax=10;
+  double fsrSigmaMin=6;
+  double fsrPeakRange=20;
+  double fsrFracMin=0.05;
+  double fsrFracMax=0.2;
   double fsrFracInit=0.1;
-  if(electrons) fsrFracInit = 0.3;
-  if(electrons) fsrFracMax = 0.8;
+  //fsrFracInit = 0.2;
+  //fsrFracMax = 0.3;
   if(ptMin >= 100) {
+    fsrFracMin=0;
     fsrPeak=140;
-  } else if(ptMin >= 70) {
-    fsrPeak=115;
+  //} else if(ptMin >= 70) {
+  //  fsrPeak=115;
   } else if(ptMin >= 50) {
     fsrPeak=105;
     fsrPeakRange=10;
-    if(electrons) fsrFracInit=0.41;
-    if(electrons) fsrFracMin=.1;
-    fsrSigma=7;
+    //fsrFracInit=0.2;
+    fsrFracMin=0;
+    //fsrFracMax = 0.3;
+    //fsrSigma=7;
   } else if(ptMin >= 40) {
     fsrPeak=95;
-    if(electrons) fsrFracMin=.1;
+    //fsrFracMin=.1;
+    //fsrFracMax = 0.3;
   } else if(ptMin >= 30) {
     fsrPeak=80;
-    if(electrons) fsrFracMin=.1;
-    fsrPeakRange=10;
+    //fsrFracMax = 0.3;
+    //fsrFracMin=.1;
+    //fsrPeakRange=10;
   } else if(ptMin >= 20) {
     fsrPeak=75;
-    if(electrons) fsrFracMin=.2;
+    //fsrFracMin=.15;
   } else if(ptMin >= 10) {
-    fsrPeak=65;
-    if(electrons) fsrFracMin=.2;
+    fsrPeak=60;
+    //fsrFracMin=.3;
+    //fsrFracInit=.4;
+    //fsrFracMax=.8;
     fsrPeakRange=10;
-    fsrSigma=10;
-    fsrSigmaMin=10;
+    //fsrSigma=10;
   } else {
     fsrPeakRange=300;
   }
@@ -203,27 +216,56 @@ CBWCBPlusVoigt::CBWCBPlusVoigt(RooRealVar &m, const Bool_t pass, double ptMin, d
   //sprintf(vname,"vMean%s",name);      vMean  = new RooRealVar(vname,vname,60,5,150);
   //sprintf(vname,"vMean%s",name);      vMean  = new RooRealVar(vname,vname,fsrPeak,5,150);
   sprintf(vname,"vMean%s",name);      vMean  = new RooRealVar(vname,vname,fsrPeak,fsrPeak-fsrPeakRange,fsrPeak+fsrPeakRange);
-  sprintf(vname,"vWidth%s",name);     vWidth = new RooRealVar(vname,vname,0.01,0.001,10);
-  sprintf(vname,"vSigma%s",name);     vSigma = new RooRealVar(vname,vname,fsrSigma, fsrSigmaMin,50);
+  sprintf(vname,"vWidth%s",name);     vWidth = new RooRealVar(vname,vname,0.01,0.001,.1);
+  sprintf(vname,"vSigma%s",name);     vSigma = new RooRealVar(vname,vname,fsrSigma, fsrSigmaMin, fsrSigmaMax);
   if(pass) {
-    sprintf(vname,"mean%s",name);       mean   = new RooRealVar(vname,vname,0,-10,10);
-    sprintf(vname,"sigma%s",name);      sigma  = new RooRealVar(vname,vname,1,0.01,15);
-    sprintf(vname,"alpha%s",name);      alpha  = new RooRealVar(vname,vname,5,-20,20);
-    sprintf(vname,"n%s",name);          n      = new RooRealVar(vname,vname,1,0,10);
-    sprintf(vname,"fsrFrac%s",name);    fsrFrac= new RooRealVar(vname,vname, fsrFracInit, 0,0.8);
+    sprintf(vname,"mean%s",name);       mean   = new RooRealVar(vname,vname,0,-5,5);
+    sprintf(vname,"sigma%s",name);      sigma  = new RooRealVar(vname,vname,2,1,5);
+    sprintf(vname,"alpha%s",name);      alpha  = new RooRealVar(vname,vname,.8, -1, 3);
+    sprintf(vname,"n%s",name);          n      = new RooRealVar(vname,vname,1.5,0,10);
+    sprintf(vname,"fsrFrac%s",name);    fsrFrac= new RooRealVar(vname,vname, 0.01, 0,fsrFracMax);
   } else {
-    sprintf(vname,"mean%s",name);       mean  = new RooRealVar(vname,vname,0,-10,10);
-    sprintf(vname,"sigma%s",name);      sigma = new RooRealVar(vname,vname,1,0.01,15);
-    sprintf(vname,"alpha%s",name);      alpha = new RooRealVar(vname,vname,5,-20,20);
-    sprintf(vname,"n%s",name);          n     = new RooRealVar(vname,vname,1,0,10);
+    sprintf(vname,"mean%s",name);       mean  = new RooRealVar(vname,vname,0,-5,5);
+    sprintf(vname,"sigma%s",name);      sigma = new RooRealVar(vname,vname,2,1,5);
+    sprintf(vname,"alpha%s",name);      alpha = new RooRealVar(vname,vname,.8,-1,3);
+    sprintf(vname,"n%s",name);          n     = new RooRealVar(vname,vname,1.5,0,10);
     sprintf(vname,"fsrFrac%s",name);    fsrFrac= new RooRealVar(vname,vname, fsrFracInit, fsrFracMin,fsrFracMax);
   }
   sprintf(formula, "1 - fsrFrac%s", name);
   sprintf(vname,"oneMinusFsrFrac%s",name);    oneMinusFsrFrac= new RooFormulaVar(vname,vname,formula, *fsrFrac);
-  //sprintf(vname, "fsrNorm%s", name);    fsrNorm = new RooFormulaVar(vname, "fsrFrac", fsrFrac);
-//  n->setVal(1.0);
-//  n->setConstant(kTRUE);
+  if(refDir != "") {
+    std::vector<std::string> paramNames = {
+      "vMean",
+      "vWidth",
+      "vSigma",
+      "mean",
+      "sigma",
+      "alpha",
+      "n",
+      "fsrFrac"
+    };
+    for(unsigned int i=0; i<paramNames.size(); i++) {
+      if(pass) {
+        paramNames[i] = paramNames[i] + "Pass";
+      } else {
+        paramNames[i] = paramNames[i] + "Fail";
+      }
+    }
+    std::vector<double> params = readSigParams(ibin, fitname, paramNames, refDir);
+    vMean    ->setVal(params[0]);  vMean    ->setMin(.9*params[0]);  vMean    ->setMax(1.1*params[0]);  
+    vWidth   ->setVal(params[1]);    
+    vSigma   ->setVal(params[2]);  vSigma   ->setMin(.9*params[2]);  vSigma   ->setMax(1.1*params[2]);  
+    mean     ->setVal(params[3]);  
+    sigma    ->setVal(params[4]);  
+    alpha    ->setVal(params[5]);  alpha    ->setMin(params[5]-2);   alpha    ->setMax(params[5]+2);
+    n        ->setVal(TMath::Min(10., TMath::Max(0., params[6])));  
+    n        ->setMin(TMath::Max(0., .9*params[6]));  
+    n        ->setMax(TMath::Min(10., 1.1*params[6]));
+    fsrFrac  ->setVal(params[7]);  fsrFrac  ->setMin(.9*params[7]);  fsrFrac  ->setMax(1.1*params[7]);  
+
+  }
   
+   
   sprintf(vname,"cb%s",name);
   cb = new RooCBShape(vname,vname,m,*mean,*sigma,*alpha,*n);
   
@@ -267,14 +309,14 @@ CMCTemplateConvGaussian::CMCTemplateConvGaussian(RooRealVar &m, TH1D* hist, cons
   char vname[50];  
   
   if(pass) {
-    sprintf(vname,"mean%s",name);  mean  = new RooRealVar(vname,vname,0,-10,10);
+    sprintf(vname,"mean%s",name);  mean  = new RooRealVar(vname,vname,0,-5,5);
     if(sigma0) { sigma = sigma0; }
-    else       { sprintf(vname,"sigma%s",name); sigma = new RooRealVar(vname,vname,2,0,5); }
+    else       { sprintf(vname,"sigma%s",name); sigma = new RooRealVar(vname,vname,1,0.1,2); }
     sprintf(vname,"gaus%s",name);  gaus  = new RooGaussian(vname,vname,m,*mean,*sigma);
   } else {
-    sprintf(vname,"mean%s",name);  mean  = new RooRealVar(vname,vname,0,-10,10);
+    sprintf(vname,"mean%s",name);  mean  = new RooRealVar(vname,vname,0,-5,5);
     if(sigma0) { sigma = sigma0; }
-    else       { sprintf(vname,"sigma%s",name); sigma = new RooRealVar(vname,vname,2,0,5); }
+    else       { sprintf(vname,"sigma%s",name); sigma = new RooRealVar(vname,vname,1,0.1,2); }
     sprintf(vname,"gaus%s",name);  gaus  = new RooGaussian(vname,vname,m,*mean,*sigma);
   }
 
@@ -376,4 +418,45 @@ CMCDatasetConvGaussian::~CMCDatasetConvGaussian()
   delete inTree;  inTree=0;
   delete dataSet; dataSet=0;
   delete keysPdf; keysPdf=0;
+}
+//--------------------------------------------------------------------------------------------------
+std::vector<double> CSignalModel::readSigParams(
+  const int ibin,
+  const std::string fitname,
+  std::vector<std::string> paramNames,
+  std::string refDir
+) {
+  std::vector<double> params;
+  char rname[512];
+  sprintf(
+    rname,
+    "%s/plots/fitres%s_%i.txt",
+    refDir.c_str(),
+    fitname.c_str(),
+    ibin
+  );
+  ifstream rfile;
+  for(unsigned int i = 0; i<paramNames.size(); i++) {
+    rfile.open(rname);
+    assert(rfile.is_open());
+    std::string line;
+    bool found_param = false;
+    printf("Looking for parameter %s...\n", paramNames[i].c_str());
+    while(getline(rfile,line)) {
+      //printf("%s\n", line.c_str());
+      size_t found = line.find(" "+paramNames[i]+" ");
+      if(found!=string::npos) {
+        std::string varname, initval, finalval, pmstr, error, corr;
+        std::stringstream ss(line);
+        ss >> varname >> initval >> finalval >> pmstr >> error >> corr;
+        params.push_back(atof(finalval.c_str()));
+        printf("Got value %f\n", atof(finalval.c_str()));
+        found_param=true;
+        break;
+      }
+    }
+    assert(found_param);
+    rfile.close();
+  }
+  return params;
 }

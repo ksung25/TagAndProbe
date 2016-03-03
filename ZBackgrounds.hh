@@ -27,6 +27,8 @@ public:
   CExponential(RooRealVar &m, const Bool_t pass);
   ~CExponential();
   RooRealVar *t;
+  RooRealVar *offset;
+  RooFormulaVar *mMinusOffset;
 };
 
 class CErfcExpo : public CBackgroundModel
@@ -78,21 +80,30 @@ CExponential::CExponential(RooRealVar &m, const Bool_t pass)
   else     sprintf(name,"%s","Fail");
   
   char vname[50];
+  char formula[256];
   
   sprintf(vname,"t%s",name);
   if(pass)
-    t = new RooRealVar(vname,vname,-0.04,-1.,-0.05);
+    t = new RooRealVar(vname,vname,-0.04,-1.,1);
   else
-    t = new RooRealVar(vname,vname,-0.04,-1.,-0.05);
+    t = new RooRealVar(vname,vname,-0.04,-1.,1);
+  sprintf(vname, "expOffset%s", name); offset = new RooRealVar(vname,vname, 0,-200,200);
+  sprintf(formula, "m - expOffset%s", name);
+  RooArgList *formulaVars = new RooArgList(m, *offset);
+  sprintf(vname, "mMinusOffset%s", name); mMinusOffset = new RooFormulaVar(vname, vname, formula, *formulaVars);
+
       
   sprintf(vname,"background%s",name);
-  model = new RooExponential(vname,vname,m,*t);
+  model = new RooExponential(vname,vname,*mMinusOffset,*t);
 }
 
 CExponential::~CExponential()
 {
   delete t;
+  delete offset;
+  delete mMinusOffset;
   t=0;
+  offset=0;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -105,13 +116,13 @@ CErfcExpo::CErfcExpo(RooRealVar &m, const Bool_t pass)
   char vname[50];
 
   if(pass) {
-    sprintf(vname,"alfa%s",name);  alfa  = new RooRealVar(vname,vname,50,5,200);
-    sprintf(vname,"beta%s",name);  beta  = new RooRealVar(vname,vname,0.05,0,0.2);
-    sprintf(vname,"gamma%s",name); gamma = new RooRealVar(vname,vname,0.1,0,1);
+    sprintf(vname,"alfa%s",name);  alfa  = new RooRealVar(vname,vname,100,5,200);
+    sprintf(vname,"beta%s",name);  beta  = new RooRealVar(vname,vname,0.02,0,0.2);
+    sprintf(vname,"gamma%s",name); gamma = new RooRealVar(vname,vname,0.03,0,1);
   } else {
-    sprintf(vname,"alfa%s",name);  alfa  = new RooRealVar(vname,vname,50,5,200);
-    sprintf(vname,"beta%s",name);  beta  = new RooRealVar(vname,vname,0.05,0,0.2);
-    sprintf(vname,"gamma%s",name); gamma = new RooRealVar(vname,vname,0.1,0,1);
+    sprintf(vname,"alfa%s",name);  alfa  = new RooRealVar(vname,vname,100,5,200);
+    sprintf(vname,"beta%s",name);  beta  = new RooRealVar(vname,vname,0.02,0,0.2);
+    sprintf(vname,"gamma%s",name); gamma = new RooRealVar(vname,vname,0.03,0,1);
   }  
   
   sprintf(vname,"peak%s",name);  
@@ -131,7 +142,7 @@ CErfcExpo::~CErfcExpo()
   delete peak;  peak=0;
 }
 
-//--------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------
 CErfcExpoFixed::CErfcExpoFixed(RooRealVar &m, const Bool_t pass, const int ibin, const std::string fitname, std::string refDir)
 {
   char name[10];
@@ -150,7 +161,7 @@ CErfcExpoFixed::CErfcExpoFixed(RooRealVar &m, const Bool_t pass, const int ibin,
     paramNames.push_back("gammaFail");
   }
   std::vector<double> params = readBkgParams(ibin, fitname, paramNames, refDir);
-  sprintf(vname,"alfa%s",name);  alfa  = new RooRealVar(vname,vname,params[0]); alfa->setConstant(kTRUE);
+  sprintf(vname,"alfa%s",name);  alfa  = new RooRealVar(vname,vname,params[0], TMath::Max(5., .1*params[0]), TMath::Min(200., 1.1*params[0]));
   sprintf(vname,"beta%s",name);  beta  = new RooRealVar(vname,vname,params[1]); beta->setConstant(kTRUE);
   sprintf(vname,"gamma%s",name); gamma = new RooRealVar(vname,vname,params[2]); gamma->setConstant(kTRUE);
   
@@ -272,7 +283,7 @@ CQuadraticExp::~CQuadraticExp()
   delete a2; a2=0;
   delete t;  t=0;
 }
-
+//--------------------------------------------------------------------------------------------------
 std::vector<double> CBackgroundModel::readBkgParams(
   const int ibin,
   const std::string fitname,
@@ -296,13 +307,14 @@ std::vector<double> CBackgroundModel::readBkgParams(
     bool found_param = false;
     printf("Looking for parameter %s...\n", paramNames[i].c_str());
     while(getline(rfile,line)) {
-      printf("%s\n", line.c_str());
-      size_t found = line.find(paramNames[i]);
+      //printf("%s\n", line.c_str());
+      size_t found = line.find(" "+paramNames[i]+" ");
       if(found!=string::npos) {
         std::string varname, initval, finalval, pmstr, error, corr;
         std::stringstream ss(line);
         ss >> varname >> initval >> finalval >> pmstr >> error >> corr;
         params.push_back(atof(finalval.c_str()));
+        printf("Got value %f\n", atof(finalval.c_str()));
         found_param=true;
         break;
       }

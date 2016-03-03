@@ -50,7 +50,8 @@ void make_tnp_skim(
   int muon_trigger=6,
   int tau_trigger=6,
   double tag_pt_min = 30,
-  double tag_eta_max = 2.1
+  double tag_eta_max = 2.1,
+  int electron_pretend_trigger=0 // when electron triggers aren't properly marked per-electron in the ntuples, need to improvise
 ) {	
   ifstream ifs(list_of_files.c_str());
   if (!ifs) {
@@ -483,7 +484,7 @@ void make_tnp_skim(
             //if (((*triggerFired)[ij] != 0)) printf("passed trigger #%d\n",ij);
           }
         }
-        
+        bool electron_trigger_matched=false, muon_trigger_matched=false;
         // Now find tags and probes
         TLorentzVector *P4=(TLorentzVector*)lepP4->At(il);
         if( P4->Pt() >= 10.) {

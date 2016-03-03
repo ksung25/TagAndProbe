@@ -116,11 +116,11 @@ CErfcExpo::CErfcExpo(RooRealVar &m, const Bool_t pass)
   char vname[50];
 
   if(pass) {
-    sprintf(vname,"alfa%s",name);  alfa  = new RooRealVar(vname,vname,100,5,200);
+    sprintf(vname,"alfa%s",name);  alfa  = new RooRealVar(vname,vname,70,50,200);
     sprintf(vname,"beta%s",name);  beta  = new RooRealVar(vname,vname,0.02,0,0.2);
     sprintf(vname,"gamma%s",name); gamma = new RooRealVar(vname,vname,0.03,0,1);
   } else {
-    sprintf(vname,"alfa%s",name);  alfa  = new RooRealVar(vname,vname,100,5,200);
+    sprintf(vname,"alfa%s",name);  alfa  = new RooRealVar(vname,vname,70,50,200);
     sprintf(vname,"beta%s",name);  beta  = new RooRealVar(vname,vname,0.02,0,0.2);
     sprintf(vname,"gamma%s",name); gamma = new RooRealVar(vname,vname,0.03,0,1);
   }  
@@ -161,7 +161,8 @@ CErfcExpoFixed::CErfcExpoFixed(RooRealVar &m, const Bool_t pass, const int ibin,
     paramNames.push_back("gammaFail");
   }
   std::vector<double> params = readBkgParams(ibin, fitname, paramNames, refDir);
-  sprintf(vname,"alfa%s",name);  alfa  = new RooRealVar(vname,vname,params[0], TMath::Max(5., .1*params[0]), TMath::Min(200., 1.1*params[0]));
+  //sprintf(vname,"alfa%s",name);  alfa  = new RooRealVar(vname,vname,params[0], TMath::Max(5., .1*params[0]), TMath::Min(200., 1.1*params[0]));
+  sprintf(vname,"alfa%s",name);  alfa  = new RooRealVar(vname,vname,67, 50, 200);
   sprintf(vname,"beta%s",name);  beta  = new RooRealVar(vname,vname,params[1]); beta->setConstant(kTRUE);
   sprintf(vname,"gamma%s",name); gamma = new RooRealVar(vname,vname,params[2]); gamma->setConstant(kTRUE);
   

@@ -94,7 +94,6 @@ void CEffZFitter::initialize(const std::string conf, const int sigpass, const in
   fMassHi    = massHi;
   fFitMassLo = fitMassLo;
   fFitMassHi = fitMassHi;
-  templateFile = temfname; 
 
   // set up output directory
   fOutputDir = outdir;
@@ -1502,8 +1501,7 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
     NbkgFail.setMin(0.5*NbkgFailMax);
   }
   if(ptMin>=40) {
-    NbkgFail.setVal(0);
-    NbkgFail.setMax(0.1*NbkgFailMax);
+    NbkgFail.setVal(0.1*NbkgFailMax);
   }
   if(fBkgPass==0) NbkgPass.setVal(0);
   if(fBkgFail==0) NbkgFail.setVal(0);

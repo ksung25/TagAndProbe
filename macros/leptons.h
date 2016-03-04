@@ -31,6 +31,8 @@ double selectIsoCut(int type, int pdgId, double eta) {
   }
   if     (TMath::Abs(pdgId) == 13) {
     if (type==0) return 10000;
+    if (type==1) return .25;
+    if (type==4) return .25;
     return 0.15;
   }
   else if(TMath::Abs(pdgId) == 11) {

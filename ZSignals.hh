@@ -171,7 +171,7 @@ CBWCBPlusVoigt::CBWCBPlusVoigt(RooRealVar &m, const Bool_t pass, double ptMin, d
   double fsrPeak=80;
   double fsrSigma=7;
   double fsrSigmaMax=10;
-  double fsrSigmaMin=6;
+  double fsrSigmaMin=2;
   double fsrPeakRange=20;
   double fsrFracMin=0.05;
   double fsrFracMax=0.2;
@@ -180,11 +180,13 @@ CBWCBPlusVoigt::CBWCBPlusVoigt(RooRealVar &m, const Bool_t pass, double ptMin, d
   //fsrFracMax = 0.3;
   if(ptMin >= 100) {
     fsrFracMin=0;
+    fsrFracMax=0.05;
     fsrPeak=140;
   //} else if(ptMin >= 70) {
   //  fsrPeak=115;
   } else if(ptMin >= 50) {
     fsrPeak=105;
+    fsrFracMax=0.05;
     fsrPeakRange=10;
     //fsrFracInit=0.2;
     fsrFracMin=0;
@@ -204,9 +206,9 @@ CBWCBPlusVoigt::CBWCBPlusVoigt(RooRealVar &m, const Bool_t pass, double ptMin, d
     //fsrFracMin=.15;
   } else if(ptMin >= 10) {
     fsrPeak=55;
-    //fsrFracMin=.3;
-    //fsrFracInit=.4;
-    //fsrFracMax=.8;
+    fsrFracMin=.2;
+    fsrFracInit=.3;
+    fsrFracMax=.4;
     fsrPeakRange=5;
     //fsrSigma=10;
   } else {
@@ -228,7 +230,7 @@ CBWCBPlusVoigt::CBWCBPlusVoigt(RooRealVar &m, const Bool_t pass, double ptMin, d
     sprintf(vname,"mean%s",name);       mean  = new RooRealVar(vname,vname,0,-5,5);
     sprintf(vname,"sigma%s",name);      sigma = new RooRealVar(vname,vname,2,1,5);
     sprintf(vname,"alpha%s",name);      alpha = new RooRealVar(vname,vname,.8,-1,3);
-    sprintf(vname,"n%s",name);          n     = new RooRealVar(vname,vname,1.5,0.5,10);
+    sprintf(vname,"n%s",name);          n     = new RooRealVar(vname,vname,1.5,0.5,5);
     sprintf(vname,"fsrFrac%s",name);    fsrFrac= new RooRealVar(vname,vname, fsrFracInit, fsrFracMin,fsrFracMax);
   }
   sprintf(formula, "1 - fsrFrac%s", name);
@@ -252,16 +254,23 @@ CBWCBPlusVoigt::CBWCBPlusVoigt(RooRealVar &m, const Bool_t pass, double ptMin, d
       }
     }
     std::vector<double> params = readSigParams(ibin, fitname, paramNames, refDir);
-    vMean    ->setVal(params[0]);  vMean    ->setMin(.9*params[0]);  vMean    ->setMax(1.1*params[0]);  
-    vWidth   ->setVal(params[1]);    
-    vSigma   ->setVal(params[2]);  vSigma   ->setMin(.9*params[2]);  vSigma   ->setMax(1.1*params[2]);  
-    mean     ->setVal(params[3]);  
-    sigma    ->setVal(params[4]);  
-    alpha    ->setVal(params[5]);  alpha    ->setMin(params[5]-2);   alpha    ->setMax(params[5]+2);
+    vMean    ->setVal(params[0]);  vMean    ->setMin(TMath::Max(fsrPeak-fsrPeakRange, .8*params[0]));  vMean    ->setMax(TMath::Min(fsrPeak+fsrPeakRange, 1.2*params[0]));  
+    vWidth   ->setVal(params[1]);  vWidth->setMin( TMath::Max(.001, .8*params[1])); vWidth->setMax( 1.2*params[1]);
+    vSigma   ->setVal(params[2]);  vSigma   ->setMin(TMath::Max(fsrSigmaMin, .8*params[2]));  vSigma   ->setMax(TMath::Min(fsrSigmaMax, 1.2*params[2]));  
+    mean     ->setVal(params[3]);  //mean->setMin(.8*params[3]); mean->setMax(1.2*params[3]); 
+    sigma    ->setVal(params[4]);  sigma->setMin(.8*params[4]); sigma->setMax(1.2*params[4]);
+    alpha    ->setVal(params[5]);  alpha    ->setMin(TMath::Max(-1., params[5]-2));   alpha    ->setMax(TMath::Min(3., params[5]+2));
     n        ->setVal(TMath::Min(10., TMath::Max(0., params[6])));  
-    n        ->setMin(TMath::Max(0., .9*params[6]));  
-    n        ->setMax(TMath::Min(10., 1.1*params[6]));
-    fsrFrac  ->setVal(params[7]);  fsrFrac  ->setMin(.9*params[7]);  fsrFrac  ->setMax(1.1*params[7]);  
+    n        ->setMin(TMath::Max(0., .8*params[6]));  
+    n        ->setMax(TMath::Min(10., 1.2*params[6]));
+    fsrFrac  ->setVal(params[7]);
+    if(pass) {
+      fsrFrac  ->setMin(TMath::Max(0., .8*params[7]));
+      fsrFrac  ->setMax(TMath::Min(fsrFracMax, 1.2*params[7]));  
+    } else {
+      fsrFrac  ->setMin(TMath::Max(fsrFracMin, .8*params[7]));
+      fsrFrac  ->setMax(TMath::Min(fsrFracMax, 1.2*params[7]));  
+    }
 
   }
   

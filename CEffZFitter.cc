@@ -74,11 +74,25 @@ CEffZFitter::~CEffZFitter()
 }
 
 //--------------------------------------------------------------------------------------------------
-void CEffZFitter::initialize(const std::string conf, const int sigpass, const int bkgpass, const int sigfail, const int bkgfail,
-                             const std::string infname, const std::string outdir, const std::string temfname, const std::string refDir,  
-                             const double massLo, const double massHi, const double fitMassLo, const double fitMassHi, 
-		             const int uncMethod, const std::string pufname, const int charge,
-			     const unsigned int runNumLo, const unsigned int runNumHi)
+void CEffZFitter::initialize(
+  const std::string conf,
+  const int sigpass,
+  const int bkgpass,
+  const int sigfail,
+  const int bkgfail,
+  const std::string infname,
+  const std::string outdir,
+  const std::string temfname,
+  const std::string sigRefDir,  
+  const std::string bkgRefDir,  
+  const double massLo,
+  const double massHi,
+  const double fitMassLo,
+  const double fitMassHi, 
+  const int uncMethod,
+  const std::string pufname,
+  const int charge,
+  const unsigned int runNumLo, const unsigned int runNumHi)
 {
   std::cout << "   [CEffZFitter] Initializing... " << std::endl;
 
@@ -97,7 +111,8 @@ void CEffZFitter::initialize(const std::string conf, const int sigpass, const in
 
   // set up output directory
   fOutputDir = outdir;
-  fRefDir = refDir;
+  fSigRefDir = sigRefDir;
+  fBkgRefDir = bkgRefDir;
   gSystem->mkdir(fOutputDir.c_str(),true);
   CPlot::sOutDir = TString(outdir.c_str()) + TString("/plots");
       
@@ -1416,7 +1431,7 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
   } else if(fSigPass==5) {
     sigModPass = new CBWCBPlusVoigt(m, true, ptMin, ptMax);
   } else if(fSigPass==6) {
-    sigModPass = new CBWCBPlusVoigt(m, true, ptMin, ptMax, ibin, name, fRefDir);
+    sigModPass = new CBWCBPlusVoigt(m, true, ptMin, ptMax, ibin, name, fSigRefDir);
   }
 
   if(fBkgPass==1) { 
@@ -1434,7 +1449,7 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
   } else if(fBkgPass==5) {
     bkgModPass = new CQuadraticExp(m,true);
   } else if(fBkgPass==6) {
-    bkgModPass = new CErfcExpoFixed(m, true, ibin, name, fRefDir);
+    bkgModPass = new CErfcExpoFixed(m, true, ibin, name, fBkgRefDir);
   }
 
   if(fSigFail==1) {
@@ -1459,7 +1474,7 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
   } else if(fSigFail==5) {
     sigModFail = new CBWCBPlusVoigt(m, false, ptMin, ptMax);
   } else if(fSigFail==6) {
-    sigModFail = new CBWCBPlusVoigt(m, false, ptMin, ptMax, ibin, name, fRefDir);
+    sigModFail = new CBWCBPlusVoigt(m, false, ptMin, ptMax, ibin, name, fSigRefDir);
   }
   if(fBkgFail==1) { 
     bkgModFail = new CExponential(m,false);
@@ -1476,7 +1491,7 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
   } else if(fBkgFail==5) {
     bkgModFail = new CQuadraticExp(m,false);
   } else if(fBkgPass==6) {
-    bkgModFail = new CErfcExpoFixed(m, false, ibin, name, fRefDir);
+    bkgModFail = new CErfcExpoFixed(m, false, ibin, name, fBkgRefDir);
   }
   
   // Define free parameters
@@ -1491,18 +1506,16 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
   //  if(ybinLo>=20) NbkgFailMax = NbkgFailMax * 0.3;
   //  else if(ybinLo>=50) NbkgFailMax = NbkgFailMax * 0.05;
   //}
-  NbkgPassMax = NbkgPassMax * 0.05;
   RooRealVar Nsig("Nsig","Signal Yield",0.80*NsigMax,0,NsigMax);
   RooRealVar eff("eff","Efficiency",0.8,0,1.0);
   RooRealVar NbkgPass("NbkgPass","Background count in PASS sample",0.01*NbkgPassMax,0,NbkgPassMax);
-  RooRealVar NbkgFail("NbkgFail","Background count in FAIL sample",0.2*NbkgFailMax,0,NbkgFailMax);  
+  RooRealVar NbkgFail("NbkgFail","Background count in FAIL sample",0.05*NbkgFailMax,0,NbkgFailMax);  
   if(ptMin<=10) {
     NbkgFail.setVal(0.5*NbkgFailMax);
     NbkgFail.setMin(0.5*NbkgFailMax);
   }
-  if(ptMin>=40) {
-    NbkgFail.setVal(0.1*NbkgFailMax);
-  }
+  if(ptMin>=30) NbkgPass.setMax(NbkgPassMax * 0.02);
+  else NbkgPass.setMax(NbkgPassMax * 0.05);
   if(fBkgPass==0) NbkgPass.setVal(0);
   if(fBkgFail==0) NbkgFail.setVal(0);
   RooFormulaVar NsigPass("NsigPass","eff*Nsig",RooArgList(eff,Nsig));

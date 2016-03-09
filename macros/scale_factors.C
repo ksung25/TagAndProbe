@@ -303,7 +303,7 @@ void systematics(string methods_config, string basename_config) {
       ss >> systematic_source >> plots_dir >> root_dir;
       if( plots_dir[plots_dir.size()-1]  != '/' ) plots_dir = plots_dir + "/";
       if( root_dir[plots_dir.size()-1]  != '/' )  root_dir  = root_dir + "/";
-
+      //printf("root dir is %s\n",  root_dir.c_str());
       // replace underscores in the method name for the plots
       string nice_method_name = systematic_source;
       size_t pos = 0;
@@ -355,13 +355,50 @@ void systematics(string methods_config, string basename_config) {
       delete h_syst_method;
       delete canvas;
     }
+    // get the hi/low stat. errors
+    TH2D *h_nominal_sf_stat_error_lo = (TH2D*) output_rootfile->Get(("scalefactors_"+output_basename+"_stat_error_lo").c_str());
+    TH2D *h_nominal_sf_stat_error_hi = (TH2D*) output_rootfile->Get(("scalefactors_"+output_basename+"_stat_error_hi").c_str());
+
+    TH2D *h_sf  = (TH2D*) h_nominal_sf->Clone();
     for(int i = 1; i <= h_nominal_sf->GetNbinsX(); i++) { for(int j = 1; j <= h_nominal_sf->GetNbinsY(); j++) {
       unsigned int nbin = h_nominal_sf->GetBin(i,j);
+      double stat_error_lo = h_nominal_sf_stat_error_lo->GetBinContent(nbin);
+      double stat_error_hi = h_nominal_sf_stat_error_hi->GetBinContent(nbin);
       h_syst_combined->SetBinContent(nbin, sqrt(h_syst_combined->GetBinContent(nbin)));
+      printf("setting bin error for bin %d = %f\n", nbin, sqrt(
+        pow(h_syst_combined->GetBinContent(nbin),2) +
+        pow(TMath::Max(stat_error_lo, stat_error_hi), 2)
+      ));
+      h_sf->SetBinError(nbin, sqrt(
+        pow(h_syst_combined->GetBinContent(nbin),2) +
+        pow(TMath::Max(stat_error_lo, stat_error_hi), 2)
+      ));
     }}
+    
+
+
+    // Redraw 2D SF histograms with systematics and statistical error    
+    TCanvas *canvas = new TCanvas("canvas", "canvas", 800,600);
+    h_sf->Draw("TEXTE COLZ");
+    canvas->Update();
+    h_sf->GetXaxis()->SetTitle("| #eta |");
+    h_sf->GetXaxis()->SetTitleOffset(0.9);
+    h_sf->GetXaxis()->SetTitleSize(0.04);
+    h_sf->GetXaxis()->SetLabelSize(0.02);
+    h_sf->GetYaxis()->SetTitle("p_{T} [GeV]");
+    h_sf->GetYaxis()->SetTitleOffset(0.9);
+    h_sf->GetYaxis()->SetTitleSize(0.04);
+    h_sf->GetYaxis()->SetLabelSize(0.02);
+    h_sf->GetYaxis()->SetRangeUser(10,200);
+    h_sf->SetMinimum(.8);
+    h_sf->SetMaximum(1.2);
+    h_sf->SetMarkerSize(.9);
+    palette_axis = (TPaletteAxis*) h_sf->GetListOfFunctions()->FindObject("palette"); 
+    palette_axis->SetLabelSize(0.02);
+    canvas->Update();
+    canvas->Print((plots_dir + string(h_nominal_sf->GetName()) + ".png").c_str());
 
     // Draw 2D histogram of all systematics combined in quadrature    
-    TCanvas *canvas = new TCanvas("canvas", "canvas", 800,600);
     h_syst_combined->Draw("TEXTE COLZ");
     canvas->Update();
     h_syst_combined->GetXaxis()->SetTitle("| #eta |");
@@ -382,9 +419,6 @@ void systematics(string methods_config, string basename_config) {
     canvas->Print((nominal_plots_dir + string(h_syst_combined->GetName()) + ".png").c_str());
     
     // Now draw 1D histograms of scale factors in eta and pT slices with full errors
-    // get the hi/low stat. errors
-    TH2D *h_nominal_sf_stat_error_lo = (TH2D*) output_rootfile->Get(("scalefactors_"+output_basename+"_stat_error_lo").c_str());
-    TH2D *h_nominal_sf_stat_error_hi = (TH2D*) output_rootfile->Get(("scalefactors_"+output_basename+"_stat_error_hi").c_str());
 
     int maxslices=5; 
      
@@ -439,6 +473,7 @@ void systematics(string methods_config, string basename_config) {
       h_nominal_sf->GetXaxis()->GetBinUpEdge(maxslices)
     );
     ( (TGraphAsymmErrors*) ptslices->At(0))->GetXaxis()->SetTitle("|#eta|");
+    ( (TGraphAsymmErrors*) ptslices->At(0))->GetXaxis()->SetTitleOffset(1.3);
     TLine *oneline_ptslices = new TLine(
       h_nominal_sf->GetXaxis()->GetBinLowEdge(1),
       1,
@@ -500,6 +535,8 @@ void systematics(string methods_config, string basename_config) {
       h_nominal_sf->GetYaxis()->GetBinUpEdge(maxslices)
     );
     ( (TGraphAsymmErrors*) etaslices->At(0))->GetXaxis()->SetTitle("p_{T} [GeV]");
+    ( (TGraphAsymmErrors*) etaslices->At(0))->GetXaxis()->SetTitleOffset(1.3);
+    ( (TGraphAsymmErrors*) etaslices->At(0))->GetXaxis()->SetMoreLogLabels();
     TLine *oneline_etaslices = new TLine(
       h_nominal_sf->GetYaxis()->GetBinLowEdge(1),
       1,

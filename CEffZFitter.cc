@@ -1510,9 +1510,9 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
   RooRealVar eff("eff","Efficiency",0.8,0,1.0);
   RooRealVar NbkgPass("NbkgPass","Background count in PASS sample",0.01*NbkgPassMax,0,NbkgPassMax);
   RooRealVar NbkgFail("NbkgFail","Background count in FAIL sample",0.05*NbkgFailMax,0,NbkgFailMax);  
-  if(ptMin<=10) {
+  if(ptMin<=20) {
     NbkgFail.setVal(0.5*NbkgFailMax);
-    NbkgFail.setMin(0.5*NbkgFailMax);
+    //NbkgFail.setMin(0.5*NbkgFailMax);
   }
   if(ptMin>=30) NbkgPass.setMax(NbkgPassMax * 0.02);
   else NbkgPass.setMax(NbkgPassMax * 0.05);

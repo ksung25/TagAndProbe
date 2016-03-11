@@ -168,6 +168,7 @@ CBWCBPlusVoigt::CBWCBPlusVoigt(RooRealVar &m, const Bool_t pass, double ptMin, d
   sprintf(vname,"bw%s",name);
   bw = new RooBreitWigner(vname,vname,m,*mass,*width);
   
+  bool electrons=false;
   double fsrPeak=80;
   double fsrSigma=7;
   double fsrSigmaMax=10;
@@ -186,14 +187,18 @@ CBWCBPlusVoigt::CBWCBPlusVoigt(RooRealVar &m, const Bool_t pass, double ptMin, d
   //  fsrPeak=115;
   } else if(ptMin >= 50) {
     fsrPeak=105;
-    fsrFracMax=0.05;
-    fsrPeakRange=10;
+    if(electrons) fsrFracMax=0.05;
+    if(electrons) fsrPeakRange=10;
+    else fsrPeakRange = 20;
     //fsrFracInit=0.2;
     fsrFracMin=0;
     //fsrFracMax = 0.3;
     //fsrSigma=7;
   } else if(ptMin >= 40) {
-    fsrPeak=95;
+    if(electrons) fsrPeak=95;
+    else fsrPeak = 80;
+
+    if(!electrons) fsrSigmaMin=1;
     //fsrFracMin=.1;
     //fsrFracMax = 0.3;
   } else if(ptMin >= 30) {
@@ -203,6 +208,7 @@ CBWCBPlusVoigt::CBWCBPlusVoigt(RooRealVar &m, const Bool_t pass, double ptMin, d
     //fsrPeakRange=10;
   } else if(ptMin >= 20) {
     fsrPeak=75;
+    if(!electrons && ptMax<=25) fsrPeak=67;
     //fsrFracMin=.15;
   } else if(ptMin >= 10) {
     fsrPeak=55;
@@ -210,9 +216,16 @@ CBWCBPlusVoigt::CBWCBPlusVoigt(RooRealVar &m, const Bool_t pass, double ptMin, d
     fsrFracInit=.3;
     fsrFracMax=.4;
     fsrPeakRange=5;
-    //fsrSigma=10;
+    fsrSigmaMax=20;//fsrSigma=10;
   } else {
+    fsrFracMax=.8;
+    fsrFracMin=0;
     fsrPeakRange=300;
+  }
+  if(!electrons && ptMin==0 && ptMax==8000) { // fine eta binning for muons
+    fsrPeak=75;
+    fsrPeakRange=10;
+    fsrSigmaMax=20;
   }
 
   //sprintf(vname,"vMean%s",name);      vMean  = new RooRealVar(vname,vname,60,5,150);
@@ -446,6 +459,7 @@ std::vector<double> CSignalModel::readSigParams(
   );
   ifstream rfile;
   for(unsigned int i = 0; i<paramNames.size(); i++) {
+    printf("Trying to open param file \"%s\"...\n", rname);
     rfile.open(rname);
     assert(rfile.is_open());
     std::string line;

@@ -13,17 +13,18 @@ int main(int argc, char **argv)
   //==============================================================================================================
 
   // handle input arguments
-  const std::string conf     = argv[1];         // input configuration file
-  const int         sigpass  = atoi(argv[2]);	// signal model for PASS sample
-  const int         bkgpass  = atoi(argv[3]);	// background model for PASS sample
-  const int         sigfail  = atoi(argv[4]);	// signal model for FAIL sample
-  const int         bkgfail  = atoi(argv[5]);	// background model for FAIL sample
-  const std::string infname  = argv[6];         // input ROOT file of probes
-  const std::string outdir   = argv[7];         // output directory
-  const int         doPU     = atoi(argv[8]);	// PU re-weighting mode
-  const int         charge   = atoi(argv[9]);	// probe charge requirement (0, -1, +1)
-  const std::string temfname = argv[10];        // ROOT file for generating MC-based templates
-  const std::string refDir = argv[11];        // reference dir for fixed parameters
+  const std::string conf      = argv[1];         // input configuration file
+  const int         sigpass   = atoi(argv[2]);	// signal model for PASS sample
+  const int         bkgpass   = atoi(argv[3]);	// background model for PASS sample
+  const int         sigfail   = atoi(argv[4]);	// signal model for FAIL sample
+  const int         bkgfail   = atoi(argv[5]);	// background model for FAIL sample
+  const std::string infname   = argv[6];         // input ROOT file of probes
+  const std::string outdir    = argv[7];         // output directory
+  const int         doPU      = atoi(argv[8]);	// PU re-weighting mode
+  const int         charge    = atoi(argv[9]);	// probe charge requirement (0, -1, +1)
+  const std::string temfname  = argv[10];        // ROOT file for generating MC-based templates
+  const std::string sigRefDir = argv[11];        // reference dir for fixed signal parameters
+  const std::string bkgRefDir = argv[12];        // reference dir for fixed background parameters
   
   // other settings
   const double       massLo    = 60;
@@ -68,7 +69,7 @@ int main(int argc, char **argv)
 ***************************************************************************/
   CEffZFitter fitter;
   fitter.initialize(conf, sigpass, bkgpass, sigfail, bkgfail,
-                    infname, outdir, temfname, refDir, 
+                    infname, outdir, temfname, sigRefDir, bkgRefDir,
                     massLo, massHi, fitMassLo, fitMassHi, 
 		    uncMethod, pufname, charge, runNumLo, runNumHi);
   fitter.computeEff();

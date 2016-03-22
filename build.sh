@@ -30,3 +30,9 @@ g++ -O3 -shared -Wl,-soname,libCEffZFitter.so -o libCEffZFitter.so CEffZFitter.o
 
 echo "Building effZFit..."
 g++ -O3 -g -o effZFit effZFit.cc `root-config --cflags` `root-config --libs` -l Minuit -I $ROOFITSYS/include -L $ROOFITSYS/lib -l RooFit -l RooFitCore -L. -l CEffZFitter -l CPlot -l KStyle -l RooCMSShape -l RooVoigtianShape -l CEffUser1D -l CEffUser2D
+
+echo "Building generateToys..."
+g++ -O3 -g -o generateToys generateToys.cc `root-config --cflags` `root-config --libs` -l Minuit -I $ROOFITSYS/include -L $ROOFITSYS/lib -l RooFit -l RooFitCore -L. -l CEffZFitter -l CPlot -l KStyle -l RooCMSShape -l RooVoigtianShape -l CEffUser1D -l CEffUser2D
+
+echo "Building fitToy..."
+g++ -O3 -g -o fitToy fitToy.cc `root-config --cflags` `root-config --libs` -l Minuit -I $ROOFITSYS/include -L $ROOFITSYS/lib -l RooFit -l RooFitCore -L. -l CEffZFitter -l CPlot -l KStyle -l RooCMSShape -l RooVoigtianShape -l CEffUser1D -l CEffUser2D

@@ -1,5 +1,6 @@
 #include "TROOT.h"
 #include "TH1D.h"
+#include "TTree.h"
 #include "RooDataSet.h"
 #include "RooRealVar.h"
 #include "RooAbsPdf.h"
@@ -14,21 +15,36 @@
 #include "RooVoigtianShape.h"
 #include "RooVoigtian.h"
 #include "RooKeysPdf.h"
+#include <vector>
+#include <fstream>
+#include <iostream>
+#include <string>
+#include <sstream>
 
-
+using namespace std;
 class CSignalModel
 {
 public:
   CSignalModel():model(0){}
   virtual ~CSignalModel(){ delete model; }
   RooAbsPdf *model;
-protected:
+  enum signalType {
+    kBreitWignerConvCrystalBall,
+    kMCTemplateConvGaussian,     //initialized from default
+    kMCTemplateConvGaussianInit, //initialized from reference dir
+    kVoigtianCBShape,
+    kMCDatasetConvGaussian,
+    kBWCBPlusVoigt,
+    kBWCBPlusVoigtBounded,
+    kNone
+  };
   std::vector<double> readSigParams(
     const int ibin,
     const std::string name,
     std::vector<std::string> paramNames,
     std::string refDir
   );
+protected:
 
 };
 
@@ -60,7 +76,7 @@ public:
 class CMCTemplateConvGaussian : public CSignalModel
 {
 public:
-  CMCTemplateConvGaussian(RooRealVar &m, TH1D* hist, const Bool_t pass, RooRealVar *sigma0=0, int intOrder=1);
+  CMCTemplateConvGaussian(RooRealVar &m, TH1D* hist, const Bool_t pass, int intOrder=1, int ibin=0, const std::string fitname="", std::string refDir="");
   ~CMCTemplateConvGaussian();
   RooRealVar  *mean, *sigma;
   RooGaussian *gaus;
@@ -322,7 +338,7 @@ CBWCBPlusVoigt::~CBWCBPlusVoigt()
 }
 
 //--------------------------------------------------------------------------------------------------
-CMCTemplateConvGaussian::CMCTemplateConvGaussian(RooRealVar &m, TH1D* hist, const Bool_t pass, RooRealVar *sigma0, int intOrder)
+CMCTemplateConvGaussian::CMCTemplateConvGaussian(RooRealVar &m, TH1D* hist, const Bool_t pass, int intOrder, int ibin, const std::string fitname, std::string refDir)
 {  
   char name[10];
   if(pass) sprintf(name,"%s","Pass");
@@ -332,20 +348,27 @@ CMCTemplateConvGaussian::CMCTemplateConvGaussian(RooRealVar &m, TH1D* hist, cons
   
   if(pass) {
     sprintf(vname,"mean%s",name);  mean  = new RooRealVar(vname,vname,-1,-5,5);
-    if(sigma0) { sigma = sigma0; }
-    else       { sprintf(vname,"sigma%s",name); sigma = new RooRealVar(vname,vname,0.5,0.5,5); }
+    sprintf(vname,"sigma%s",name); sigma = new RooRealVar(vname,vname,0.5,0.5,5);
     sprintf(vname,"gaus%s",name);  gaus  = new RooGaussian(vname,vname,m,*mean,*sigma);
   } else {
     sprintf(vname,"mean%s",name);  mean  = new RooRealVar(vname,vname,-1,-5,5);
-    if(sigma0) { sigma = sigma0; }
-    else       { sprintf(vname,"sigma%s",name); sigma = new RooRealVar(vname,vname,0.5,0.5,5); }
+    sprintf(vname,"sigma%s",name); sigma = new RooRealVar(vname,vname,0.5,0.5,5);
     sprintf(vname,"gaus%s",name);  gaus  = new RooGaussian(vname,vname,m,*mean,*sigma);
   }
-
+  
+  if(refDir != "") {
+    std::vector<std::string> paramNames;
+    if(pass) paramNames = {"meanPass", "sigmaPass"};
+    else     paramNames = {"meanFail", "sigmaFail"};
+    std::vector<double> params = readSigParams(ibin, fitname, paramNames, refDir);
+    mean->setVal(params[0]);
+    sigma->setVal(params[1]);
+  }
 
   sprintf(vname,"inHist_%s",hist->GetName());
   inHist = (TH1D*)hist->Clone(vname);
-  
+  inHist->SetDirectory(0);
+
   sprintf(vname,"dataHist%s",name); dataHist = new RooDataHist(vname,vname,RooArgSet(m),inHist);
   sprintf(vname,"histPdf%s",name);  histPdf  = new RooHistPdf(vname,vname,m,*dataHist,intOrder);
   sprintf(vname,"signal%s",name);   model    = new RooFFTConvPdf(vname,vname,m,*histPdf,*gaus);
@@ -426,7 +449,8 @@ CMCDatasetConvGaussian::CMCDatasetConvGaussian(RooRealVar &m, TTree* tree, const
   
   sprintf(vname,"inTree_%s",tree->GetName());
   inTree = (TTree*)tree->Clone(vname);
-  
+  inTree->SetDirectory(0);
+
   sprintf(vname,"dataSet%s",name); dataSet = new RooDataSet(vname,vname,inTree,RooArgSet(m));
   sprintf(vname,"keysPdf%s",name); keysPdf = new RooKeysPdf(vname,vname,m,*dataSet,RooKeysPdf::NoMirror,1);
   sprintf(vname,"signal%s",name);  model   = new RooFFTConvPdf(vname,vname,m,*keysPdf,*gaus);

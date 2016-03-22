@@ -5,20 +5,37 @@
 #include "RooCMSShape.h"
 #include "RooGenericPdf.h"
 #include <vector>
+#include <fstream>
+#include <iostream>
+#include <string>
+#include <sstream>
 
+using namespace std;
 class CBackgroundModel
 {
 public:
   CBackgroundModel():model(0){}
   virtual ~CBackgroundModel() { delete model; }
   RooAbsPdf *model;
-protected:
+  enum backgroundType {
+    kExponential,
+    kErfcExpo,
+    kErfcExpoFixed,
+    kDoubleExp,
+    kLinearExp,
+    kQuadraticExp,
+    kNone
+
+  };
   std::vector<double> readBkgParams(
     const int ibin,
     const std::string name,
     std::vector<std::string> paramNames,
     std::string refDir
   );
+
+protected:
+
 };
 
 class CExponential : public CBackgroundModel
@@ -116,11 +133,11 @@ CErfcExpo::CErfcExpo(RooRealVar &m, const Bool_t pass)
   char vname[50];
 
   if(pass) {
-    sprintf(vname,"alfa%s",name);  alfa  = new RooRealVar(vname,vname,70,50,200);
+    sprintf(vname,"alfa%s",name);  alfa  = new RooRealVar(vname,vname,70,10,200);
     sprintf(vname,"beta%s",name);  beta  = new RooRealVar(vname,vname,0.02,0,0.1);
     sprintf(vname,"gamma%s",name); gamma = new RooRealVar(vname,vname,0.03,-1,1);
   } else {
-    sprintf(vname,"alfa%s",name);  alfa  = new RooRealVar(vname,vname,70,50,200);
+    sprintf(vname,"alfa%s",name);  alfa  = new RooRealVar(vname,vname,70,10,200);
     sprintf(vname,"beta%s",name);  beta  = new RooRealVar(vname,vname,0.03,0,0.1);
     sprintf(vname,"gamma%s",name); gamma = new RooRealVar(vname,vname,0.000,0,2);
   }  

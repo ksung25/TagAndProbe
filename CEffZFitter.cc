@@ -135,7 +135,6 @@ void CEffZFitter::initialize(
   else if(bkgfail=="LinearExp"     ) fBkgFail=CBackgroundModel::kLinearExp    ;
   else if(bkgfail=="QuadraticExp"  ) fBkgFail=CBackgroundModel::kQuadraticExp ;
   else fBkgFail=CBackgroundModel::kNone;
-  
   fMassLo    = massLo;
   fMassHi    = massHi;
   fFitMassLo = fitMassLo;
@@ -2100,13 +2099,13 @@ void CEffZFitter::createModels(
     
     } else {
       modelPass = new RooAddPdf("modelPass","Model for PASS sample",
-                                (fBkgPass>0) ? RooArgList(*(sigModPass->model),*(bkgModPass->model)) :  RooArgList(*(sigModPass->model)),
-                                (fBkgPass>0) ? RooArgList(NsigPass,NbkgPass) : RooArgList(NsigPass));
+                                (fBkgPass!=CBackgroundModel::kNone) ? RooArgList(*(sigModPass->model),*(bkgModPass->model)) :  RooArgList(*(sigModPass->model)),
+                                (fBkgPass!=CBackgroundModel::kNone) ? RooArgList(NsigPass,NbkgPass) : RooArgList(NsigPass));
     
       //modelFail = new RooAddPdf("modelFail","Model for FAIL sample",RooArgList(*(sigModFail->model),*(bkgModFail->model)),RooArgList(NsigFail,NbkgFail));
       modelFail = new RooAddPdf("modelFail","Model for FAIL sample",
-                                (fBkgFail>0) ? RooArgList(*(sigModFail->model),*(bkgModFail->model)) :  RooArgList(*(sigModFail->model)),
-                                (fBkgFail>0) ? RooArgList(NsigFail,NbkgFail) : RooArgList(NsigFail));
+                                (fBkgFail!=CBackgroundModel::kNone) ? RooArgList(*(sigModFail->model),*(bkgModFail->model)) :  RooArgList(*(sigModFail->model)),
+                                (fBkgFail!=CBackgroundModel::kNone) ? RooArgList(NsigFail,NbkgFail) : RooArgList(NsigFail));
     }
 
 }

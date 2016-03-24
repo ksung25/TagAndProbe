@@ -74,7 +74,7 @@ void compare_methods(string toys_dir, string plots_dir, string method1, string m
       //printf("trying to open \"%s\"\n", filename);
       std::ifstream file_method1(filename);
       if(!file_method1.is_open()) continue;
-      file_method1 >> eff1 >> errh1 >> errl1;
+      file_method1 >> eff1 >> errl1 >> errh1;
       toy_eff_method1->SetPoint(toynum, toynum, eff1);
       toy_eff_method1->SetPointError(toynum, 0,0, errl1, errh1);
 
@@ -82,7 +82,7 @@ void compare_methods(string toys_dir, string plots_dir, string method1, string m
       //printf("trying to open \"%s\"\n", filename);
       std::ifstream file_method2(filename);
       if(!file_method2.is_open()) continue;
-      file_method2 >> eff2 >> errh2 >> errl2;
+      file_method2 >> eff2 >> errl2 >> errh2;
       toy_eff_method2->SetPoint(toynum, toynum, eff2);
       toy_eff_method2->SetPointError(toynum, 0,0, errl2, errh2);
 

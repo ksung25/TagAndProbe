@@ -1230,7 +1230,7 @@ void CEffZFitter::makeEffHist2D(TH2D *hEff, TH2D *hErrl, TH2D *hErrh,
       
       double eff, errl, errh;
 
-      if(fSigPass==0 && fSigFail==0) {  // Cut-and-count
+      if(fSigPass==CSignalModel::kNone && fSigFail==CSignalModel::kNone) {  // Cut-and-count
         performCount(eff, errl, errh, 
                      ibin, 
                      hEff->GetXaxis()->GetBinLowEdge(ix+1), hEff->GetXaxis()->GetBinLowEdge(ix+2),

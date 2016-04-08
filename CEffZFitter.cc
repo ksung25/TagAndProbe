@@ -1171,7 +1171,7 @@ TGraphAsymmErrors* CEffZFitter::makeEffGraph(const std::vector<double> &edgesv,
     
     double eff, errl, errh;
     
-    if(fSigPass==CSignalModel::kNone && fSigFail==CBackgroundModel::kNone) {  // Cut-and-count
+    if(fSigPass==CSignalModel::kNone && fSigFail==CSignalModel::kNone) {  // Cut-and-count
       performCount(eff, errl, errh,
                    ibin,
 		   edgesv[ibin], edgesv[ibin+1],

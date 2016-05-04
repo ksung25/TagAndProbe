@@ -4,6 +4,7 @@
 #include <TCanvas.h>
 #include <TGraphAsymmErrors.h>
 #include <TH2D.h>
+#include <TColor.h>
 #include <TEfficiency.h>
 #include <TLorentzVector.h>
 
@@ -561,7 +562,21 @@ void CEffZFitter::computeEff()
   }
 
 
-  gStyle->SetPalette(1);
+  gStyle->SetPaintTextFormat("3.2f");
+  bool use_mit_palette=true; 
+  if(use_mit_palette) {
+    static Int_t  colors[100];
+    Double_t Red[3]    = { 1, 138./255., 163/255.};
+    Double_t Green[3]  = { 1, 139./255., 31/255.};
+    Double_t Blue[3]   = { 1, 140./255., 52/255.};
+    Double_t Length[3] = { 0.00, 0.35, 1.00 };
+    Int_t FI = TColor::CreateGradientColorTable(3,Length,Red,Green,Blue,100);
+    for (int i=0; i<100; i++) colors[i] = FI+i;
+    gStyle->SetPalette(100,colors);
+  } else {
+    gStyle->SetPalette(1);
+  }
+  
   c->SetRightMargin(0.15);
   c->SetLeftMargin(0.15);
 
@@ -576,7 +591,7 @@ void CEffZFitter::computeEff()
     if(NBINS_PT>2) { hEffEtaPt->GetYaxis()->SetRangeUser(fPtBinEdgesv[0],fPtBinEdgesv[NBINS_PT-2]); }
     CPlot plotEffEtaPt("effetapt","","probe #eta","probe p_{T} [GeV/c]");
     if(fDoAbsEta) { plotEffEtaPt.SetXTitle("probe |#eta|"); }
-    plotEffEtaPt.AddHist2D(hEffEtaPt,"COLZ");
+    plotEffEtaPt.AddHist2D(hEffEtaPt,"TEXT COLZ");
     plotEffEtaPt.Draw(c,true,"png");
     plotEffEtaPt.Draw(c,true,"pdf");
 
@@ -584,7 +599,7 @@ void CEffZFitter::computeEff()
     if(NBINS_PT>2) { hErrlEtaPt->GetYaxis()->SetRangeUser(fPtBinEdgesv[0],fPtBinEdgesv[NBINS_PT-2]); }
     CPlot plotErrlEtaPt("errletapt","","probe #eta","probe p_{T} [GeV/c]");
     if(fDoAbsEta) { plotErrlEtaPt.SetXTitle("probe |#eta|"); }
-    plotErrlEtaPt.AddHist2D(hErrlEtaPt,"COLZ");
+    plotErrlEtaPt.AddHist2D(hErrlEtaPt,"TEXT COLZ");
     plotErrlEtaPt.Draw(c,true,"png");
     plotErrlEtaPt.Draw(c,true,"pdf");
 
@@ -592,7 +607,7 @@ void CEffZFitter::computeEff()
     if(NBINS_PT>2) { hErrhEtaPt->GetYaxis()->SetRangeUser(fPtBinEdgesv[0],fPtBinEdgesv[NBINS_PT-2]); }
     CPlot plotErrhEtaPt("errhetapt","","probe #eta","probe p_{T} [GeV/c]");
     if(fDoAbsEta) { plotErrhEtaPt.SetXTitle("probe |#eta|"); }
-    plotErrhEtaPt.AddHist2D(hErrhEtaPt,"COLZ");
+    plotErrhEtaPt.AddHist2D(hErrhEtaPt,"TEXT COLZ");
     plotErrhEtaPt.Draw(c,true,"png");
     plotErrhEtaPt.Draw(c,true,"pdf");
   }
@@ -1462,7 +1477,7 @@ void CEffZFitter::performFit(
     ptMax=ybinHi;
     ptMin=ybinLo;
   } 
-  createModels(ptMin, ptMax, name);
+  createModels(ptMin, ptMax, name, ibin);
    
   // Define free parameters and initial values
   double NsigMax     = doBinned ? histPass.Integral()+histFail.Integral() : passTree->GetEntries()+failTree->GetEntries();
@@ -1629,19 +1644,10 @@ void CEffZFitter::performFit(
   //
   // Clean up
   //
-  delete esignalPass;
-  delete ebackgroundPass;
-  delete esignalFail;
-  delete ebackgroundFail;
-  delete modelPass;
-  delete modelFail;  
+  destroyModels();
   delete dataCombined;
   delete dataPass;
   delete dataFail;
-  delete sigModPass;
-  delete bkgModPass;
-  delete sigModFail;
-  delete bkgModFail;        
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -1798,9 +1804,12 @@ void CEffZFitter::generateToys(
   assert(fIsInitialized);
   // set up output directory
   gSystem->mkdir(("toys/"+fOutputDir).c_str(),true);
+
+  fSigRefDir = fOutputDir;
+  fBkgRefDir = fOutputDir;
       
   TFile *histfile = 0;
-  string outfile_name = fOutputDir + "_binnedTemplates.root";
+  string outfile_name = "templates/" + fOutputDir + "/binnedTemplates.root";
   histfile = new TFile(outfile_name.c_str());
   assert(histfile);
 
@@ -1859,7 +1868,7 @@ void CEffZFitter::generateToys(
     NbkgPass.setVal(params[2]);
     NbkgFail.setVal(params[3]);
     
-    createModels(ptMin, ptMax, name);
+    createModels(ptMin, ptMax, name, ibin);
     RooMCStudy *passToyMachine = new RooMCStudy(*modelPass, RooArgSet(m));
     RooMCStudy *failToyMachine = new RooMCStudy(*modelFail, RooArgSet(m));
     
@@ -1969,22 +1978,21 @@ void CEffZFitter::fitToy(
 
 }
 void CEffZFitter::destroyModels() {
-  //if(sigModPass) delete sigModPass;
-  //if(bkgModPass) delete bkgModPass;
-  //if(sigModFail) delete sigModFail;
-  //if(bkgModFail) delete bkgModFail;
-  //if(esignalPass)     delete esignalPass;
-  //if(ebackgroundPass) delete ebackgroundPass;
-  //if(esignalFail)     delete esignalFail;
-  //if(ebackgroundFail) delete ebackgroundFail;
-  //if(modelPass) delete modelPass;
-  //if(modelFail) delete modelFail;
+  if(modelPass) delete modelPass;
+  if(modelFail) delete modelFail;
+  if(esignalPass)     delete esignalPass;
+  if(ebackgroundPass) delete ebackgroundPass;
+  if(esignalFail)     delete esignalFail;
+  if(ebackgroundFail) delete ebackgroundFail;
+  if(sigModPass) delete sigModPass;
+  if(bkgModPass) delete bkgModPass;
+  if(sigModFail) delete sigModFail;
+  if(bkgModFail) delete bkgModFail;
 }
 void CEffZFitter::createModels(
   double ptMin, double ptMax, const std::string name, const int ibin
 ) {
   assert(fIsInitialized);
-  destroyModels();
   TFile *histfile = 0, *datfile = 0;
   if(
     fSigPass==CSignalModel::kMCTemplateConvGaussian || 

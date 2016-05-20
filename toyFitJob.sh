@@ -13,7 +13,7 @@ echo "Doing the fits now: ./fitToy $1 $2 $3 $4 $5 $6 $7 $8 $9 ${10} ${11} ${12} 
 outputTarball=`printf "${1}_toy%06d_tnpOutput.tgz" ${13}`
 cd toys
 tar -zcf $outputTarball `printf "${7}/toy%06d/*.txt" ${13}`
-mv $outputTarball $remoteToysDir
-cd $remoteToysDir
-tar -xzf $outputTarball
-rm $outputTarball
+#mv $outputTarball $remoteToysDir
+#cd $remoteToysDir
+#tar -xzf $outputTarball
+#rm $outputTarball

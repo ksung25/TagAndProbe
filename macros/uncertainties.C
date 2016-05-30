@@ -35,25 +35,6 @@ Int_t n_mu_eta_bins=2;
 Int_t mit_red  = 1861; 
 Int_t mit_gray = 1862; 
 
-// Function to get MIT colors for the 2D plots
-void mitPalette()
-{
-  static Int_t  colors[100];
-  static Bool_t initialized = kFALSE;
-  Double_t Red[3]    = { 1, 138./255., 163/255.};
-  Double_t Green[3]  = { 1, 139./255., 31/255.};
-  Double_t Blue[3]   = { 1, 140./255., 52/255.};
-  Double_t Length[3] = { 0.00, 0.35, 1.00 };
-  if(!initialized){
-    Int_t FI = TColor::CreateGradientColorTable(3,Length,Red,Green,Blue,100);
-    for (int i=0; i<100; i++) colors[i] = FI+i;
-    initialized = kTRUE;
-    return;
-  }
-  gStyle->SetPalette(100,colors);
-
-}
-
 void data_style (TH1D *histo) {
   histo->SetLineColor(1);
   histo->SetMarkerColor(1);
@@ -663,13 +644,13 @@ void propagate_to_Zpt(
   int nbins=8;
   int max_pT = 400;
   
-  TFile *uncertainties_ele = TFile::Open((root_dir+"scalefactors_ele_74x.root").c_str(),"READ");
-  TFile *uncertainties_mu  = TFile::Open((root_dir+"scalefactors_mu_74x.root").c_str(),"READ");
+  TFile *uncertainties_ele = TFile::Open((root_dir+"scalefactors_ele_76x.root").c_str(),"READ");
+  TFile *uncertainties_mu  = TFile::Open((root_dir+"scalefactors_mu_76x.root").c_str(),"READ");
   
-  TFile *f_tnp_ele_veto   = TFile::Open("~/leptonScaleFactors/root/DYJetsToLL_74x_aMCatNLO_genMatching_BaselineToVeto_electronTnP.root","READ");
-  TFile *f_tnp_ele_tight  = TFile::Open("~/leptonScaleFactors/root/DYJetsToLL_74x_aMCatNLO_genMatching_BaselineToTight_electronTnP.root","READ");
-  TFile *f_tnp_mu_loose   = TFile::Open("~/leptonScaleFactors/root/DYJetsToLL_74x_aMCatNLO_genMatching_BaselineToLoose_electronTnP.root","READ");
-  TFile *f_tnp_mu_tight   = TFile::Open("~/leptonScaleFactors/root/DYJetsToLL_74x_aMCatNLO_genMatching_BaselineToTight_electronTnP.root","READ");
+  TFile *f_tnp_ele_veto   = TFile::Open("~/leptonScaleFactors/root/DYJetsToLL_NLO_76x_BaselineToVeto_electronTnP.root","READ");
+  TFile *f_tnp_ele_tight  = TFile::Open("~/leptonScaleFactors/root/DYJetsToLL_NLO_76x_BaselineToTight_electronTnP.root","READ");
+  TFile *f_tnp_mu_loose   = TFile::Open("~/leptonScaleFactors/root/DYJetsToLL_NLO_76x_BaselineToLoose_electronTnP.root","READ");
+  TFile *f_tnp_mu_tight   = TFile::Open("~/leptonScaleFactors/root/DYJetsToLL_NLO_76x_BaselineToTight_electronTnP.root","READ");
 
   if(
     !uncertainties_ele  ||
@@ -679,10 +660,29 @@ void propagate_to_Zpt(
     !f_tnp_mu_loose           ||
     !f_tnp_mu_tight           
   ) { printf("failed to open file\n"); exit(-1); }
-  TH2D *syst_ele_sf_combined_veto     = (TH2D*) uncertainties_ele ->Get("scalefactors_Veto_ele_syst_error_combined");
-  TH2D *syst_ele_sf_combined_tight    = (TH2D*) uncertainties_ele ->Get("scalefactors_Tight_ele_syst_error_combined");
-  TH2D *syst_mu_sf_combined_loose     = (TH2D*) uncertainties_mu ->Get("scalefactors_Loose_mu_syst_error_combined");
-  TH2D *syst_mu_sf_combined_tight     = (TH2D*) uncertainties_mu ->Get("scalefactors_Tight_mu_syst_error_combined");
+  TH2D *syst_ele_sf_combined_veto         = (TH2D*) uncertainties_ele ->Get("scalefactors_Veto_Electron_syst_error_combined"        );
+  TH2D *syst_ele_sf_tag_cuts_veto         = (TH2D*) uncertainties_ele ->Get("scalefactors_Veto_Electron_syst_error_tag_cuts"        );
+  TH2D *syst_ele_sf_generator_veto       = (TH2D*) uncertainties_ele ->Get("scalefactors_Veto_Electron_syst_error_generator"       );
+  TH2D *syst_ele_sf_background_shape_veto = (TH2D*) uncertainties_ele ->Get("scalefactors_Veto_Electron_syst_error_background_shape");
+  TH2D *syst_ele_sf_signal_shape_veto     = (TH2D*) uncertainties_ele ->Get("scalefactors_Veto_Electron_syst_error_signal_shape"    );
+  
+  TH2D *syst_ele_sf_combined_tight         = (TH2D*) uncertainties_ele ->Get("scalefactors_Tight_Electron_syst_error_combined"        );
+  TH2D *syst_ele_sf_tag_cuts_tight         = (TH2D*) uncertainties_ele ->Get("scalefactors_Tight_Electron_syst_error_tag_cuts"        );
+  TH2D *syst_ele_sf_generator_tight       = (TH2D*) uncertainties_ele ->Get("scalefactors_Tight_Electron_syst_error_generator"       );
+  TH2D *syst_ele_sf_background_shape_tight = (TH2D*) uncertainties_ele ->Get("scalefactors_Tight_Electron_syst_error_background_shape");
+  TH2D *syst_ele_sf_signal_shape_tight     = (TH2D*) uncertainties_ele ->Get("scalefactors_Tight_Electron_syst_error_signal_shape"    );
+  
+  TH2D *syst_mu_sf_combined_loose         = (TH2D*) uncertainties_mu ->Get("scalefactors_Loose_Muon_syst_error_combined"        );
+  TH2D *syst_mu_sf_tag_cuts_loose         = (TH2D*) uncertainties_mu ->Get("scalefactors_Loose_Muon_syst_error_tag_cuts"        );
+  TH2D *syst_mu_sf_generator_loose       = (TH2D*) uncertainties_mu ->Get("scalefactors_Loose_Muon_syst_error_generator"       );
+  TH2D *syst_mu_sf_background_shape_loose = (TH2D*) uncertainties_mu ->Get("scalefactors_Loose_Muon_syst_error_background_shape");
+  TH2D *syst_mu_sf_signal_shape_loose     = (TH2D*) uncertainties_mu ->Get("scalefactors_Loose_Muon_syst_error_signal_shape"    );
+  
+  TH2D *syst_mu_sf_combined_tight         = (TH2D*) uncertainties_mu ->Get("scalefactors_Tight_Muon_syst_error_combined"        );
+  TH2D *syst_mu_sf_tag_cuts_tight         = (TH2D*) uncertainties_mu ->Get("scalefactors_Tight_Muon_syst_error_tag_cuts"        );
+  TH2D *syst_mu_sf_generator_tight       = (TH2D*) uncertainties_mu ->Get("scalefactors_Tight_Muon_syst_error_generator"       );
+  TH2D *syst_mu_sf_background_shape_tight = (TH2D*) uncertainties_mu ->Get("scalefactors_Tight_Muon_syst_error_background_shape");
+  TH2D *syst_mu_sf_signal_shape_tight     = (TH2D*) uncertainties_mu ->Get("scalefactors_Tight_Muon_syst_error_signal_shape"    );
   
   // read from tnp skim
   unsigned int runNum, // event ID
@@ -701,12 +701,30 @@ void propagate_to_Zpt(
   TH1D *h_Z_pT_ele_tight = new TH1D("h_Z_pT_ele_tight", "Z p_{T} spectrum for Tight electron pairs", nbins, 0, max_pT);
   TH1D *h_Z_pT_mu_loose  = new TH1D("h_Z_pT_mu_loose", "Z p_{T} spectrum for Loose muon pairs",  nbins, 0, max_pT);
   TH1D *h_Z_pT_mu_tight  = new TH1D("h_Z_pT_mu_tight", "Z p_{T} spectrum for Tight muon pairs",  nbins, 0, max_pT);
-  TH1D *h_syst_Z_ele_veto  = new TH1D("h_syst_Z_ele_veto",  "SF syst. unc. as Z p_{T} for Veto electron pairs",  nbins, 0, max_pT);
-  TH1D *h_syst_Z_ele_tight = new TH1D("h_syst_Z_ele_tight", "SF syst. unc. as Z p_{T} for Tight electron pairs", nbins, 0, max_pT);
-  TH1D *h_syst_Z_ele_tight_worst = new TH1D("h_syst_Z_ele_tight_worst", "SF syst. unc. as Z p_{T} for Tight electron pairs", nbins, 0, max_pT);
-  TH1D *h_syst_Z_ele_tight_best  = new TH1D("h_syst_Z_ele_tight_best", "SF syst. unc. as Z p_{T} for Tight electron pairs", nbins, 0, max_pT);
-  TH1D *h_syst_Z_mu_loose  = new TH1D("h_syst_Z_mu_loose",  "SF syst. unc. as Z p_{T} for Loose muon pairs",  nbins, 0, max_pT);
-  TH1D *h_syst_Z_mu_tight  = new TH1D("h_syst_Z_mu_tight",  "SF syst. unc. as Z p_{T} for Tight muon pairs",  nbins, 0, max_pT);
+  
+  TH1D *h_syst_Z_ele_combined_veto         = new TH1D("h_syst_Z_ele_combined_veto"        ,  "SF syst. unc. as Z p_{T} for Veto electron pairs (combined)",  nbins, 0, max_pT);
+  TH1D *h_syst_Z_ele_tag_cuts_veto         = new TH1D("h_syst_Z_ele_tag_cuts_veto"        ,  "SF syst. unc. as Z p_{T} for Veto electron pairs (tag cuts)",  nbins, 0, max_pT);
+  TH1D *h_syst_Z_ele_generator_veto        = new TH1D("h_syst_Z_ele_generator_veto"       ,  "SF syst. unc. as Z p_{T} for Veto electron pairs (generator eff.)",  nbins, 0, max_pT);
+  TH1D *h_syst_Z_ele_background_shape_veto = new TH1D("h_syst_Z_ele_background_shape_veto",  "SF syst. unc. as Z p_{T} for Veto electron pairs (background shape)",  nbins, 0, max_pT);
+  TH1D *h_syst_Z_ele_signal_shape_veto     = new TH1D("h_syst_Z_ele_signal_shape_veto"    ,  "SF syst. unc. as Z p_{T} for Veto electron pairs (signal shape)",  nbins, 0, max_pT);
+  
+  TH1D *h_syst_Z_ele_combined_tight         = new TH1D("h_syst_Z_ele_combined_tight"        ,  "SF syst. unc. as Z p_{T} for Tight electron pairs (combined)",  nbins, 0, max_pT);
+  TH1D *h_syst_Z_ele_tag_cuts_tight         = new TH1D("h_syst_Z_ele_tag_cuts_tight"        ,  "SF syst. unc. as Z p_{T} for Tight electron pairs (tag cuts)",  nbins, 0, max_pT);
+  TH1D *h_syst_Z_ele_generator_tight        = new TH1D("h_syst_Z_ele_generator_tight"       ,  "SF syst. unc. as Z p_{T} for Tight electron pairs (generator eff.)",  nbins, 0, max_pT);
+  TH1D *h_syst_Z_ele_background_shape_tight = new TH1D("h_syst_Z_ele_background_shape_tight",  "SF syst. unc. as Z p_{T} for Tight electron pairs (background shape)",  nbins, 0, max_pT);
+  TH1D *h_syst_Z_ele_signal_shape_tight     = new TH1D("h_syst_Z_ele_signal_shape_tight"    ,  "SF syst. unc. as Z p_{T} for Tight electron pairs (signal shape)",  nbins, 0, max_pT);
+  
+  TH1D *h_syst_Z_mu_combined_loose         = new TH1D("h_syst_Z_mu_combined_loose"        ,  "SF syst. unc. as Z p_{T} for Loose muon pairs (combined)",  nbins, 0, max_pT);
+  TH1D *h_syst_Z_mu_tag_cuts_loose         = new TH1D("h_syst_Z_mu_tag_cuts_loose"        ,  "SF syst. unc. as Z p_{T} for Loose muon pairs (tag cuts)",  nbins, 0, max_pT);
+  TH1D *h_syst_Z_mu_generator_loose        = new TH1D("h_syst_Z_mu_generator_loose"       ,  "SF syst. unc. as Z p_{T} for Loose muon pairs (generator eff.)",  nbins, 0, max_pT);
+  TH1D *h_syst_Z_mu_background_shape_loose = new TH1D("h_syst_Z_mu_background_shape_loose",  "SF syst. unc. as Z p_{T} for Loose muon pairs (background shape)",  nbins, 0, max_pT);
+  TH1D *h_syst_Z_mu_signal_shape_loose     = new TH1D("h_syst_Z_mu_signal_shape_loose"    ,  "SF syst. unc. as Z p_{T} for Loose muon pairs (signal shape)",  nbins, 0, max_pT);
+  
+  TH1D *h_syst_Z_mu_combined_tight         = new TH1D("h_syst_Z_mu_combined_tight"        ,  "SF syst. unc. as Z p_{T} for Tight muon pairs (combined)",  nbins, 0, max_pT);
+  TH1D *h_syst_Z_mu_tag_cuts_tight         = new TH1D("h_syst_Z_mu_tag_cuts_tight"        ,  "SF syst. unc. as Z p_{T} for Tight muon pairs (tag cuts)",  nbins, 0, max_pT);
+  TH1D *h_syst_Z_mu_generator_tight        = new TH1D("h_syst_Z_mu_generator_tight"       ,  "SF syst. unc. as Z p_{T} for Tight muon pairs (generator eff.)",  nbins, 0, max_pT);
+  TH1D *h_syst_Z_mu_background_shape_tight = new TH1D("h_syst_Z_mu_background_shape_tight",  "SF syst. unc. as Z p_{T} for Tight muon pairs (background shape)",  nbins, 0, max_pT);
+  TH1D *h_syst_Z_mu_signal_shape_tight     = new TH1D("h_syst_Z_mu_signal_shape_tight"    ,  "SF syst. unc. as Z p_{T} for Tight muon pairs (signal shape)",  nbins, 0, max_pT);
   
   TH1D *h_total_weight_ele_veto  = new TH1D("h_total_weight_ele_veto",  "",  nbins, 0, max_pT);
   TH1D *h_total_weight_ele_tight = new TH1D("h_total_weight_ele_tight", "", nbins, 0, max_pT);
@@ -778,8 +796,10 @@ void propagate_to_Zpt(
       TMath::Abs(mass - 90) <= 30 &&
       qtag + qprobe == 0
     )) continue;
-    double syst_tag   = syst_ele_sf_combined_veto->GetBinContent(syst_ele_sf_combined_veto->FindBin(TMath::Abs(p4_tag->Eta()), p4_tag->Pt()));
-    double syst_probe = syst_ele_sf_combined_veto->GetBinContent(syst_ele_sf_combined_veto->FindBin(TMath::Abs(p4_probe->Eta()), p4_probe->Pt()));
+    int tag_bin=syst_ele_sf_combined_veto->FindBin(TMath::Abs(p4_tag->Eta()), p4_tag->Pt());
+    int probe_bin=syst_ele_sf_combined_veto->FindBin(TMath::Abs(p4_probe->Eta()), p4_probe->Pt());
+    double syst_tag   = syst_ele_sf_combined_veto->GetBinContent(tag_bin);
+    double syst_probe = syst_ele_sf_combined_veto->GetBinContent(probe_bin);
     double syst_Z = syst_tag+syst_probe;
     double weighted_syst = scale1fb*(syst_Z);
     if(verbose) printf("tag pt = %f, eta = %f\nprobe pt = %f, eta = %f\n", p4_tag->Pt(), p4_tag->Eta(), p4_probe->Pt(), p4_probe->Eta());
@@ -790,11 +810,19 @@ void propagate_to_Zpt(
     double Z_pT = systemP4.Pt();
     if(verbose) printf("Z pT is %f\n", Z_pT);
     h_Z_pT_ele_veto->Fill(Z_pT, scale1fb);
-    h_syst_Z_ele_veto->Fill(Z_pT, weighted_syst);
     h_total_weight_ele_veto->Fill(Z_pT,scale1fb);
+    h_syst_Z_ele_combined_veto->Fill(Z_pT, weighted_syst);
+    h_syst_Z_ele_tag_cuts_veto        ->Fill(Z_pT, scale1fb*(syst_ele_sf_tag_cuts_veto ->GetBinContent(tag_bin)        + syst_ele_sf_tag_cuts_veto->GetBinContent(probe_bin)));
+    h_syst_Z_ele_generator_veto       ->Fill(Z_pT, scale1fb*(syst_ele_sf_generator_veto->GetBinContent(tag_bin)        + syst_ele_sf_generator_veto->GetBinContent(probe_bin)));
+    h_syst_Z_ele_background_shape_veto->Fill(Z_pT, scale1fb*(syst_ele_sf_background_shape_veto->GetBinContent(tag_bin) + syst_ele_sf_background_shape_veto->GetBinContent(probe_bin)));
+    h_syst_Z_ele_signal_shape_veto    ->Fill(Z_pT, scale1fb*(syst_ele_sf_signal_shape_veto->GetBinContent(tag_bin)     + syst_ele_sf_signal_shape_veto->GetBinContent(probe_bin)));
   }
   h_Z_pT_ele_veto    ->Scale(1./h_total_weight_ele_veto->Integral());
-  h_syst_Z_ele_veto  ->Divide(h_total_weight_ele_veto);
+  h_syst_Z_ele_combined_veto         ->Divide(h_total_weight_ele_veto);
+  h_syst_Z_ele_tag_cuts_veto         ->Divide(h_total_weight_ele_veto);
+  h_syst_Z_ele_generator_veto        ->Divide(h_total_weight_ele_veto);
+  h_syst_Z_ele_background_shape_veto ->Divide(h_total_weight_ele_veto);
+  h_syst_Z_ele_signal_shape_veto     ->Divide(h_total_weight_ele_veto);
   
   
   printf("Doing tight electrons . . .\n");
@@ -822,6 +850,8 @@ void propagate_to_Zpt(
       TMath::Abs(mass - 90) <= 30 &&
       qtag + qprobe == 0
     )) continue;
+    int tag_bin=syst_ele_sf_combined_tight->FindBin(TMath::Abs(p4_tag->Eta()), p4_tag->Pt());
+    int probe_bin=syst_ele_sf_combined_tight->FindBin(TMath::Abs(p4_probe->Eta()), p4_probe->Pt());
     double syst_tag   = syst_ele_sf_combined_tight->GetBinContent(syst_ele_sf_combined_tight->FindBin(TMath::Abs(p4_tag->Eta()), p4_tag->Pt()));
     double syst_probe = syst_ele_sf_combined_tight->GetBinContent(syst_ele_sf_combined_tight->FindBin(TMath::Abs(p4_probe->Eta()), p4_probe->Pt()));
     double syst_Z = syst_tag+syst_probe;
@@ -834,17 +864,19 @@ void propagate_to_Zpt(
     double Z_pT = systemP4.Pt();
     if(verbose) printf("Z pT is %f\n", Z_pT);
     h_Z_pT_ele_tight->Fill(Z_pT, scale1fb);
-    h_syst_Z_ele_tight->Fill(Z_pT, weighted_syst);
-    h_syst_Z_ele_tight_worst->Fill(Z_pT, scale1fb*TMath::Max(syst_tag, syst_probe));
-    h_syst_Z_ele_tight_best->Fill(Z_pT, scale1fb*TMath::Min(syst_tag, syst_probe));
     h_total_weight_ele_tight->Fill(Z_pT,scale1fb);
-    int Zbin = h_Z_pT_mu_tight->FindBin(Z_pT);
-    if(Zbin <= 8 && Zbin >= 1) ((TH2D*) dilepton_pt_correlation_ele_tight_->At(Zbin-1) )->Fill(p4_probe->Pt(), p4_tag->Pt(), scale1fb);
+    h_syst_Z_ele_combined_tight->Fill(Z_pT, weighted_syst);
+    h_syst_Z_ele_tag_cuts_tight        ->Fill(Z_pT, scale1fb*(syst_ele_sf_tag_cuts_tight ->GetBinContent(tag_bin)        + syst_ele_sf_tag_cuts_tight->GetBinContent(probe_bin)));
+    h_syst_Z_ele_generator_tight       ->Fill(Z_pT, scale1fb*(syst_ele_sf_generator_tight->GetBinContent(tag_bin)        + syst_ele_sf_generator_tight->GetBinContent(probe_bin)));
+    h_syst_Z_ele_background_shape_tight->Fill(Z_pT, scale1fb*(syst_ele_sf_background_shape_tight->GetBinContent(tag_bin) + syst_ele_sf_background_shape_tight->GetBinContent(probe_bin)));
+    h_syst_Z_ele_signal_shape_tight    ->Fill(Z_pT, scale1fb*(syst_ele_sf_signal_shape_tight->GetBinContent(tag_bin)     + syst_ele_sf_signal_shape_tight->GetBinContent(probe_bin)));
   }
   h_Z_pT_ele_tight    ->Scale(1./h_total_weight_ele_tight->Integral());
-  h_syst_Z_ele_tight  ->Divide(h_total_weight_ele_tight);
-  h_syst_Z_ele_tight_worst  ->Divide(h_total_weight_ele_tight);
-  h_syst_Z_ele_tight_best   ->Divide(h_total_weight_ele_tight);
+  h_syst_Z_ele_combined_tight         ->Divide(h_total_weight_ele_tight);
+  h_syst_Z_ele_tag_cuts_tight         ->Divide(h_total_weight_ele_tight);
+  h_syst_Z_ele_generator_tight        ->Divide(h_total_weight_ele_tight);
+  h_syst_Z_ele_background_shape_tight ->Divide(h_total_weight_ele_tight);
+  h_syst_Z_ele_signal_shape_tight     ->Divide(h_total_weight_ele_tight);
 
   printf("Doing loose muons . . .\n");
   nentries= t_tnp_mu_loose->GetEntries();
@@ -857,10 +889,12 @@ void propagate_to_Zpt(
       TMath::Abs(mass - 90) <= 30 &&
       qtag + qprobe == 0
     )) continue;
-    double tag_pt   = TMath::Min(199.9, p4_tag->Pt());
-    double probe_pt = TMath::Min(199.9, p4_probe->Pt());
+    double tag_pt   = TMath::Min(119.9, p4_tag->Pt());
+    double probe_pt = TMath::Min(119.9, p4_probe->Pt());
     double tag_abseta   = TMath::Abs(p4_tag->Eta());
     double probe_abseta = TMath::Abs(p4_probe->Eta());
+    int tag_bin=syst_ele_sf_combined_tight->FindBin(TMath::Abs(p4_tag->Eta()), p4_tag->Pt());
+    int probe_bin=syst_ele_sf_combined_tight->FindBin(TMath::Abs(p4_probe->Eta()), p4_probe->Pt());
     double syst_tag   = syst_mu_sf_combined_loose->GetBinContent(syst_mu_sf_combined_loose->FindBin(tag_abseta, tag_pt));
     double syst_probe = syst_mu_sf_combined_loose->GetBinContent(syst_mu_sf_combined_loose->FindBin(probe_abseta, probe_pt));
     double syst_Z = syst_tag+syst_probe;
@@ -873,11 +907,19 @@ void propagate_to_Zpt(
     double Z_pT = systemP4.Pt();
     if(verbose) printf("Z pT is %f\n", Z_pT);
     h_Z_pT_mu_loose->Fill(Z_pT, scale1fb);
-    h_syst_Z_mu_loose->Fill(Z_pT, weighted_syst);
     h_total_weight_mu_loose->Fill(Z_pT,scale1fb);
+    h_syst_Z_mu_combined_loose->Fill(Z_pT, weighted_syst);
+    h_syst_Z_mu_tag_cuts_loose        ->Fill(Z_pT, scale1fb*(syst_mu_sf_tag_cuts_loose ->GetBinContent(tag_bin)        + syst_mu_sf_tag_cuts_loose->GetBinContent(probe_bin)));
+    h_syst_Z_mu_generator_loose       ->Fill(Z_pT, scale1fb*(syst_mu_sf_generator_loose->GetBinContent(tag_bin)        + syst_mu_sf_generator_loose->GetBinContent(probe_bin)));
+    h_syst_Z_mu_background_shape_loose->Fill(Z_pT, scale1fb*(syst_mu_sf_background_shape_loose->GetBinContent(tag_bin) + syst_mu_sf_background_shape_loose->GetBinContent(probe_bin)));
+    h_syst_Z_mu_signal_shape_loose    ->Fill(Z_pT, scale1fb*(syst_mu_sf_signal_shape_loose->GetBinContent(tag_bin)     + syst_mu_sf_signal_shape_loose->GetBinContent(probe_bin)));
   }
   h_Z_pT_mu_loose    ->Scale(1./h_total_weight_mu_loose->Integral());
-  h_syst_Z_mu_loose  ->Divide(h_total_weight_mu_loose);
+  h_syst_Z_mu_combined_loose         ->Divide(h_total_weight_mu_loose);
+  h_syst_Z_mu_tag_cuts_loose         ->Divide(h_total_weight_mu_loose);
+  h_syst_Z_mu_generator_loose        ->Divide(h_total_weight_mu_loose);
+  h_syst_Z_mu_background_shape_loose ->Divide(h_total_weight_mu_loose);
+  h_syst_Z_mu_signal_shape_loose     ->Divide(h_total_weight_mu_loose);
   
   printf("Doing tight muons . . .\n");
   nentries= t_tnp_mu_tight->GetEntries();
@@ -890,30 +932,34 @@ void propagate_to_Zpt(
       TMath::Abs(mass - 90) <= 30 &&
       qtag + qprobe == 0
     )) continue;
-    double tag_pt   = TMath::Min(199.9, p4_tag->Pt());
-    double probe_pt = TMath::Min(199.9, p4_probe->Pt());
+    double tag_pt   = TMath::Min(119.9, p4_tag->Pt());
+    double probe_pt = TMath::Min(119.9, p4_probe->Pt());
     double tag_abseta   = TMath::Abs(p4_tag->Eta());
     double probe_abseta = TMath::Abs(p4_probe->Eta());
+    int tag_bin=syst_ele_sf_combined_tight->FindBin(TMath::Abs(p4_tag->Eta()), p4_tag->Pt());
+    int probe_bin=syst_ele_sf_combined_tight->FindBin(TMath::Abs(p4_probe->Eta()), p4_probe->Pt());
     double syst_tag   = syst_mu_sf_combined_tight->GetBinContent(syst_mu_sf_combined_tight->FindBin(tag_abseta, tag_pt));
     double syst_probe = syst_mu_sf_combined_tight->GetBinContent(syst_mu_sf_combined_tight->FindBin(probe_abseta, probe_pt));
     double syst_Z = syst_tag+syst_probe;
     double weighted_syst = scale1fb*(syst_Z);
+   
     TLorentzVector systemP4 = (*p4_tag) + (*p4_probe);
     double Z_pT = systemP4.Pt();
-    if(verbose) { 
-      printf("Z pT is %f\n", Z_pT);
-      printf("tag pt = %f, eta = %f\nprobe pt = %f, eta = %f\n", p4_tag->Pt(), p4_tag->Eta(), p4_probe->Pt(), p4_probe->Eta());
-      printf("syst error for entry %lld is %f + %f = %f\n", i, syst_tag, syst_probe, syst_Z);
-      printf("weighted syst error is %f\n", weighted_syst);
-    }
-      //printf("syst error for entry %d is %f + %f = %f\n", i, syst_tag, syst_probe, syst_Z);
+    if(verbose) printf("Z pT is %f\n", Z_pT);
     h_Z_pT_mu_tight->Fill(Z_pT, scale1fb);
-    h_syst_Z_mu_tight->Fill(Z_pT, weighted_syst);
     h_total_weight_mu_tight->Fill(Z_pT,scale1fb);
-
+    h_syst_Z_mu_combined_tight->Fill(Z_pT, weighted_syst);
+    h_syst_Z_mu_tag_cuts_tight        ->Fill(Z_pT, scale1fb*(syst_mu_sf_tag_cuts_tight ->GetBinContent(tag_bin)        + syst_mu_sf_tag_cuts_tight->GetBinContent(probe_bin)));
+    h_syst_Z_mu_generator_tight       ->Fill(Z_pT, scale1fb*(syst_mu_sf_generator_tight->GetBinContent(tag_bin)        + syst_mu_sf_generator_tight->GetBinContent(probe_bin)));
+    h_syst_Z_mu_background_shape_tight->Fill(Z_pT, scale1fb*(syst_mu_sf_background_shape_tight->GetBinContent(tag_bin) + syst_mu_sf_background_shape_tight->GetBinContent(probe_bin)));
+    h_syst_Z_mu_signal_shape_tight    ->Fill(Z_pT, scale1fb*(syst_mu_sf_signal_shape_tight->GetBinContent(tag_bin)     + syst_mu_sf_signal_shape_tight->GetBinContent(probe_bin)));
   }
-  h_Z_pT_mu_tight  ->Scale(1./h_total_weight_mu_tight->Integral());
-  h_syst_Z_mu_tight->Divide(h_total_weight_mu_tight);
+  h_Z_pT_mu_tight    ->Scale(1./h_total_weight_mu_tight->Integral());
+  h_syst_Z_mu_combined_tight         ->Divide(h_total_weight_mu_tight);
+  h_syst_Z_mu_tag_cuts_tight         ->Divide(h_total_weight_mu_tight);
+  h_syst_Z_mu_generator_tight        ->Divide(h_total_weight_mu_tight);
+  h_syst_Z_mu_background_shape_tight ->Divide(h_total_weight_mu_tight);
+  h_syst_Z_mu_signal_shape_tight     ->Divide(h_total_weight_mu_tight);
   
   TColor *col_mit_red  = new TColor(mit_red,  163/255., 31/255.,  52/255.);
   TColor *col_mit_gray = new TColor(mit_gray, 138/255., 139/255., 140/255.);
@@ -930,69 +976,56 @@ void propagate_to_Zpt(
   box_mu->SetLineColor(2);
   box_mu->SetLineStyle(1);
   box_mu->SetLineWidth(2);
- 
   for(int j=1; j<=nbins; j++) {
-    h_syst_Z_ele_veto->SetBinError(j,0);
-    h_syst_Z_ele_tight->SetBinError(j,0);
-    h_syst_Z_mu_loose->SetBinError(j,0);
-    h_syst_Z_mu_tight->SetBinError(j,0);
-    h_syst_Z_ele_tight_worst->SetBinError(j,0);
-    h_syst_Z_ele_tight_best->SetBinError(j,0);
+    h_syst_Z_ele_combined_veto->SetBinError(j,0);
+    h_syst_Z_ele_combined_tight->SetBinError(j,0);
+    h_syst_Z_mu_combined_loose->SetBinError(j,0);
+    h_syst_Z_mu_combined_tight->SetBinError(j,0);
   }
- 
+
   TCanvas *c_Z_pT_ele_veto = new TCanvas("c_Z_pT_ele_veto","Z pT spectrum for Veto electron pairs");
   h_Z_pT_ele_veto->Draw();
   h_Z_pT_ele_veto->GetXaxis()->SetTitle("Z p_{T} [GeV]");
   h_Z_pT_ele_veto->GetXaxis()->SetTitleOffset(1.25);
   gPad->Update();
-  TCanvas *c_syst_Z_ele_veto = new TCanvas("c_syst_Z_ele_veto", "SF syst. unc. as Z pT for Veto electron pairs");
-  c_syst_Z_ele_veto->SetGrid();
-  h_syst_Z_ele_veto->SetMarkerStyle(21);
-  h_syst_Z_ele_veto->SetMarkerSize(1);
-  h_syst_Z_ele_veto->SetMarkerColor(1);
-  h_syst_Z_ele_veto->SetLineColor(1);
-  h_syst_Z_ele_veto->SetLineWidth(2);
-  h_syst_Z_ele_veto->SetMaximum(.1);
-  h_syst_Z_ele_veto->SetMinimum(0);
-  h_syst_Z_ele_veto->Draw("LP");
-  h_syst_Z_ele_veto->GetXaxis()->SetTitle("Z p_{T} [GeV]");
-  h_syst_Z_ele_veto->GetYaxis()->SetTitle("Uncertainty");
-  h_syst_Z_ele_veto->GetXaxis()->SetTitleOffset(1.25);
-  h_syst_Z_ele_veto->GetYaxis()->SetTitleOffset(1.25);
+  TCanvas *c_syst_Z_ele_combined_veto = new TCanvas("c_syst_Z_ele_combined_veto", "SF syst. unc. as Z pT for Veto electron pairs");
+  c_syst_Z_ele_combined_veto->SetGrid();
+  h_syst_Z_ele_combined_veto->SetMarkerStyle(21);
+  h_syst_Z_ele_combined_veto->SetMarkerSize(1);
+  h_syst_Z_ele_combined_veto->SetMarkerColor(1);
+  h_syst_Z_ele_combined_veto->SetLineColor(1);
+  h_syst_Z_ele_combined_veto->SetLineWidth(2);
+  h_syst_Z_ele_combined_veto->SetMaximum(.1);
+  h_syst_Z_ele_combined_veto->SetMinimum(0);
+  h_syst_Z_ele_combined_veto->Draw("LP");
+  h_syst_Z_ele_combined_veto->GetXaxis()->SetTitle("Z p_{T} [GeV]");
+  h_syst_Z_ele_combined_veto->GetYaxis()->SetTitle("Uncertainty");
+  h_syst_Z_ele_combined_veto->GetXaxis()->SetTitleOffset(1.25);
+  h_syst_Z_ele_combined_veto->GetYaxis()->SetTitleOffset(1.25);
   box_ele->Draw("L");
-  h_syst_Z_ele_veto->Draw("LP SAME");
+  h_syst_Z_ele_combined_veto->Draw("LP SAME");
   
   TCanvas *c_Z_pT_ele_tight = new TCanvas("c_Z_pT_ele_tight","Z pT spectrum for Tight electron pairs");
   h_Z_pT_ele_tight->Draw();
   h_Z_pT_ele_tight->GetXaxis()->SetTitle("Z p_{T} [GeV]");
   h_Z_pT_ele_tight->GetXaxis()->SetTitleOffset(1.25);
   gPad->Update();
-  TCanvas *c_syst_Z_ele_tight = new TCanvas("c_syst_Z_ele_tight", "SF syst. unc. as Z pT for Tight electron pairs");
-  c_syst_Z_ele_tight->SetGrid();
-  h_syst_Z_ele_tight->SetMarkerStyle(21);
-  h_syst_Z_ele_tight->SetMarkerSize(1);
-  h_syst_Z_ele_tight->SetMarkerColor(1);
-  h_syst_Z_ele_tight->SetLineColor(1);
-  h_syst_Z_ele_tight->SetLineWidth(2);
-  h_syst_Z_ele_tight->SetMaximum(.1);
-  h_syst_Z_ele_tight->SetMinimum(0);
-  h_syst_Z_ele_tight->Draw("LP");
-  h_syst_Z_ele_tight->GetXaxis()->SetTitle("Z p_{T} [GeV]");
-  h_syst_Z_ele_tight->GetYaxis()->SetTitle("Uncertainty");
-  h_syst_Z_ele_tight->GetXaxis()->SetTitleOffset(1.25);
-  h_syst_Z_ele_tight->GetYaxis()->SetTitleOffset(1.25);
+  TCanvas *c_syst_Z_ele_combined_tight = new TCanvas("c_syst_Z_ele_combined_tight", "SF syst. unc. as Z pT for Tight electron pairs");
+  c_syst_Z_ele_combined_tight->SetGrid();
+  h_syst_Z_ele_combined_tight->SetMarkerStyle(21);
+  h_syst_Z_ele_combined_tight->SetMarkerSize(1);
+  h_syst_Z_ele_combined_tight->SetMarkerColor(1);
+  h_syst_Z_ele_combined_tight->SetLineColor(1);
+  h_syst_Z_ele_combined_tight->SetLineWidth(2);
+  h_syst_Z_ele_combined_tight->SetMaximum(.1);
+  h_syst_Z_ele_combined_tight->SetMinimum(0);
+  h_syst_Z_ele_combined_tight->Draw("LP");
+  h_syst_Z_ele_combined_tight->GetXaxis()->SetTitle("Z p_{T} [GeV]");
+  h_syst_Z_ele_combined_tight->GetYaxis()->SetTitle("Uncertainty");
+  h_syst_Z_ele_combined_tight->GetXaxis()->SetTitleOffset(1.25);
+  h_syst_Z_ele_combined_tight->GetYaxis()->SetTitleOffset(1.25);
   box_ele->Draw("L");
-  h_syst_Z_ele_tight->Draw("LP SAME");
-  //h_syst_Z_ele_tight_worst->SetLineColor(mit_red);
-  //h_syst_Z_ele_tight_worst->SetLineWidth(2);
-  //h_syst_Z_ele_tight_worst->SetMarkerColor(mit_red);
-  //h_syst_Z_ele_tight_worst->SetMarkerStyle(23);
-  //h_syst_Z_ele_tight_worst->Draw("LP SAME");
-  //h_syst_Z_ele_tight_best->SetLineColor(mit_gray);
-  //h_syst_Z_ele_tight_best->SetLineWidth(2);
-  //h_syst_Z_ele_tight_best->SetMarkerColor(mit_gray);
-  //h_syst_Z_ele_tight_best->SetMarkerStyle(22);
-  //h_syst_Z_ele_tight_best->Draw("LP SAME");
+  h_syst_Z_ele_combined_tight->Draw("LP SAME");
 
   
   TCanvas *c_Z_pT_mu_loose = new TCanvas("c_Z_pT_mu_loose","Z pT spectrum for Loose muon pairs");
@@ -1000,22 +1033,22 @@ void propagate_to_Zpt(
   h_Z_pT_mu_loose->GetXaxis()->SetTitle("Z p_{T} [GeV]");
   h_Z_pT_mu_loose->GetXaxis()->SetTitleOffset(1.25);
   gPad->Update();
-  TCanvas *c_syst_Z_mu_loose = new TCanvas("c_syst_Z_mu_loose", "SF syst. unc. as Z pT for Loose muon pairs");
-  c_syst_Z_mu_loose->SetGrid();
-  h_syst_Z_mu_loose->SetMarkerStyle(21);
-  h_syst_Z_mu_loose->SetMarkerSize(1);
-  h_syst_Z_mu_loose->SetMarkerColor(1);
-  h_syst_Z_mu_loose->SetLineColor(1);
-  h_syst_Z_mu_loose->SetLineWidth(2);
-  h_syst_Z_mu_loose->SetMaximum(.1);
-  h_syst_Z_mu_loose->SetMinimum(0);
-  h_syst_Z_mu_loose->Draw("LP");
-  h_syst_Z_mu_loose->GetXaxis()->SetTitle("Z p_{T} [GeV]");
-  h_syst_Z_mu_loose->GetYaxis()->SetTitle("Uncertainty");
-  h_syst_Z_mu_loose->GetXaxis()->SetTitleOffset(1.25);
-  h_syst_Z_mu_loose->GetYaxis()->SetTitleOffset(1.25);
+  TCanvas *c_syst_Z_mu_combined_loose = new TCanvas("c_syst_Z_mu_combined_loose", "SF syst. unc. as Z pT for Loose muon pairs");
+  c_syst_Z_mu_combined_loose->SetGrid();
+  h_syst_Z_mu_combined_loose->SetMarkerStyle(21);
+  h_syst_Z_mu_combined_loose->SetMarkerSize(1);
+  h_syst_Z_mu_combined_loose->SetMarkerColor(1);
+  h_syst_Z_mu_combined_loose->SetLineColor(1);
+  h_syst_Z_mu_combined_loose->SetLineWidth(2);
+  h_syst_Z_mu_combined_loose->SetMaximum(.1);
+  h_syst_Z_mu_combined_loose->SetMinimum(0);
+  h_syst_Z_mu_combined_loose->Draw("LP");
+  h_syst_Z_mu_combined_loose->GetXaxis()->SetTitle("Z p_{T} [GeV]");
+  h_syst_Z_mu_combined_loose->GetYaxis()->SetTitle("Uncertainty");
+  h_syst_Z_mu_combined_loose->GetXaxis()->SetTitleOffset(1.25);
+  h_syst_Z_mu_combined_loose->GetYaxis()->SetTitleOffset(1.25);
   box_mu->Draw("L");
-  h_syst_Z_mu_loose->Draw("LP SAME");
+  h_syst_Z_mu_combined_loose->Draw("LP SAME");
 
   
   TCanvas *c_Z_pT_mu_tight = new TCanvas("c_Z_pT_mu_tight","Z pT spectrum for Tight muon pairs");
@@ -1023,31 +1056,31 @@ void propagate_to_Zpt(
   h_Z_pT_mu_tight->GetXaxis()->SetTitle("Z p_{T} [GeV]");
   h_Z_pT_mu_tight->GetXaxis()->SetTitleOffset(1.25);
   gPad->Update();
-  TCanvas *c_syst_Z_mu_tight = new TCanvas("c_syst_Z_mu_tight", "SF syst. unc. as Z pT for Tight muon pairs");
-  c_syst_Z_mu_tight->SetGrid();
-  h_syst_Z_mu_tight->SetMarkerStyle(21);
-  h_syst_Z_mu_tight->SetMarkerSize(1);
-  h_syst_Z_mu_tight->SetMarkerColor(1);
-  h_syst_Z_mu_tight->SetLineColor(1);
-  h_syst_Z_mu_tight->SetLineWidth(2);
-  h_syst_Z_mu_tight->SetMaximum(.1);
-  h_syst_Z_mu_tight->SetMinimum(0);
-  h_syst_Z_mu_tight->Draw("LP");
-  h_syst_Z_mu_tight->GetXaxis()->SetTitle("Z p_{T} [GeV]");
-  h_syst_Z_mu_tight->GetYaxis()->SetTitle("Uncertainty");
-  h_syst_Z_mu_tight->GetXaxis()->SetTitleOffset(1.25);
-  h_syst_Z_mu_tight->GetYaxis()->SetTitleOffset(1.25);
+  TCanvas *c_syst_Z_mu_combined_tight = new TCanvas("c_syst_Z_mu_combined_tight", "SF syst. unc. as Z pT for Tight muon pairs");
+  c_syst_Z_mu_combined_tight->SetGrid();
+  h_syst_Z_mu_combined_tight->SetMarkerStyle(21);
+  h_syst_Z_mu_combined_tight->SetMarkerSize(1);
+  h_syst_Z_mu_combined_tight->SetMarkerColor(1);
+  h_syst_Z_mu_combined_tight->SetLineColor(1);
+  h_syst_Z_mu_combined_tight->SetLineWidth(2);
+  h_syst_Z_mu_combined_tight->SetMaximum(.1);
+  h_syst_Z_mu_combined_tight->SetMinimum(0);
+  h_syst_Z_mu_combined_tight->Draw("LP");
+  h_syst_Z_mu_combined_tight->GetXaxis()->SetTitle("Z p_{T} [GeV]");
+  h_syst_Z_mu_combined_tight->GetYaxis()->SetTitle("Uncertainty");
+  h_syst_Z_mu_combined_tight->GetXaxis()->SetTitleOffset(1.25);
+  h_syst_Z_mu_combined_tight->GetYaxis()->SetTitleOffset(1.25);
   box_mu->Draw("L");
-  h_syst_Z_mu_tight->Draw("LP SAME");
+  h_syst_Z_mu_combined_tight->Draw("LP SAME");
 
   c_Z_pT_ele_veto->Print((plots_dir+"Z_pT_ele_veto.png").c_str());
-  c_syst_Z_ele_veto->Print((plots_dir+"syst_Z_ele_veto.png").c_str());
+  c_syst_Z_ele_combined_veto->Print((plots_dir+"syst_Z_ele_veto.png").c_str());
   c_Z_pT_ele_tight->Print((plots_dir+"Z_pT_ele_tight.png").c_str());
-  c_syst_Z_ele_tight->Print((plots_dir+"syst_Z_ele_tight.png").c_str());
+  c_syst_Z_ele_combined_tight->Print((plots_dir+"syst_Z_ele_tight.png").c_str());
   c_Z_pT_mu_loose->Print((plots_dir+"Z_pT_mu_loose.png").c_str());
-  c_syst_Z_mu_loose->Print((plots_dir+"syst_Z_mu_loose.png").c_str());
+  c_syst_Z_mu_combined_loose->Print((plots_dir+"syst_Z_mu_loose.png").c_str());
   c_Z_pT_mu_tight->Print((plots_dir+"Z_pT_mu_tight.png").c_str());
-  c_syst_Z_mu_tight->Print((plots_dir+"syst_Z_mu_tight.png").c_str());
+  c_syst_Z_mu_combined_tight->Print((plots_dir+"syst_Z_mu_tight.png").c_str());
 
   mitPalette();
   gStyle->SetPaintTextFormat("4.3f");
@@ -1059,6 +1092,152 @@ void propagate_to_Zpt(
     ((TH2D*) dilepton_pt_correlation_ele_tight_->At(j) )->Draw("COLZ TEXT");
     c_dilepton_pt_correlation->Print((plots_dir + ((TH2D*) dilepton_pt_correlation_ele_tight_->At(j) )->GetName()+".png").c_str());
   }
+
+  TCanvas *c_syst_breakdown_Z_ele_veto = new TCanvas("c_syst_breakdown_Z_ele_Veto", "SF syst. unc. by source as Z pT for Veto ele pairs");
+  THStack *syst_breakdown_Z_ele_veto = new THStack("syst_breakdown_Z_ele_veto", "SF syst. unc. as Z p_{T} for Veto electron pairs (breakdown)");
+  h_syst_Z_ele_signal_shape_veto     ->SetLineColor(mit_red);
+  h_syst_Z_ele_background_shape_veto ->SetLineColor(mit_gray);
+  h_syst_Z_ele_tag_cuts_veto         ->SetLineColor(38);
+  h_syst_Z_ele_generator_veto        ->SetLineColor(53);
+  h_syst_Z_ele_signal_shape_veto     ->SetFillColor(mit_red);
+  h_syst_Z_ele_background_shape_veto ->SetFillColor(mit_gray);
+  h_syst_Z_ele_tag_cuts_veto         ->SetFillColor(38);
+  h_syst_Z_ele_generator_veto        ->SetFillColor(53);
+  syst_breakdown_Z_ele_veto->Add(h_syst_Z_ele_signal_shape_veto, "B");
+  syst_breakdown_Z_ele_veto->Add(h_syst_Z_ele_background_shape_veto, "B");
+  syst_breakdown_Z_ele_veto->Add(h_syst_Z_ele_tag_cuts_veto, "B");
+  syst_breakdown_Z_ele_veto->Add(h_syst_Z_ele_generator_veto, "B");
+  TLegend *legend_syst_breakdown_Z_ele_veto = new TLegend(.6,.6,.8,.8);
+  legend_syst_breakdown_Z_ele_veto->SetFillColor(0);
+  legend_syst_breakdown_Z_ele_veto->AddEntry(h_syst_Z_ele_generator_veto, "MC Generator #varepsilon", "f");
+  legend_syst_breakdown_Z_ele_veto->AddEntry(h_syst_Z_ele_tag_cuts_veto, "Tag cuts", "f");
+  legend_syst_breakdown_Z_ele_veto->AddEntry(h_syst_Z_ele_background_shape_veto, "Background shape", "f");
+  legend_syst_breakdown_Z_ele_veto->AddEntry(h_syst_Z_ele_signal_shape_veto, "Signal shape", "f");
+  legend_syst_breakdown_Z_ele_veto->AddEntry(h_syst_Z_ele_combined_veto, "Combined", "lp");
+  syst_breakdown_Z_ele_veto->SetMinimum(0);
+  syst_breakdown_Z_ele_veto->SetMaximum(0.1);
+  syst_breakdown_Z_ele_veto->Draw("HIST");
+  h_syst_Z_ele_combined_veto->Draw("LP SAME");
+  legend_syst_breakdown_Z_ele_veto->Draw("SAME");
+  c_syst_breakdown_Z_ele_veto->Print((plots_dir+"syst_breakdown_Z_ele_veto.png").c_str());
+
+  TCanvas *c_syst_breakdown_Z_ele_tight = new TCanvas("c_syst_breakdown_Z_ele_Tight", "SF syst. unc. by source as Z pT for Tight ele pairs");
+  THStack *syst_breakdown_Z_ele_tight = new THStack("syst_breakdown_Z_ele_tight", "SF syst. unc. as Z p_{T} for Tight electron pairs (breakdown)");
+  h_syst_Z_ele_signal_shape_tight     ->SetLineColor(mit_red);
+  h_syst_Z_ele_background_shape_tight ->SetLineColor(mit_gray);
+  h_syst_Z_ele_tag_cuts_tight         ->SetLineColor(38);
+  h_syst_Z_ele_generator_tight        ->SetLineColor(53);
+  h_syst_Z_ele_signal_shape_tight     ->SetFillColor(mit_red);
+  h_syst_Z_ele_background_shape_tight ->SetFillColor(mit_gray);
+  h_syst_Z_ele_tag_cuts_tight         ->SetFillColor(38);
+  h_syst_Z_ele_generator_tight        ->SetFillColor(53);
+  syst_breakdown_Z_ele_tight->Add(h_syst_Z_ele_signal_shape_tight, "B");
+  syst_breakdown_Z_ele_tight->Add(h_syst_Z_ele_background_shape_tight, "B");
+  syst_breakdown_Z_ele_tight->Add(h_syst_Z_ele_tag_cuts_tight, "B");
+  syst_breakdown_Z_ele_tight->Add(h_syst_Z_ele_generator_tight, "B");
+  TLegend *legend_syst_breakdown_Z_ele_tight = new TLegend(.6,.6,.8,.8);
+  legend_syst_breakdown_Z_ele_tight->SetFillColor(0);
+  legend_syst_breakdown_Z_ele_tight->AddEntry(h_syst_Z_ele_generator_tight, "MC Generator #varepsilon", "f");
+  legend_syst_breakdown_Z_ele_tight->AddEntry(h_syst_Z_ele_tag_cuts_tight, "Tag cuts", "f");
+  legend_syst_breakdown_Z_ele_tight->AddEntry(h_syst_Z_ele_background_shape_tight, "Background shape", "f");
+  legend_syst_breakdown_Z_ele_tight->AddEntry(h_syst_Z_ele_signal_shape_tight, "Signal shape", "f");
+  legend_syst_breakdown_Z_ele_tight->AddEntry(h_syst_Z_ele_combined_tight, "Combined", "lp");
+  syst_breakdown_Z_ele_tight->SetMinimum(0);
+  syst_breakdown_Z_ele_tight->SetMaximum(0.1);
+  syst_breakdown_Z_ele_tight->Draw("HIST");
+  h_syst_Z_ele_combined_tight->Draw("LP SAME");
+  legend_syst_breakdown_Z_ele_tight->Draw("SAME");
+  c_syst_breakdown_Z_ele_tight->Print((plots_dir+"syst_breakdown_Z_ele_tight.png").c_str());
+
+  TCanvas *c_syst_breakdown_Z_mu_loose = new TCanvas("c_syst_breakdown_Z_mu_Loose", "SF syst. unc. by source as Z pT for Loose mu pairs");
+  THStack *syst_breakdown_Z_mu_loose = new THStack("syst_breakdown_Z_mu_loose", "SF syst. unc. as Z p_{T} for Loose muon pairs (breakdown)");
+  h_syst_Z_mu_signal_shape_loose     ->SetLineColor(mit_red);
+  h_syst_Z_mu_background_shape_loose ->SetLineColor(mit_gray);
+  h_syst_Z_mu_tag_cuts_loose         ->SetLineColor(38);
+  h_syst_Z_mu_generator_loose        ->SetLineColor(53);
+  h_syst_Z_mu_signal_shape_loose     ->SetFillColor(mit_red);
+  h_syst_Z_mu_background_shape_loose ->SetFillColor(mit_gray);
+  h_syst_Z_mu_tag_cuts_loose         ->SetFillColor(38);
+  h_syst_Z_mu_generator_loose        ->SetFillColor(53);
+  syst_breakdown_Z_mu_loose->Add(h_syst_Z_mu_signal_shape_loose, "B");
+  syst_breakdown_Z_mu_loose->Add(h_syst_Z_mu_background_shape_loose, "B");
+  syst_breakdown_Z_mu_loose->Add(h_syst_Z_mu_tag_cuts_loose, "B");
+  syst_breakdown_Z_mu_loose->Add(h_syst_Z_mu_generator_loose, "B");
+  TLegend *legend_syst_breakdown_Z_mu_loose = new TLegend(.6,.6,.8,.8);
+  legend_syst_breakdown_Z_mu_loose->SetFillColor(0);
+  legend_syst_breakdown_Z_mu_loose->AddEntry(h_syst_Z_mu_generator_loose, "MC Generator #varepsilon", "f");
+  legend_syst_breakdown_Z_mu_loose->AddEntry(h_syst_Z_mu_tag_cuts_loose, "Tag cuts", "f");
+  legend_syst_breakdown_Z_mu_loose->AddEntry(h_syst_Z_mu_background_shape_loose, "Background shape", "f");
+  legend_syst_breakdown_Z_mu_loose->AddEntry(h_syst_Z_mu_signal_shape_loose, "Signal shape", "f");
+  legend_syst_breakdown_Z_mu_loose->AddEntry(h_syst_Z_mu_combined_loose, "Combined", "lp");
+  syst_breakdown_Z_mu_loose->SetMinimum(0);
+  syst_breakdown_Z_mu_loose->SetMaximum(0.1);
+  syst_breakdown_Z_mu_loose->Draw("HIST");
+  h_syst_Z_mu_combined_loose->Draw("LP SAME"); 
+  legend_syst_breakdown_Z_mu_loose->Draw("SAME");
+  c_syst_breakdown_Z_mu_loose->Print((plots_dir+"syst_breakdown_Z_mu_loose.png").c_str());
+
+  TCanvas *c_syst_breakdown_Z_mu_tight = new TCanvas("c_syst_breakdown_Z_mu_Tight", "SF syst. unc. by source as Z pT for Tight mu pairs");
+  THStack *syst_breakdown_Z_mu_tight = new THStack("syst_breakdown_Z_mu_tight", "SF syst. unc. as Z p_{T} for Tight muon pairs (breakdown)");
+  h_syst_Z_mu_signal_shape_tight     ->SetLineColor(mit_red);
+  h_syst_Z_mu_background_shape_tight ->SetLineColor(mit_gray);
+  h_syst_Z_mu_tag_cuts_tight         ->SetLineColor(38);
+  h_syst_Z_mu_generator_tight        ->SetLineColor(53);
+  h_syst_Z_mu_signal_shape_tight     ->SetFillColor(mit_red);
+  h_syst_Z_mu_background_shape_tight ->SetFillColor(mit_gray);
+  h_syst_Z_mu_tag_cuts_tight         ->SetFillColor(38);
+  h_syst_Z_mu_generator_tight        ->SetFillColor(53);
+  syst_breakdown_Z_mu_tight->Add(h_syst_Z_mu_signal_shape_tight, "B");
+  syst_breakdown_Z_mu_tight->Add(h_syst_Z_mu_background_shape_tight, "B");
+  syst_breakdown_Z_mu_tight->Add(h_syst_Z_mu_tag_cuts_tight, "B");
+  syst_breakdown_Z_mu_tight->Add(h_syst_Z_mu_generator_tight, "B");
+  TLegend *legend_syst_breakdown_Z_mu_tight = new TLegend(.6,.6,.8,.8);
+  legend_syst_breakdown_Z_mu_tight->SetFillColor(0);
+  legend_syst_breakdown_Z_mu_tight->AddEntry(h_syst_Z_mu_generator_tight, "MC Generator #varepsilon", "f");
+  legend_syst_breakdown_Z_mu_tight->AddEntry(h_syst_Z_mu_tag_cuts_tight, "Tag cuts", "f");
+  legend_syst_breakdown_Z_mu_tight->AddEntry(h_syst_Z_mu_background_shape_tight, "Background shape", "f");
+  legend_syst_breakdown_Z_mu_tight->AddEntry(h_syst_Z_mu_signal_shape_tight, "Signal shape", "f");
+  legend_syst_breakdown_Z_mu_tight->AddEntry(h_syst_Z_mu_combined_tight, "Combined", "lp");
+  syst_breakdown_Z_mu_tight->SetMinimum(0);
+  syst_breakdown_Z_mu_tight->SetMaximum(0.1);
+  syst_breakdown_Z_mu_tight->Draw("HIST");
+  h_syst_Z_mu_combined_tight->Draw("LP SAME");
+  legend_syst_breakdown_Z_mu_tight->Draw("SAME");
+  c_syst_breakdown_Z_mu_tight->Print((plots_dir+"syst_breakdown_Z_mu_tight.png").c_str());
+  
+  // Print out tables of systematics
+  printf("########################################################\n");
+  printf("# Veto Electron SF systematic                          #\n");
+  printf("########################################################\n");
+  printf("ZpT<=   Sig.    Bkg.    Tag     Gen.    Combined\n");
+  for(int j=1; j<=nbins; j++) {
+    printf("%8d  %5.4f  %5.4f  %5.4f  %5.4f  %5.4f\n", j*max_pT/nbins, h_syst_Z_ele_signal_shape_veto->GetBinContent(j), h_syst_Z_ele_background_shape_veto->GetBinContent(j), h_syst_Z_ele_tag_cuts_veto->GetBinContent(j), h_syst_Z_ele_generator_veto->GetBinContent(j), h_syst_Z_ele_combined_veto->GetBinContent(j));
+  }
+ 
+  printf("########################################################\n");
+  printf("# Tight Electron SF systematic                         #\n");
+  printf("########################################################\n\n");
+  printf("ZpT<=   Sig.    Bkg.    Tag     Gen.    Combined\n");
+  for(int j=1; j<=nbins; j++) {
+    printf("%8d  %5.4f  %5.4f  %5.4f  %5.4f  %5.4f\n", j*max_pT/nbins, h_syst_Z_ele_signal_shape_tight->GetBinContent(j), h_syst_Z_ele_background_shape_tight->GetBinContent(j), h_syst_Z_ele_tag_cuts_tight->GetBinContent(j), h_syst_Z_ele_generator_tight->GetBinContent(j), h_syst_Z_ele_combined_tight->GetBinContent(j));
+  }
+ 
+  printf("########################################################\n");
+  printf("# Loose Muon SF systematic                             #\n");
+  printf("########################################################\n");
+  printf("ZpT<=   Sig.    Bkg.    Tag     Gen.    Combined\n");
+  for(int j=1; j<=nbins; j++) {
+    printf("%8d  %5.4f  %5.4f  %5.4f  %5.4f  %5.4f\n", j*max_pT/nbins, h_syst_Z_mu_signal_shape_loose->GetBinContent(j), h_syst_Z_mu_background_shape_loose->GetBinContent(j), h_syst_Z_mu_tag_cuts_loose->GetBinContent(j), h_syst_Z_mu_generator_loose->GetBinContent(j), h_syst_Z_mu_combined_loose->GetBinContent(j));
+  }
+ 
+  printf("########################################################\n");
+  printf("# Tight Muon SF systematic                             #\n");
+  printf("########################################################\n");
+  printf("ZpT<=   Sig.    Bkg.    Tag     Gen.    Combined\n");
+  for(int j=1; j<=nbins; j++) {
+    printf("%8d  %5.4f  %5.4f  %5.4f  %5.4f  %5.4f\n", j*max_pT/nbins, h_syst_Z_mu_signal_shape_tight->GetBinContent(j), h_syst_Z_mu_background_shape_tight->GetBinContent(j), h_syst_Z_mu_tag_cuts_tight->GetBinContent(j), h_syst_Z_mu_generator_tight->GetBinContent(j), h_syst_Z_mu_combined_tight->GetBinContent(j));
+  }
+ 
 
 
 }
@@ -3123,3 +3302,148 @@ void muon_closure(
   printf("Done! \n");
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void egamma_comparison_textfile() {
+  TFile *dgh_file_nominal = TFile::Open("root/2016-02-26/2016-02-26_74x_template_erfcexp/scalefactors_ele_74x.root");
+  TFile *dgh_file_AltBkg  = TFile::Open("root/2016-02-26/2016-02-26_74x_template_exp/scalefactors_ele_74x.root");
+  TFile *dgh_file_AltSig  = TFile::Open("root/2016-02-26/2016-02-26_74x_BWCBPlusVoigt_erfcexp/scalefactors_ele_74x.root");
+  TFile *dgh_file_AltMC   = TFile::Open("root/2016-02-26/2016-02-26_74x_template_erfcexp_LO/scalefactors_ele_74x.root");
+  TFile *dgh_file_diffTag = TFile::Open("root/2016-02-26/2016-02-26_74x_template_erfcexp_diffTag/scalefactors_ele_74x.root");
+  assert(
+    dgh_file_nominal ->IsOpen() && !dgh_file_nominal ->IsZombie() &&
+    dgh_file_AltBkg  ->IsOpen() && !dgh_file_AltBkg  ->IsZombie() && 
+    dgh_file_AltSig  ->IsOpen() && !dgh_file_AltSig  ->IsZombie() && 
+    dgh_file_AltMC   ->IsOpen() && !dgh_file_AltMC   ->IsZombie() && 
+    dgh_file_diffTag ->IsOpen() && !dgh_file_diffTag ->IsZombie() 
+  );
+  TH2D *effData      = (TH2D*) dgh_file_nominal->Get("eff_data_Tight_ele");
+  TH2D *effMC        = (TH2D*) dgh_file_nominal->Get("eff_mc_Tight_ele");
+  TH2D *effAltBkg    = (TH2D*) dgh_file_AltBkg->Get("eff_data_Tight_ele");
+  TH2D *effAltSig    = (TH2D*) dgh_file_AltSig->Get("eff_data_Tight_ele");
+  TH2D *effAltMC     = (TH2D*) dgh_file_AltMC->Get("eff_mc_Tight_ele");
+  TH2D *effAltTagSel = (TH2D*) dgh_file_diffTag->Get("eff_data_Tight_ele");
+  
+  TFile *egm_file = TFile::Open("root/CutBasedID_TightWP_fromTemplates_withSyst_Final.txt_SF2D.root");
+  assert(egm_file->IsOpen() && !egm_file->IsZombie());
+  FILE *dgh_textfile = fopen("DGH_scalefactors_ele_74x_2016-03-09.txt", "w");
+  assert(dgh_textfile != NULL);
+  TH2D *egm_sf = (TH2D*) egm_file->Get("EGamma_SF2D");
+  for(int i = 1; i<=egm_sf->GetNbinsX(); i++) { for(int j = 1; j<=egm_sf->GetNbinsY(); j++) {
+    double etacenter = egm_sf->GetXaxis()->GetBinCenter(i);
+    double ptcenter = egm_sf->GetYaxis()->GetBinCenter(j);
+    int dghbin = effData->FindBin( TMath::Abs(etacenter), ptcenter);
+    int egmbin = egm_sf->GetBin(i,j);
+    fprintf(dgh_textfile, "%-8.3f %-8.3f %-8.3f %-8.3f %-8.3f %-8.3f %-8.3f %-8.3f %-8.3f %-8.3f %-8.3f %-8.3f %-8.3f %-8.3f %-8.3f\n",
+      egm_sf->GetXaxis()->GetBinLowEdge(i),   //etaMin
+      egm_sf->GetXaxis()->GetBinUpEdge(i),    //etaMax
+      egm_sf->GetYaxis()->GetBinLowEdge(j),   //ptMin
+      egm_sf->GetYaxis()->GetBinUpEdge(j),    //ptMax
+      effData->GetBinContent(dghbin),         //effData
+      effData->GetBinError(dghbin),           //statErrData
+      effMC->GetBinContent(dghbin),           //effMC
+      effMC->GetBinError(dghbin),             //statErrMC
+      effAltBkg->GetBinContent(dghbin),       //effAltBkgModel
+      effAltSig->GetBinContent(dghbin),       //effAltSigModel
+      effAltMC->GetBinContent(dghbin),        //effAltMCSignal
+      effAltTagSel->GetBinContent(dghbin),    //effAltTagSel
+      -1.,                                    //effPUup
+      -1.,                                    //effPUdown
+      -1.                                     //effAltFitRange
+    );
+
+  }}
+  assert(fclose(dgh_textfile) ==0);
+
+}
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void egamma_comparison() {
+  gStyle->SetOptStat(0);
+  mitPalette2();
+  gStyle->SetPaintTextFormat("4.3f");
+  TPaletteAxis *palette_axis;
+  TColor *col_mit_red  = new TColor(mit_red,  163/255., 31/255.,  52/255.);
+  TColor *col_mit_gray = new TColor(mit_gray, 138/255., 139/255., 140/255.);
+
+  TFile *egm_file = TFile::Open("root/CutBasedID_TightWP_fromTemplates_withSyst_Final.txt_SF2D.root");
+  TFile *dgh_file = TFile::Open("root/DGH_scalefactors_ele_74x_2016-03-09.root");
+
+  TH2D *egm_sf = (TH2D*) egm_file->Get("EGamma_SF2D");
+  TH2D *dgh_sf = (TH2D*) dgh_file->Get("scalefactors_Tight_ele");
+  TH2D *dgh_sf_stat_hi = (TH2D*) dgh_file->Get("scalefactors_Tight_ele_stat_error_hi");
+  TH2D *dgh_sf_stat_lo = (TH2D*) dgh_file->Get("scalefactors_Tight_ele_stat_error_lo");
+  TH2D *dgh_sf_syst_combined = (TH2D*) dgh_file->Get("scalefactors_Tight_ele_syst_error_combined");
+
+  TH2D *sf_differences = (TH2D*) egm_sf->Clone();
+  sf_differences->Reset();
+  sf_differences->SetName("sf_differences");
+  sf_differences->SetTitle("Difference of tight ID/iso scale factors (DGH minus Official)");
+  TH2D *error_differences = (TH2D*) egm_sf->Clone();
+  error_differences->Reset();
+  error_differences->SetName("error_differences");
+  error_differences->SetTitle("Difference of tight ID/iso scale factor uncertainties (DGH minus Official)");
+
+  for(int i = 1; i<=egm_sf->GetNbinsX(); i++) { for(int j = 1; j<=egm_sf->GetNbinsY(); j++) {
+    double etacenter = egm_sf->GetXaxis()->GetBinCenter(i);
+    double ptcenter = egm_sf->GetYaxis()->GetBinCenter(j);
+    int dghbin = dgh_sf->FindBin( TMath::Abs(etacenter), ptcenter);
+    int egmbin = egm_sf->GetBin(i,j);
+    double dgh_error = sqrt(
+      pow(TMath::Max(dgh_sf_stat_hi->GetBinContent(dghbin), dgh_sf_stat_lo->GetBinContent(dghbin)), 2) +
+      pow(dgh_sf_syst_combined->GetBinContent(dghbin), 2)
+    );
+    double sf_difference = dgh_sf->GetBinContent(dghbin) - egm_sf->GetBinContent(egmbin);
+    double error_difference = dgh_error - egm_sf->GetBinError(egmbin);
+    double sf_difference_error = sqrt(
+      pow(dgh_error , 2) +
+      pow(egm_sf->GetBinError(egmbin), 2)
+    );
+    sf_differences->SetBinContent(egmbin, sf_difference);
+    sf_differences->SetBinError(egmbin, sf_difference_error);
+    error_differences->SetBinContent(egmbin, error_difference);
+
+  }}
+  TCanvas *c_sf_differences = new TCanvas("c_sf_differences", "Difference of scale factors", 1600, 600);
+  c_sf_differences->SetLogy();
+  sf_differences->GetYaxis()->SetMoreLogLabels();
+  sf_differences->Draw("TEXTE COLZ");
+  gPad->Update();
+  sf_differences->GetXaxis()->SetTitle("#eta_{SC}");
+  sf_differences->GetXaxis()->SetTitleOffset(0.9);
+  sf_differences->GetXaxis()->SetTitleSize(0.04);
+  sf_differences->GetXaxis()->SetLabelSize(0.02);
+  sf_differences->GetYaxis()->SetTitle("p_{T} [GeV]");
+  sf_differences->GetYaxis()->SetTitleOffset(0.9);
+  sf_differences->GetYaxis()->SetTitleSize(0.04);
+  sf_differences->GetYaxis()->SetLabelSize(0.02);
+  sf_differences->GetYaxis()->SetRangeUser(10,200);
+  sf_differences->SetMinimum(-.2);
+  sf_differences->SetMaximum(0.2);
+  sf_differences->SetMarkerSize(1.3);
+  palette_axis = (TPaletteAxis*) sf_differences->GetListOfFunctions()->FindObject("palette"); 
+  palette_axis->SetLabelSize(0.02);
+  c_sf_differences->Update();
+  c_sf_differences->Print("sf_differences.png");
+
+  TCanvas *c_error_differences = new TCanvas("c_error_differences", "Difference of scale factor errors", 1600, 600);
+  c_error_differences->SetLogy();
+  error_differences->GetYaxis()->SetMoreLogLabels();
+  error_differences->Draw("TEXT COLZ");
+  gPad->Update();
+  error_differences->GetXaxis()->SetTitle("#eta_{SC}");
+  error_differences->GetXaxis()->SetTitleOffset(0.9);
+  error_differences->GetXaxis()->SetTitleSize(0.04);
+  error_differences->GetXaxis()->SetLabelSize(0.02);
+  error_differences->GetYaxis()->SetTitle("p_{T} [GeV]");
+  error_differences->GetYaxis()->SetTitleOffset(0.9);
+  error_differences->GetYaxis()->SetTitleSize(0.04);
+  error_differences->GetYaxis()->SetLabelSize(0.02);
+  error_differences->GetYaxis()->SetRangeUser(10,200);
+  error_differences->SetMinimum(-.2);
+  error_differences->SetMaximum(0.2);
+  error_differences->SetMarkerSize(1.3);
+  palette_axis = (TPaletteAxis*) error_differences->GetListOfFunctions()->FindObject("palette"); 
+  palette_axis->SetLabelSize(0.02);
+  c_error_differences->Update();
+  c_error_differences->Print("error_differences.png");
+
+}

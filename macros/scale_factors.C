@@ -34,27 +34,8 @@ Float_t mu_pt_bins[] = {10,20,30,40,50,200,8000};
 Float_t mu_eta_bins[] = {0, 0.2, 0.3, 0.9, 1.2, 2.1, 2.4};
 Int_t n_mu_pt_bins=6;
 Int_t n_mu_eta_bins=6;
-int marker_colors[] = {1, mit_red, mit_gray, 9, 6, 4, 8};
+int marker_colors[] = {1, mit_gray, mit_red, 97, 91, 8, 60};
 int marker_styles[] = {20, 21, 22, 23, 33, 34, 20};
-
-// Function to get MIT colors for the 2D plots
-void mitPalette()
-{
-  static Int_t  colors[100];
-  static Bool_t initialized = kFALSE;
-  Double_t Red[3]    = { 1, 138./255., 163/255.};
-  Double_t Green[3]  = { 1, 139./255., 31/255.};
-  Double_t Blue[3]   = { 1, 140./255., 52/255.};
-  Double_t Length[3] = { 0.00, 0.35, 1.00 };
-  if(!initialized){
-    Int_t FI = TColor::CreateGradientColorTable(3,Length,Red,Green,Blue,100);
-    for (int i=0; i<100; i++) colors[i] = FI+i;
-    initialized = kTRUE;
-    return;
-  }
-  gStyle->SetPalette(100,colors);
-
-}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void scale_factors(string plots_dir, string root_dir, string basename_config) {
@@ -66,7 +47,7 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
 
   // Pad directories with a slash at the end if it's not there
   if( plots_dir[plots_dir.size()-1]  != '/' ) plots_dir = plots_dir + "/";
-  if( root_dir[plots_dir.size()-1]  != '/' )  root_dir  = root_dir + "/";
+  if( root_dir[root_dir.size()-1]  != '/' )  root_dir  = root_dir + "/";
 
   // Open the output rootfile
   string output_rootfile_name;
@@ -86,8 +67,8 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     stringstream ss(line);
     ss >> data_basename >> mc_basename >> selection >> flavor;
 
-    if(flavor == "electron")  output_basename = selection+"_ele";
-    else if(flavor == "muon")   output_basename = selection+"_mu";
+    if(flavor == "Electron")  output_basename = selection+"_Electron";
+    else if(flavor == "Muon")   output_basename = selection+"_Muon";
     else                    output_basename = selection+"_"+flavor;
     
     TFile *f_data = TFile::Open( ( plots_dir + data_basename   + "/eff.root").c_str(), "READ");
@@ -151,9 +132,9 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     // Start drawing stuff 
     gStyle->SetOptStat(0);
     gStyle->SetPaintTextFormat("4.3f");
-    mitPalette();
     TPaletteAxis *palette_axis;
 
+    mitPalette();
     TCanvas *canvas = new TCanvas("canvas", "canvas", 800,600);
     h_eff_data->Draw("TEXTE COLZ");
     canvas->Update();
@@ -165,7 +146,7 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     h_eff_data->GetYaxis()->SetTitleOffset(0.9);
     h_eff_data->GetYaxis()->SetTitleSize(0.04);
     h_eff_data->GetYaxis()->SetLabelSize(0.02);
-    h_eff_data->GetYaxis()->SetRangeUser(10,200);
+    h_eff_data->GetYaxis()->SetRangeUser(10, TMath::Min(h_eff_data->GetYaxis()->GetBinUpEdge(h_eff_data->GetNbinsY()), 200.));
     h_eff_data->SetMinimum(0);
     h_eff_data->SetMaximum(1.);
     h_eff_data->SetMarkerSize(.9);
@@ -184,7 +165,7 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     h_eff_mc->GetYaxis()->SetTitleOffset(0.9);
     h_eff_mc->GetYaxis()->SetTitleSize(0.04);
     h_eff_mc->GetYaxis()->SetLabelSize(0.02);
-    h_eff_mc->GetYaxis()->SetRangeUser(10,200);
+    h_eff_mc->GetYaxis()->SetRangeUser(10, TMath::Min(h_eff_mc->GetYaxis()->GetBinUpEdge(h_eff_mc->GetNbinsY()), 200.));
     h_eff_mc->SetMinimum(0);
     h_eff_mc->SetMaximum(1.);
     h_eff_mc->SetMarkerSize(.9);
@@ -193,6 +174,7 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     canvas->Update();
     canvas->Print((plots_dir + string(h_eff_mc->GetName()) + ".png").c_str());
 
+    mitPalette2();
     h_sf->Draw("TEXTE COLZ");
     canvas->Update();
     h_sf->GetXaxis()->SetTitle("| #eta |");
@@ -203,7 +185,7 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     h_sf->GetYaxis()->SetTitleOffset(0.9);
     h_sf->GetYaxis()->SetTitleSize(0.04);
     h_sf->GetYaxis()->SetLabelSize(0.02);
-    h_sf->GetYaxis()->SetRangeUser(10,200);
+    h_sf->GetYaxis()->SetRangeUser(10, TMath::Min(h_sf->GetYaxis()->GetBinUpEdge(h_sf->GetNbinsY()), 200.));
     h_sf->SetMinimum(.8);
     h_sf->SetMaximum(1.2);
     h_sf->SetMarkerSize(.9);
@@ -265,8 +247,8 @@ void systematics(string methods_config, string basename_config) {
     stringstream ss(line);
     ss >> data_basename >> mc_basename >> selection >> flavor;
 
-    if(flavor == "electron")  output_basename = selection+"_ele";
-    else if(flavor == "muon")   output_basename = selection+"_mu";
+    if(flavor == "Electron")  output_basename = selection+"_Electron";
+    else if(flavor == "Muon")   output_basename = selection+"_Muon";
     else                    output_basename = selection+"_"+flavor;
     
     ifstream methods_stream;
@@ -292,7 +274,7 @@ void systematics(string methods_config, string basename_config) {
 
     TH2D *h_nominal_sf = (TH2D*) output_rootfile->Get(("scalefactors_"+output_basename).c_str());
     TH2D *h_syst_combined = (TH2D*) h_nominal_sf->Clone();
-    h_syst_combined->Scale(0.);
+    h_syst_combined->Reset();
     h_syst_combined->SetName(("scalefactors_"+output_basename+"_syst_error_combined").c_str());
     h_syst_combined->SetTitle(("Combined systematics for "+selection+" "+flavor+" selection").c_str());
     
@@ -329,6 +311,8 @@ void systematics(string methods_config, string basename_config) {
 
       // Draw 2D histogram of systematics for this method 
       TCanvas *canvas = new TCanvas("canvas", "canvas", 800,600);
+      h_syst_method->SetMinimum(0);
+      h_syst_method->SetMaximum(.2);
       h_syst_method->Draw("TEXTE COLZ");
       canvas->Update();
       h_syst_method->GetXaxis()->SetTitle("| #eta |");
@@ -339,9 +323,7 @@ void systematics(string methods_config, string basename_config) {
       h_syst_method->GetYaxis()->SetTitleOffset(0.9);
       h_syst_method->GetYaxis()->SetTitleSize(0.04);
       h_syst_method->GetYaxis()->SetLabelSize(0.02);
-      h_syst_method->GetYaxis()->SetRangeUser(10,200);
-      h_syst_method->SetMinimum(0);
-      h_syst_method->SetMaximum(.2);
+      h_syst_method->GetYaxis()->SetRangeUser(         10., TMath::Min(h_syst_method->GetYaxis()->GetBinUpEdge( h_syst_method->GetNbinsY() ) , 200.)       );
       h_syst_method->SetMarkerSize(.9);
       palette_axis = (TPaletteAxis*) h_syst_method->GetListOfFunctions()->FindObject("palette"); 
       palette_axis->SetLabelSize(0.02);
@@ -375,12 +357,13 @@ void systematics(string methods_config, string basename_config) {
       ));
     }}
     
-
-
     // Redraw 2D SF histograms with systematics and statistical error    
-    TCanvas *canvas = new TCanvas("canvas", "canvas", 800,600);
+    mitPalette2();
+    TCanvas *c_sf = new TCanvas("c_sf", "c_sf", 800,600);
+    h_sf->SetMinimum(.8);
+    h_sf->SetMaximum(1.2);
     h_sf->Draw("TEXTE COLZ");
-    canvas->Update();
+    c_sf->Update();
     h_sf->GetXaxis()->SetTitle("| #eta |");
     h_sf->GetXaxis()->SetTitleOffset(0.9);
     h_sf->GetXaxis()->SetTitleSize(0.04);
@@ -389,18 +372,22 @@ void systematics(string methods_config, string basename_config) {
     h_sf->GetYaxis()->SetTitleOffset(0.9);
     h_sf->GetYaxis()->SetTitleSize(0.04);
     h_sf->GetYaxis()->SetLabelSize(0.02);
-    h_sf->GetYaxis()->SetRangeUser(10,200);
-    h_sf->SetMinimum(.8);
-    h_sf->SetMaximum(1.2);
+    h_sf->GetYaxis()->SetRangeUser(
+      10., TMath::Min(h_sf->GetYaxis()->GetBinUpEdge( h_sf->GetNbinsY() ) , 200.)
+    );
     h_sf->SetMarkerSize(.9);
     palette_axis = (TPaletteAxis*) h_sf->GetListOfFunctions()->FindObject("palette"); 
     palette_axis->SetLabelSize(0.02);
-    canvas->Update();
-    canvas->Print((plots_dir + string(h_nominal_sf->GetName()) + ".png").c_str());
+    c_sf->Update();
+    c_sf->Print((plots_dir + string(h_nominal_sf->GetName()) + ".png").c_str());
 
+    mitPalette();
     // Draw 2D histogram of all systematics combined in quadrature    
+    TCanvas *c_syst_combined = new TCanvas("c_syst_combined", "c_syst_combined", 800,600);
+    h_syst_combined->SetMinimum(0);
+    h_syst_combined->SetMaximum(.2);
     h_syst_combined->Draw("TEXTE COLZ");
-    canvas->Update();
+    c_syst_combined->Update();
     h_syst_combined->GetXaxis()->SetTitle("| #eta |");
     h_syst_combined->GetXaxis()->SetTitleOffset(0.9);
     h_syst_combined->GetXaxis()->SetTitleSize(0.04);
@@ -409,18 +396,18 @@ void systematics(string methods_config, string basename_config) {
     h_syst_combined->GetYaxis()->SetTitleOffset(0.9);
     h_syst_combined->GetYaxis()->SetTitleSize(0.04);
     h_syst_combined->GetYaxis()->SetLabelSize(0.02);
-    h_syst_combined->GetYaxis()->SetRangeUser(10,200);
-    h_syst_combined->SetMinimum(0);
-    h_syst_combined->SetMaximum(.2);
+    h_syst_combined->GetYaxis()->SetRangeUser(
+      10., TMath::Min(h_syst_combined->GetYaxis()->GetBinUpEdge( h_syst_combined->GetNbinsY() ) , 200.)
+    );
     h_syst_combined->SetMarkerSize(.9);
     palette_axis = (TPaletteAxis*) h_syst_combined->GetListOfFunctions()->FindObject("palette"); 
     palette_axis->SetLabelSize(0.02);
-    canvas->Update();
-    canvas->Print((nominal_plots_dir + string(h_syst_combined->GetName()) + ".png").c_str());
+    c_syst_combined->Update();
+    c_syst_combined->Print((nominal_plots_dir + string(h_syst_combined->GetName()) + ".png").c_str());
     
     // Now draw 1D histograms of scale factors in eta and pT slices with full errors
 
-    int maxslices=5; 
+    int maxslices=7; 
      
     // do pt slices
     TObjArray *ptslices = new TObjArray( h_nominal_sf->GetNbinsY() );
@@ -456,9 +443,9 @@ void systematics(string methods_config, string basename_config) {
     }
     
     TCanvas *canvas_ptslices = new TCanvas("canvas_ptslices", "canvas_ptslices", 800,600);
-    canvas_ptslices->SetRightMargin(0.02);
+    canvas_ptslices->SetRightMargin(0.05);
     canvas_ptslices->SetLeftMargin(0.07);
-    TLegend *legend_ptslices = new TLegend(.7,.7,.95,.88);
+    TLegend *legend_ptslices = new TLegend(.7,.7,.90,.88);
     legend_ptslices->SetFillColor(0);
     legend_ptslices->SetMargin(.5);
     for(int j = 1; j <= TMath::Min(maxslices, h_nominal_sf->GetNbinsY()); j++) { // loop over each pt slice
@@ -469,15 +456,15 @@ void systematics(string methods_config, string basename_config) {
       legend_ptslices->AddEntry(( (TGraphAsymmErrors*) ptslices->At(j-1)), legend_label, "lp");
     }
     ( (TGraphAsymmErrors*) ptslices->At(0))->GetXaxis()->SetRangeUser(
-      0,
-      h_nominal_sf->GetXaxis()->GetBinUpEdge(maxslices)
+      h_nominal_sf->GetXaxis()->GetBinLowEdge(1),
+      h_nominal_sf->GetXaxis()->GetBinUpEdge( h_nominal_sf->GetNbinsX() )
     );
     ( (TGraphAsymmErrors*) ptslices->At(0))->GetXaxis()->SetTitle("|#eta|");
     ( (TGraphAsymmErrors*) ptslices->At(0))->GetXaxis()->SetTitleOffset(1.3);
     TLine *oneline_ptslices = new TLine(
       h_nominal_sf->GetXaxis()->GetBinLowEdge(1),
       1,
-      h_nominal_sf->GetXaxis()->GetBinUpEdge(maxslices),
+      h_nominal_sf->GetXaxis()->GetBinUpEdge( h_nominal_sf->GetNbinsX() ),
       1
     );
     oneline_ptslices->SetLineStyle(2);
@@ -519,7 +506,7 @@ void systematics(string methods_config, string basename_config) {
     }
     TCanvas *canvas_etaslices = new TCanvas("canvas_etaslices", "canvas_etaslices", 800,600);
     canvas_etaslices->SetLogx();
-    canvas_etaslices->SetRightMargin(0.02);
+    canvas_etaslices->SetRightMargin(0.05);
     canvas_etaslices->SetLeftMargin(0.07);
     TLegend *legend_etaslices = new TLegend(.7,.6,.9,.85);
     legend_etaslices->SetFillColor(0);
@@ -532,7 +519,7 @@ void systematics(string methods_config, string basename_config) {
     }
     ( (TGraphAsymmErrors*) etaslices->At(0))->GetXaxis()->SetRangeUser(
       h_nominal_sf->GetYaxis()->GetBinLowEdge(1),
-      h_nominal_sf->GetYaxis()->GetBinUpEdge(maxslices)
+      h_nominal_sf->GetYaxis()->GetBinUpEdge( h_nominal_sf->GetNbinsY() )
     );
     ( (TGraphAsymmErrors*) etaslices->At(0))->GetXaxis()->SetTitle("p_{T} [GeV]");
     ( (TGraphAsymmErrors*) etaslices->At(0))->GetXaxis()->SetTitleOffset(1.3);
@@ -540,7 +527,7 @@ void systematics(string methods_config, string basename_config) {
     TLine *oneline_etaslices = new TLine(
       h_nominal_sf->GetYaxis()->GetBinLowEdge(1),
       1,
-      h_nominal_sf->GetYaxis()->GetBinUpEdge(maxslices),
+      h_nominal_sf->GetYaxis()->GetBinUpEdge( h_nominal_sf->GetNbinsY() ),
       1
     );
     oneline_etaslices->SetLineStyle(2);
@@ -557,7 +544,8 @@ void systematics(string methods_config, string basename_config) {
     //delete palette_axis;
     //delete h_syst_combined;
     //delete h_nominal_sf;
-    delete canvas;
+    delete c_sf;
+    delete c_syst_combined;
   }
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

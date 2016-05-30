@@ -51,6 +51,7 @@ void make_tnp_skim(
   int tau_trigger=6,
   double tag_pt_min = 30,
   double tag_eta_max = 2.1,
+  double truth_matching_dR = 0.3,
   int electron_pretend_trigger=0 // when electron triggers aren't properly marked per-electron in the ntuples, need to improvise
 ) {	
   ifstream ifs(list_of_files.c_str());
@@ -75,9 +76,8 @@ void make_tnp_skim(
   float        scale1fb=1;                  // event weight per 1/fb
   float        mass;                      // tag-probe mass
   int          qtag, qprobe;              // tag, probe charge
-  int          truth_tag, truth_probe;              // tag, probe truth
+  float        truth_tag, truth_probe;              // tag, probe truth
   TLorentzVector *p4_tag=0, *p4_probe=0;        // tag, probe 4-vector 
-  //float        min_probe_gen_deltaR=0;
 
   TFile *electron_outfile;
   TTree *electron_pair_tree;
@@ -102,8 +102,8 @@ void make_tnp_skim(
     electron_pair_tree->Branch("tag",   "TLorentzVector", &p4_tag   );  
     electron_pair_tree->Branch("probe", "TLorentzVector", &p4_probe );          
     if(!real_data) {
-      electron_pair_tree->Branch("truth_tag",     &truth_tag,     "truth_tag/I"     );  
-      electron_pair_tree->Branch("truth_probe",   &truth_probe,   "truth_probe/I"   );  
+      electron_pair_tree->Branch("truth_tag",     &truth_tag,     "truth_tag/F"     );  
+      electron_pair_tree->Branch("truth_probe",   &truth_probe,   "truth_probe/F"   );  
     }
   }
   if(do_muons) {
@@ -122,8 +122,8 @@ void make_tnp_skim(
     muon_pair_tree->Branch("tag",   "TLorentzVector", &p4_tag   );  
     muon_pair_tree->Branch("probe", "TLorentzVector", &p4_probe );      
     if(!real_data) {
-      muon_pair_tree->Branch("truth_tag",     &truth_tag,     "truth_tag/I"     );  
-      muon_pair_tree->Branch("truth_probe",   &truth_probe,   "truth_probe/I"   );  
+      muon_pair_tree->Branch("truth_tag",     &truth_tag,     "truth_tag/F"     );  
+      muon_pair_tree->Branch("truth_probe",   &truth_probe,   "truth_probe/F"   );  
     }
   }
   if(do_taus) {
@@ -295,7 +295,8 @@ void make_tnp_skim(
 
     printf("Opening file \"%s\"\n",input_file_name.c_str());
     TFile *input_file=TFile::Open(input_file_name.c_str(),"READ");
-    TTree *events=(TTree*)input_file->Get("nero/events");
+    //TTree *events=(TTree*)input_file->Get("nero/events");
+    TTree *events=(TTree*)input_file->FindObjectAny("events");
     n_events+=events->GetEntriesFast();
 
     // book branches for nero ntuple
@@ -378,14 +379,14 @@ void make_tnp_skim(
     Long64_t nentries;
     if(!real_data) {
       
-      TTree* all_tree=(TTree*)input_file->Get("nero/all");
+      TTree* all_tree=(TTree*)input_file->FindObjectAny("all");
       all_tree->SetBranchAddress("mcWeight", &mcWeight);
       nentries=all_tree->GetEntries();
       for (Long64_t i=0; i<nentries;i++) {
         all_tree->GetEntry(i);
         sum_mc_weights+=mcWeight / TMath::Abs(mcWeight);
       }
-      printf("%lld events in this file\n", sum_mc_weights);
+      printf("%lld events, %lld entries in this file\n", sum_mc_weights, nentries);
     }
 
     Long64_t nbytes = 0;
@@ -473,7 +474,7 @@ void make_tnp_skim(
       std::vector<TLorentzVector> p4_ele_tag_, p4_ele_passing_probe_, p4_ele_failing_probe_, p4_mu_tag_, p4_mu_passing_probe_, p4_mu_failing_probe_;
       std::vector<int> q_ele_tag_, q_ele_passing_probe_, q_ele_failing_probe_, q_mu_tag_, q_mu_passing_probe_, q_mu_failing_probe_;
       // record truth info as 1 or 0
-      std::vector<int> truth_ele_tag_, truth_ele_passing_probe_, truth_ele_failing_probe_, truth_mu_tag_, truth_mu_passing_probe_, truth_mu_failing_probe_;
+      std::vector<double> truth_ele_tag_, truth_ele_passing_probe_, truth_ele_failing_probe_, truth_mu_tag_, truth_mu_passing_probe_, truth_mu_failing_probe_;
       unsigned int il;
       // Loop over the electrons and muons
       if(n_lep != 0 && (do_electrons || do_muons)) { for(il=0; il<n_lep; il++) {
@@ -488,7 +489,7 @@ void make_tnp_skim(
         // Now find tags and probes
         TLorentzVector *P4=(TLorentzVector*)lepP4->At(il);
         if( P4->Pt() >= 10.) {
-          int truth=0;
+          double truth=0;
           int charge=1;
           if((*lepPdgId)[il] > 0)  charge=-1;
 
@@ -499,8 +500,11 @@ void make_tnp_skim(
               TLorentzVector *gP4 = (TLorentzVector*)genP4->At(ig);
               if(
                 ( (*genPdgId)[ig] == (*lepPdgId)[il] ) && 
-                ( gP4->DeltaR( *P4) < .1)
-              ) truth=1;
+                ( gP4->DeltaR( *P4) < truth_matching_dR)
+              ) {
+                if(truth==0) truth = gP4->DeltaR(*P4);
+                else { truth = TMath::Max(0.001, TMath::Min(truth, gP4->DeltaR(*P4))); assert(truth!=0); }
+              }
             }}
             if(truth==0 && !real_data && truth_matching) continue;
           }
@@ -3039,6 +3043,19 @@ void reweighted_electron_skim(
   reweighted_dy_file->cd();
   reweighted_dy_tree->Write();
   reweighted_dy_file->Close();
+
+}
+////////////////////////////////////////////////////////////////////////////////////
+void scan_dR_cut(string list_of_files, string output_basename) {
+  double dR_cuts[] = {0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2, 0.22, 0.24, 0.26, 0.28, 0.3};
+  int num_cuts = 15;
+  for(int i=0; i<num_cuts; i++) {
+    char output_basename_with_cut_cstr[256];
+    sprintf(output_basename_with_cut_cstr, "%s_dR%.0fo100", output_basename.c_str(), (int) 100.*dR_cuts[i]);
+    printf("writing to %s_dR%.0fo100\n", output_basename.c_str(), (int) 100.*dR_cuts[i]);
+    string output_basename_with_cut(output_basename_with_cut_cstr);
+    make_tnp_skim(list_of_files, output_basename_with_cut, 6,6, 0,0, 6,6, true, true, false, false, false, true, 1,1,1, 30, 2.1, dR_cuts[i]);
+  }
 
 }
 

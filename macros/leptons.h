@@ -16,6 +16,7 @@
 #include <TLegend.h>
 #include <TFile.h>
 #include <TCut.h>
+#include <TColor.h>
 // LepBaseline = 1UL<<0,
 // LepVeto     = 1UL<<1,
 // LepFake     = 1UL<<2,
@@ -106,4 +107,38 @@ void InitializeJetIdCuts(Float_t fMVACut[4][4])
   }
   
 } 
+// Function to get MIT colors for the 2D plots
+void mitPalette()
+{
+  static Int_t  colors[100];
+  static Bool_t initialized = kFALSE;
+  Double_t Red[3]    = { 1, 138./255., 163/255.};
+  Double_t Green[3]  = { 1, 139./255., 31/255.};
+  Double_t Blue[3]   = { 1, 140./255., 52/255.};
+  Double_t Length[3] = { 0.00, 0.35, 1.00 };
+  if(!initialized){
+    Int_t FI = TColor::CreateGradientColorTable(3,Length,Red,Green,Blue,100);
+    for (int i=0; i<100; i++) colors[i] = FI+i;
+    initialized = kTRUE;
+    return;
+  }
+  gStyle->SetPalette(100,colors);
 
+}
+void mitPalette2()
+{
+  static Int_t  colors[100];
+  static Bool_t initialized = kFALSE;
+  Double_t Red[3]    = { 138/255., 1., 163/255.};
+  Double_t Green[3]  = { 139/255., 1., 31/255.};
+  Double_t Blue[3]   = { 140/255., 1., 52/255.};
+  Double_t Length[3] = { 0.00, 0.5, 1.00 };
+  if(!initialized){
+    Int_t FI = TColor::CreateGradientColorTable(3,Length,Red,Green,Blue,100);
+    for (int i=0; i<100; i++) colors[i] = FI+i;
+    initialized = kTRUE;
+    return;
+  }
+  gStyle->SetPalette(100,colors);
+
+}

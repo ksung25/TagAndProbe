@@ -1,5 +1,6 @@
 #include "TROOT.h"
 #include "TH1D.h"
+#include "TTree.h"
 #include "RooDataSet.h"
 #include "RooRealVar.h"
 #include "RooAbsPdf.h"
@@ -14,21 +15,36 @@
 #include "RooVoigtianShape.h"
 #include "RooVoigtian.h"
 #include "RooKeysPdf.h"
+#include <vector>
+#include <fstream>
+#include <iostream>
+#include <string>
+#include <sstream>
 
-
+using namespace std;
 class CSignalModel
 {
 public:
   CSignalModel():model(0){}
   virtual ~CSignalModel(){ delete model; }
   RooAbsPdf *model;
-protected:
+  enum signalType {
+    kBreitWignerConvCrystalBall,
+    kMCTemplateConvGaussian,     //initialized from default
+    kMCTemplateConvGaussianInit, //initialized from reference dir
+    kVoigtianCBShape,
+    kMCDatasetConvGaussian,
+    kBWCBPlusVoigt,
+    kBWCBPlusVoigtBounded,
+    kNone
+  };
   std::vector<double> readSigParams(
     const int ibin,
     const std::string name,
     std::vector<std::string> paramNames,
     std::string refDir
   );
+protected:
 
 };
 
@@ -60,7 +76,7 @@ public:
 class CMCTemplateConvGaussian : public CSignalModel
 {
 public:
-  CMCTemplateConvGaussian(RooRealVar &m, TH1D* hist, const Bool_t pass, RooRealVar *sigma0=0, int intOrder=1);
+  CMCTemplateConvGaussian(RooRealVar &m, TH1D* hist, const Bool_t pass, int intOrder=1, int ibin=0, const std::string fitname="", std::string refDir="");
   ~CMCTemplateConvGaussian();
   RooRealVar  *mean, *sigma;
   RooGaussian *gaus;
@@ -168,30 +184,37 @@ CBWCBPlusVoigt::CBWCBPlusVoigt(RooRealVar &m, const Bool_t pass, double ptMin, d
   sprintf(vname,"bw%s",name);
   bw = new RooBreitWigner(vname,vname,m,*mass,*width);
   
+  bool electrons=false;
   double fsrPeak=80;
   double fsrSigma=7;
   double fsrSigmaMax=10;
-  double fsrSigmaMin=6;
+  double fsrSigmaMin=2;
   double fsrPeakRange=20;
   double fsrFracMin=0.05;
-  double fsrFracMax=0.2;
-  double fsrFracInit=0.1;
+  double fsrFracMax=0.4;
+  double fsrFracInit=0.05;
   //fsrFracInit = 0.2;
   //fsrFracMax = 0.3;
   if(ptMin >= 100) {
     fsrFracMin=0;
+    fsrFracMax=0.05;
     fsrPeak=140;
   //} else if(ptMin >= 70) {
   //  fsrPeak=115;
   } else if(ptMin >= 50) {
     fsrPeak=105;
-    fsrPeakRange=10;
+    if(electrons) fsrFracMax=0.05;
+    if(electrons) fsrPeakRange=10;
+    else fsrPeakRange = 20;
     //fsrFracInit=0.2;
     fsrFracMin=0;
     //fsrFracMax = 0.3;
     //fsrSigma=7;
   } else if(ptMin >= 40) {
-    fsrPeak=95;
+    if(electrons) fsrPeak=95;
+    else fsrPeak = 80;
+
+    if(!electrons) fsrSigmaMin=1;
     //fsrFracMin=.1;
     //fsrFracMax = 0.3;
   } else if(ptMin >= 30) {
@@ -201,16 +224,24 @@ CBWCBPlusVoigt::CBWCBPlusVoigt(RooRealVar &m, const Bool_t pass, double ptMin, d
     //fsrPeakRange=10;
   } else if(ptMin >= 20) {
     fsrPeak=75;
+    if(!electrons && ptMax<=25) fsrPeak=67;
     //fsrFracMin=.15;
   } else if(ptMin >= 10) {
-    fsrPeak=60;
-    //fsrFracMin=.3;
-    //fsrFracInit=.4;
-    //fsrFracMax=.8;
+    fsrPeak=55;
+    fsrFracMin=.1;
+    fsrFracInit=.3;
+    fsrFracMax=.5;
     fsrPeakRange=10;
-    //fsrSigma=10;
+    fsrSigmaMax=20;//fsrSigma=10;
   } else {
+    fsrFracMax=.8;
+    fsrFracMin=0;
     fsrPeakRange=300;
+  }
+  if(!electrons && ptMin==0 && ptMax==8000) { // fine eta binning for muons
+    fsrPeak=75;
+    fsrPeakRange=10;
+    fsrSigmaMax=20;
   }
 
   //sprintf(vname,"vMean%s",name);      vMean  = new RooRealVar(vname,vname,60,5,150);
@@ -252,16 +283,23 @@ CBWCBPlusVoigt::CBWCBPlusVoigt(RooRealVar &m, const Bool_t pass, double ptMin, d
       }
     }
     std::vector<double> params = readSigParams(ibin, fitname, paramNames, refDir);
-    vMean    ->setVal(params[0]);  vMean    ->setMin(.9*params[0]);  vMean    ->setMax(1.1*params[0]);  
-    vWidth   ->setVal(params[1]);    
-    vSigma   ->setVal(params[2]);  vSigma   ->setMin(.9*params[2]);  vSigma   ->setMax(1.1*params[2]);  
-    mean     ->setVal(params[3]);  
-    sigma    ->setVal(params[4]);  
-    alpha    ->setVal(params[5]);  alpha    ->setMin(params[5]-2);   alpha    ->setMax(params[5]+2);
+    vMean    ->setVal(params[0]);  vMean    ->setMin(TMath::Max(fsrPeak-fsrPeakRange, .95*params[0]));  vMean    ->setMax(TMath::Min(fsrPeak+fsrPeakRange, 1.05*params[0]));  
+    vWidth   ->setVal(params[1]);  vWidth->setMin( TMath::Max(.001, .95*params[1])); vWidth->setMax( 1.05*params[1]);
+    vSigma   ->setVal(params[2]);  vSigma   ->setMin(TMath::Max(fsrSigmaMin, 0.95*params[2]));  vSigma   ->setMax(TMath::Min(fsrSigmaMax, 1.05*params[2]));  
+    mean     ->setVal(params[3]);  //mean->setMin(.8*params[3]); mean->setMax(1.2*params[3]); 
+    sigma    ->setVal(params[4]);  sigma->setMin(.95*params[4]); sigma->setMax(1.05*params[4]);
+    alpha    ->setVal(params[5]);  alpha    ->setMin(TMath::Max(-1., params[5]-1));   alpha    ->setMax(TMath::Min(3., params[5]+1));
     n        ->setVal(TMath::Min(10., TMath::Max(0., params[6])));  
-    n        ->setMin(TMath::Max(0., .9*params[6]));  
-    n        ->setMax(TMath::Min(10., 1.1*params[6]));
-    fsrFrac  ->setVal(params[7]);  fsrFrac  ->setMin(.9*params[7]);  fsrFrac  ->setMax(1.1*params[7]);  
+    n        ->setMin(TMath::Max(0., .95*params[6]));  
+    n        ->setMax(TMath::Min(10., 1.05*params[6]));
+    fsrFrac  ->setVal(params[7]);
+    if(pass) {
+      fsrFrac  ->setMin(TMath::Max(0., .95*params[7]));
+      fsrFrac  ->setMax(TMath::Min(fsrFracMax, 1.05*params[7]));  
+    } else {
+      fsrFrac  ->setMin(TMath::Max(fsrFracMin, .95*params[7]));
+      fsrFrac  ->setMax(TMath::Min(fsrFracMax, 1.05*params[7]));  
+    }
 
   }
   
@@ -300,7 +338,7 @@ CBWCBPlusVoigt::~CBWCBPlusVoigt()
 }
 
 //--------------------------------------------------------------------------------------------------
-CMCTemplateConvGaussian::CMCTemplateConvGaussian(RooRealVar &m, TH1D* hist, const Bool_t pass, RooRealVar *sigma0, int intOrder)
+CMCTemplateConvGaussian::CMCTemplateConvGaussian(RooRealVar &m, TH1D* hist, const Bool_t pass, int intOrder, int ibin, const std::string fitname, std::string refDir)
 {  
   char name[10];
   if(pass) sprintf(name,"%s","Pass");
@@ -309,21 +347,28 @@ CMCTemplateConvGaussian::CMCTemplateConvGaussian(RooRealVar &m, TH1D* hist, cons
   char vname[50];  
   
   if(pass) {
-    sprintf(vname,"mean%s",name);  mean  = new RooRealVar(vname,vname,0,-5,5);
-    if(sigma0) { sigma = sigma0; }
-    else       { sprintf(vname,"sigma%s",name); sigma = new RooRealVar(vname,vname,1,0.1,2); }
+    sprintf(vname,"mean%s",name);  mean  = new RooRealVar(vname,vname,-1,-5,5);
+    sprintf(vname,"sigma%s",name); sigma = new RooRealVar(vname,vname,0.5,0.5,5);
     sprintf(vname,"gaus%s",name);  gaus  = new RooGaussian(vname,vname,m,*mean,*sigma);
   } else {
-    sprintf(vname,"mean%s",name);  mean  = new RooRealVar(vname,vname,0,-5,5);
-    if(sigma0) { sigma = sigma0; }
-    else       { sprintf(vname,"sigma%s",name); sigma = new RooRealVar(vname,vname,1,0.1,2); }
+    sprintf(vname,"mean%s",name);  mean  = new RooRealVar(vname,vname,-1,-5,5);
+    sprintf(vname,"sigma%s",name); sigma = new RooRealVar(vname,vname,0.5,0.5,5);
     sprintf(vname,"gaus%s",name);  gaus  = new RooGaussian(vname,vname,m,*mean,*sigma);
   }
-
+  
+  if(refDir != "") {
+    std::vector<std::string> paramNames;
+    if(pass) paramNames = {"meanPass", "sigmaPass"};
+    else     paramNames = {"meanFail", "sigmaFail"};
+    std::vector<double> params = readSigParams(ibin, fitname, paramNames, refDir);
+    mean->setVal(params[0]);
+    sigma->setVal(params[1]);
+  }
 
   sprintf(vname,"inHist_%s",hist->GetName());
   inHist = (TH1D*)hist->Clone(vname);
-  
+  inHist->SetDirectory(0);
+
   sprintf(vname,"dataHist%s",name); dataHist = new RooDataHist(vname,vname,RooArgSet(m),inHist);
   sprintf(vname,"histPdf%s",name);  histPdf  = new RooHistPdf(vname,vname,m,*dataHist,intOrder);
   sprintf(vname,"signal%s",name);   model    = new RooFFTConvPdf(vname,vname,m,*histPdf,*gaus);
@@ -404,7 +449,8 @@ CMCDatasetConvGaussian::CMCDatasetConvGaussian(RooRealVar &m, TTree* tree, const
   
   sprintf(vname,"inTree_%s",tree->GetName());
   inTree = (TTree*)tree->Clone(vname);
-  
+  inTree->SetDirectory(0);
+
   sprintf(vname,"dataSet%s",name); dataSet = new RooDataSet(vname,vname,inTree,RooArgSet(m));
   sprintf(vname,"keysPdf%s",name); keysPdf = new RooKeysPdf(vname,vname,m,*dataSet,RooKeysPdf::NoMirror,1);
   sprintf(vname,"signal%s",name);  model   = new RooFFTConvPdf(vname,vname,m,*keysPdf,*gaus);
@@ -437,6 +483,7 @@ std::vector<double> CSignalModel::readSigParams(
   );
   ifstream rfile;
   for(unsigned int i = 0; i<paramNames.size(); i++) {
+    printf("Trying to open param file \"%s\"...\n", rname);
     rfile.open(rname);
     assert(rfile.is_open());
     std::string line;

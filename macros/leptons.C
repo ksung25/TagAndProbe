@@ -307,7 +307,7 @@ void make_tnp_skim(
       if(!input_file) printf("Issue reading the file, waiting 30 seconds and retrying...\n");
       usleep(30*1000*1000);
     }
-    TTree *events=(TTree*)input_file->Get("nero/events");
+    TTree *events=(TTree*)input_file->FindObjectAny("events");
     n_events+=events->GetEntriesFast();
 
     // book branches for nero ntuple
@@ -390,14 +390,14 @@ void make_tnp_skim(
     Long64_t nentries;
     if(!real_data) {
       
-      TTree* all_tree=(TTree*)input_file->Get("nero/all");
+      TTree* all_tree=(TTree*)input_file->FindObjectAny("all");
       all_tree->SetBranchAddress("mcWeight", &mcWeight);
       nentries=all_tree->GetEntries();
       for (Long64_t i=0; i<nentries;i++) {
         all_tree->GetEntry(i);
         sum_mc_weights+=mcWeight / TMath::Abs(mcWeight);
       }
-      printf("%lld events in this file\n", sum_mc_weights);
+      printf("%lld events, %lld entries in this file\n", sum_mc_weights, nentries);
     }
 
     Long64_t nbytes = 0;

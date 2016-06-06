@@ -4,17 +4,19 @@
 #include <TCanvas.h>
 #include <TGraphAsymmErrors.h>
 #include <TH2D.h>
+#include <TColor.h>
 #include <TEfficiency.h>
 #include <TLorentzVector.h>
 
 #include <cassert>
 #include <sstream>
 #include <iomanip>
+#include <unistd.h>
 
 #include "CPlot.hh"
 #include "KStyle.hh"
-#include "ZSignals.hh"
-#include "ZBackgrounds.hh"
+//#include "ZSignals.hh"
+//#include "ZBackgrounds.hh"
 #include "CEffUser1D.hh"
 #include "CEffUser2D.hh"
 
@@ -28,6 +30,7 @@
 #include "RooAddPdf.h"
 #include "RooFitResult.h"
 #include "RooExtendPdf.h"
+#include "RooMCStudy.h"
 
 // bin size constants
 #define BIN_SIZE_PASS 2
@@ -36,14 +39,18 @@
 //--------------------------------------------------------------------------------------------------
 CEffZFitter::CEffZFitter():
 fIsInitialized(false),
-fSigPass      (0),
-fBkgPass      (0),
-fSigFail      (0),
-fBkgFail      (0),
+fPreparedTrees(false),
+//fSigPass      (CSignalModel::kNone),
+//fBkgPass      (CBackgroundModel::kNone),
+//fSigFail      (CSignalModel::kNone),
+//fBkgFail      (CBackgroundModel::kNone),
 fMassLo       (60),
 fMassHi       (120),
 fFitMassLo    (60),
 fFitMassHi    (120),
+fRunNumLo     (0),
+fRunNumHi     (99999999),
+fCharge       (1),
 fUncMethod    (0),
 fOutputDir    ("."),
 fDoAbsEta     (false),
@@ -74,47 +81,117 @@ CEffZFitter::~CEffZFitter()
 }
 
 //--------------------------------------------------------------------------------------------------
-void CEffZFitter::initialize(const std::string conf, const int sigpass, const int bkgpass, const int sigfail, const int bkgfail,
-                             const std::string infname, const std::string outdir, const std::string temfname, const std::string refDir,  
-                             const double massLo, const double massHi, const double fitMassLo, const double fitMassHi, 
-		             const int uncMethod, const std::string pufname, const int charge,
-			     const unsigned int runNumLo, const unsigned int runNumHi)
-{
+void CEffZFitter::initialize(
+  const std::string conf,
+  const std::string sigpass,
+  const std::string bkgpass,
+  const std::string sigfail,
+  const std::string bkgfail,
+  const std::string outdir,
+  const std::string temfname,
+  const std::string sigRefDir,  
+  const std::string bkgRefDir,  
+  const double massLo,
+  const double massHi,
+  const double fitMassLo,
+  const double fitMassHi, 
+  const int uncMethod,
+  const std::string pufname,
+  const int charge,
+  const unsigned int runNumLo,
+  const unsigned int runNumHi
+) {
   std::cout << "   [CEffZFitter] Initializing... " << std::endl;
 
   //parse binning configuration file
   parseConf(conf);
   
-  fSigPass = sigpass;
-  fBkgPass = bkgpass;
-  fSigFail = sigfail;
-  fBkgFail = bkgfail;
-
+  if(sigpass=="BreitWignerConvCrystalBall" ) fSigPass=CSignalModel::kBreitWignerConvCrystalBall ;
+  else if(sigpass=="MCTemplateConvGaussian"     ) fSigPass=CSignalModel::kMCTemplateConvGaussian     ;
+  else if(sigpass=="MCTemplateConvGaussianInit" ) fSigPass=CSignalModel::kMCTemplateConvGaussianInit ;
+  else if(sigpass=="VoigtianCBShape"            ) fSigPass=CSignalModel::kVoigtianCBShape            ;
+  else if(sigpass=="MCDatasetConvGaussian"      ) fSigPass=CSignalModel::kMCDatasetConvGaussian      ;
+  else if(sigpass=="BWCBPlusVoigt"              ) fSigPass=CSignalModel::kBWCBPlusVoigt              ;
+  else if(sigpass=="BWCBPlusVoigtBounded"       ) fSigPass=CSignalModel::kBWCBPlusVoigtBounded       ;
+  else fSigPass=CSignalModel::kNone;
+  if(sigfail=="BreitWignerConvCrystalBall" ) fSigFail=CSignalModel::kBreitWignerConvCrystalBall ;
+  else if(sigfail=="MCTemplateConvGaussian"     ) fSigFail=CSignalModel::kMCTemplateConvGaussian     ;
+  else if(sigfail=="MCTemplateConvGaussianInit" ) fSigFail=CSignalModel::kMCTemplateConvGaussianInit ;
+  else if(sigfail=="VoigtianCBShape"            ) fSigFail=CSignalModel::kVoigtianCBShape            ;
+  else if(sigfail=="MCDatasetConvGaussian"      ) fSigFail=CSignalModel::kMCDatasetConvGaussian      ;
+  else if(sigfail=="BWCBPlusVoigt"              ) fSigFail=CSignalModel::kBWCBPlusVoigt              ;
+  else if(sigfail=="BWCBPlusVoigtBounded"       ) fSigFail=CSignalModel::kBWCBPlusVoigtBounded       ;
+  else fSigFail=CSignalModel::kNone;
+  if(bkgpass=="Exponential"   ) fBkgPass=CBackgroundModel::kExponential  ;
+  else if(bkgpass=="ErfcExpo"      ) fBkgPass=CBackgroundModel::kErfcExpo     ;
+  else if(bkgpass=="ErfcExpoFixed" ) fBkgPass=CBackgroundModel::kErfcExpoFixed;
+  else if(bkgpass=="DoubleExp"     ) fBkgPass=CBackgroundModel::kDoubleExp    ;
+  else if(bkgpass=="LinearExp"     ) fBkgPass=CBackgroundModel::kLinearExp    ;
+  else if(bkgpass=="QuadraticExp"  ) fBkgPass=CBackgroundModel::kQuadraticExp ;
+  else fBkgPass=CBackgroundModel::kNone;
+  if(bkgfail=="Exponential"   ) fBkgFail=CBackgroundModel::kExponential  ;
+  else if(bkgfail=="ErfcExpo"      ) fBkgFail=CBackgroundModel::kErfcExpo     ;
+  else if(bkgfail=="ErfcExpoFixed" ) fBkgFail=CBackgroundModel::kErfcExpoFixed;
+  else if(bkgfail=="DoubleExp"     ) fBkgFail=CBackgroundModel::kDoubleExp    ;
+  else if(bkgfail=="LinearExp"     ) fBkgFail=CBackgroundModel::kLinearExp    ;
+  else if(bkgfail=="QuadraticExp"  ) fBkgFail=CBackgroundModel::kQuadraticExp ;
+  else fBkgFail=CBackgroundModel::kNone;
   fMassLo    = massLo;
   fMassHi    = massHi;
   fFitMassLo = fitMassLo;
   fFitMassHi = fitMassHi;
-  templateFile = temfname; 
+  fRunNumLo  = runNumLo;
+  fRunNumHi  = runNumHi;
+  fCharge    = charge;
+  m.setRange(fFitMassLo, fFitMassHi); 
+  m.setBins(10000);
 
   // set up output directory
   fOutputDir = outdir;
-  fRefDir = refDir;
+  fSigRefDir = sigRefDir;
+  fBkgRefDir = bkgRefDir;
   gSystem->mkdir(fOutputDir.c_str(),true);
   CPlot::sOutDir = TString(outdir.c_str()) + TString("/plots");
       
-  TFile *pufile=0;
-  TH1D *puWeights=0;
   if(pufname.compare("none")!=0) {
     pufile = new TFile(pufname.c_str());      assert(pufile);
     puWeights = (TH1D*)pufile->Get("pileup"); assert(puWeights); 
   }
   
-  // generate templates from MC if necessary
-  if(fSigPass==2 || fSigFail==2) {
-    makeBinnedTemplates(temfname, charge, puWeights);
-  } else if(fSigPass==4 || fSigFail==4) {
-    makeUnbinnedTemplates(temfname, charge);
+  // Generate templates from MC if necessary
+  // Check if templates file exists and try to make them if they do not exist
+  // This will fail if a TNP job is submitted to grid and the template files were not already made
+  // interactively and sent with the job.
+  // This is necessary because reading the skim file from which the templates are made is I/O
+  // intensive across mounted file systems.
+  if(
+    fSigPass==CSignalModel::kMCTemplateConvGaussian || 
+    fSigPass==CSignalModel::kMCTemplateConvGaussianInit ||
+    fSigFail==CSignalModel::kMCTemplateConvGaussian || 
+    fSigFail==CSignalModel::kMCTemplateConvGaussianInit
+  ) {
+    string outfile_name = "templates/" + fOutputDir + "/binnedTemplates.root";
+    gSystem->mkdir(("templates/"+fOutputDir).c_str(),true);
+    int res = access(outfile_name.c_str(), R_OK);
+    if(res<0) makeBinnedTemplates(temfname, fCharge, puWeights);
+  } else if(
+    fSigPass==CSignalModel::kMCDatasetConvGaussian ||
+    fSigFail==CSignalModel::kMCDatasetConvGaussian
+  ) {
+    string outfile_name = "templates/" + fOutputDir + "/unbinnedTemplates.root";
+    gSystem->mkdir(("templates/"+fOutputDir).c_str(),true);
+    int res = access(outfile_name.c_str(), R_OK);
+    if(res<0) makeUnbinnedTemplates(temfname, fCharge);
   }
+  fIsInitialized = true;
+}
+//--------------------------------------------------------------------------------------------------
+void CEffZFitter::prepareTrees(
+  const std::string infname
+)
+{
+  assert(fIsInitialized);
+  std::cout << "   [CEffZFitter] Preparing trees " << std::endl;
   
   //------------------------------------------------------------------------------------------------
   // Read in probes data
@@ -148,7 +225,6 @@ void CEffZFitter::initialize(const std::string conf, const int sigpass, const in
   intree->SetBranchAddress("tag",      &tag);
   intree->SetBranchAddress("probe",    &probe);
 
-  
   //
   // set up output trees
   // Note: each bin is assigned a pass tree and a fail tree
@@ -241,17 +317,19 @@ void CEffZFitter::initialize(const std::string conf, const int sigpass, const in
     fFailTreeNPVv[ibin]->SetDirectory(0);
   }
 
+  std::cout << "   [CEffZFitter] Filling output trees " << std::endl;
+
   //
   // loop over probes
   //
   for(unsigned int ientry=0; ientry<intree->GetEntries(); ientry++) {
     intree->GetEntry(ientry);
     
-    if(qprobe*charge < 0) continue;
+    if(qprobe*fCharge < 0) continue;
     if(mass < fFitMassLo) continue;
     if(mass > fFitMassHi) continue;
-    if(runNum < runNumLo) continue;
-    if(runNum > runNumHi) continue;
+    if(runNum < fRunNumLo) continue;
+    if(runNum > fRunNumHi) continue;
 
     wgt = scale1fb;
     if(puWeights) {
@@ -325,13 +403,14 @@ void CEffZFitter::initialize(const std::string conf, const int sigpass, const in
   delete pufile;
   pufile=0, puWeights=0;
   
-  fIsInitialized = true;
+  fPreparedTrees = true;
 }
 
 //--------------------------------------------------------------------------------------------------
 void CEffZFitter::computeEff()
 {
   assert(fIsInitialized);
+  assert(fPreparedTrees);
   
   std::cout << "   [CEffZFitter] Computing efficiencies..." << std::endl;
 
@@ -483,7 +562,21 @@ void CEffZFitter::computeEff()
   }
 
 
-  gStyle->SetPalette(1);
+  gStyle->SetPaintTextFormat("3.2f");
+  bool use_mit_palette=true; 
+  if(use_mit_palette) {
+    static Int_t  colors[100];
+    Double_t Red[3]    = { 1, 138./255., 163/255.};
+    Double_t Green[3]  = { 1, 139./255., 31/255.};
+    Double_t Blue[3]   = { 1, 140./255., 52/255.};
+    Double_t Length[3] = { 0.00, 0.35, 1.00 };
+    Int_t FI = TColor::CreateGradientColorTable(3,Length,Red,Green,Blue,100);
+    for (int i=0; i<100; i++) colors[i] = FI+i;
+    gStyle->SetPalette(100,colors);
+  } else {
+    gStyle->SetPalette(1);
+  }
+  
   c->SetRightMargin(0.15);
   c->SetLeftMargin(0.15);
 
@@ -498,7 +591,7 @@ void CEffZFitter::computeEff()
     if(NBINS_PT>2) { hEffEtaPt->GetYaxis()->SetRangeUser(fPtBinEdgesv[0],fPtBinEdgesv[NBINS_PT-2]); }
     CPlot plotEffEtaPt("effetapt","","probe #eta","probe p_{T} [GeV/c]");
     if(fDoAbsEta) { plotEffEtaPt.SetXTitle("probe |#eta|"); }
-    plotEffEtaPt.AddHist2D(hEffEtaPt,"COLZ");
+    plotEffEtaPt.AddHist2D(hEffEtaPt,"TEXT COLZ");
     plotEffEtaPt.Draw(c,true,"png");
     plotEffEtaPt.Draw(c,true,"pdf");
 
@@ -506,7 +599,7 @@ void CEffZFitter::computeEff()
     if(NBINS_PT>2) { hErrlEtaPt->GetYaxis()->SetRangeUser(fPtBinEdgesv[0],fPtBinEdgesv[NBINS_PT-2]); }
     CPlot plotErrlEtaPt("errletapt","","probe #eta","probe p_{T} [GeV/c]");
     if(fDoAbsEta) { plotErrlEtaPt.SetXTitle("probe |#eta|"); }
-    plotErrlEtaPt.AddHist2D(hErrlEtaPt,"COLZ");
+    plotErrlEtaPt.AddHist2D(hErrlEtaPt,"TEXT COLZ");
     plotErrlEtaPt.Draw(c,true,"png");
     plotErrlEtaPt.Draw(c,true,"pdf");
 
@@ -514,7 +607,7 @@ void CEffZFitter::computeEff()
     if(NBINS_PT>2) { hErrhEtaPt->GetYaxis()->SetRangeUser(fPtBinEdgesv[0],fPtBinEdgesv[NBINS_PT-2]); }
     CPlot plotErrhEtaPt("errhetapt","","probe #eta","probe p_{T} [GeV/c]");
     if(fDoAbsEta) { plotErrhEtaPt.SetXTitle("probe |#eta|"); }
-    plotErrhEtaPt.AddHist2D(hErrhEtaPt,"COLZ");
+    plotErrhEtaPt.AddHist2D(hErrhEtaPt,"TEXT COLZ");
     plotErrhEtaPt.Draw(c,true,"png");
     plotErrhEtaPt.Draw(c,true,"pdf");
   }
@@ -577,13 +670,13 @@ void CEffZFitter::computeEff()
   hEffEtaPt=0, hErrlEtaPt=0, hErrhEtaPt=0, hEffEtaPhi=0, hErrlEtaPhi=0, hErrhEtaPhi=0;  
 
   // delete temporary templates file
-  if(fSigPass==2 || fSigFail==2) {
-    string outfile_name = fOutputDir + "_binnedTemplates.root";
-    remove(outfile_name.c_str());
-  } else if(fSigPass==4 || fSigFail==4) {
-    string outfile_name = fOutputDir + "_unbinnedTemplates.root";
-    remove(outfile_name.c_str());
-  }
+  //if(fSigPass==2 || fSigFail==2) {
+  //  string outfile_name = fOutputDir + "_binnedTemplates.root";
+  //  remove(outfile_name.c_str());
+  //} else if(fSigPass==4 || fSigFail==4) {
+  //  string outfile_name = fOutputDir + "_unbinnedTemplates.root";
+  //  remove(outfile_name.c_str());
+  //}
 
 }
 
@@ -799,7 +892,8 @@ void CEffZFitter::makeBinnedTemplates(const std::string temfname, const int char
     }    
   }
   infile->Close();
-  string outfile_name = fOutputDir + "_binnedTemplates.root";
+  gSystem->mkdir(("templates/"+fOutputDir).c_str(),true);
+  string outfile_name = "templates/" + fOutputDir + "/binnedTemplates.root";
   TFile outfile(outfile_name.c_str(), "RECREATE");
   for(unsigned int ibin=0; ibin<NBINS_PT; ibin++) {
     passPt[ibin]->Write();
@@ -1022,6 +1116,7 @@ void CEffZFitter::makeUnbinnedTemplates(const std::string temfname, const int ch
     }    
   }
   infile->Close();
+  
   string outfile_name = fOutputDir + "_unbinnedTemplates.root";
   TFile outfile(outfile_name.c_str(), "RECREATE");
   for(unsigned int ibin=0; ibin<NBINS_PT; ibin++) {
@@ -1091,7 +1186,7 @@ TGraphAsymmErrors* CEffZFitter::makeEffGraph(const std::vector<double> &edgesv,
     
     double eff, errl, errh;
     
-    if(fSigPass==0 && fSigFail==0) {  // Cut-and-count
+    if(fSigPass==CSignalModel::kNone && fSigFail==CSignalModel::kNone) {  // Cut-and-count
       performCount(eff, errl, errh,
                    ibin,
 		   edgesv[ibin], edgesv[ibin+1],
@@ -1115,7 +1210,7 @@ TGraphAsymmErrors* CEffZFitter::makeEffGraph(const std::vector<double> &edgesv,
 		   edgesv[ibin], edgesv[ibin+1], 
 		   0, 0,
                    passv[ibin], failv[ibin], 
-                   name, cpass, cfail); 
+                   name, cpass, cfail, 4); 
       }
     }  
     
@@ -1150,7 +1245,7 @@ void CEffZFitter::makeEffHist2D(TH2D *hEff, TH2D *hErrl, TH2D *hErrh,
       
       double eff, errl, errh;
 
-      if(fSigPass==0 && fSigFail==0) {  // Cut-and-count
+      if(fSigPass==CSignalModel::kNone && fSigFail==CSignalModel::kNone) {  // Cut-and-count
         performCount(eff, errl, errh, 
                      ibin, 
                      hEff->GetXaxis()->GetBinLowEdge(ix+1), hEff->GetXaxis()->GetBinLowEdge(ix+2),
@@ -1174,7 +1269,7 @@ void CEffZFitter::makeEffHist2D(TH2D *hEff, TH2D *hErrl, TH2D *hErrh,
                      hEff->GetXaxis()->GetBinLowEdge(ix+1), hEff->GetXaxis()->GetBinLowEdge(ix+2),
                      hEff->GetYaxis()->GetBinLowEdge(iy+1), hEff->GetYaxis()->GetBinLowEdge(iy+2),
                      passv[ibin], failv[ibin],
-                     name, cpass, cfail);
+                     name, cpass, cfail, 4);
         }
       }
 
@@ -1313,15 +1408,22 @@ void CEffZFitter::performCount(double &resEff, double &resErrl, double &resErrh,
 }
 
 //--------------------------------------------------------------------------------------------------
-void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
-                             const int ibin,
-			     const double xbinLo, const double xbinHi,
-			     const double ybinLo, const double ybinHi,
-                             TTree *passTree, TTree *failTree,
-                             const std::string name, TCanvas *cpass, TCanvas *cfail)
-{
-  RooRealVar m("m","mass",fFitMassLo,fFitMassHi);
-  m.setBins(10000);
+void CEffZFitter::performFit(
+  double &resEff,
+  double &resErrl,
+  double &resErrh,
+  const int ibin,
+  const double xbinLo,
+  const double xbinHi,
+  const double ybinLo,
+  const double ybinHi,
+  TTree *passTree,
+  TTree *failTree,
+  const std::string name,
+  TCanvas *cpass,
+  TCanvas *cfail,
+  unsigned int numThreads
+) {
   
   char pname[500];
   char binlabelx[1000];
@@ -1332,18 +1434,6 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
   char nsigstr[1000];
   char nbkgstr[1000];
   char chi2str[1000];
-  TFile *histfile = 0;
-  if(fSigPass==2 || fSigFail==2) {
-    string outfile_name = fOutputDir + "_binnedTemplates.root";
-    histfile = new TFile(outfile_name.c_str());
-    assert(histfile);
-  }
-  TFile *datfile = 0;
-  if(fSigPass==4 || fSigFail==4) {
-    string outfile_name = fOutputDir + "_unbinnedTemplates.root";
-    datfile = new TFile(outfile_name.c_str());
-    assert(datfile);
-  }
   
   // Define categories
   RooCategory sample("sample","");
@@ -1379,170 +1469,58 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
                                   RooFit::Import("Pass",*((RooDataSet*)dataPass)),
                                   RooFit::Import("Fail",*((RooDataSet*)dataFail))); 
   }
-  
-  // Define signal and background models
-  CSignalModel     *sigModPass = 0;
-  CBackgroundModel *bkgModPass = 0;
-  CSignalModel     *sigModFail = 0;
-  CBackgroundModel *bkgModFail = 0;
-  double ptMax=8000;
-  double ptMin=0;
+  double ptMax=0, ptMin=8000;
   if(name.compare("pt")==0) {
     ptMax=xbinHi;
     ptMin=xbinLo;
   } else if(name.compare("etapt")==0) {
     ptMax=ybinHi;
     ptMin=ybinLo;
-  }
- 
-  if(fSigPass==1) {
-    sigModPass = new CBreitWignerConvCrystalBall(m,true);
-  
-  } else if(fSigPass==2) { 
-    char hname[500];
-    sprintf(hname,"pass%s_%i",name.c_str(),ibin);
-    TH1D *h = (TH1D*)histfile->Get(hname);
-    assert(h);
-    sigModPass = new CMCTemplateConvGaussian(m,h,true);
-  
-  } else if(fSigPass==3) {
-    sigModPass = new CVoigtianCBShape(m,true);
-  
-  } else if(fSigPass==4) {
-    char tname[500];
-    sprintf(tname,"pass%s_%i",name.c_str(),ibin);
-    TTree *t = (TTree*)datfile->Get(tname);
-    assert(t);
-    sigModPass = new CMCDatasetConvGaussian(m,t,true);
-  } else if(fSigPass==5) {
-    sigModPass = new CBWCBPlusVoigt(m, true, ptMin, ptMax);
-  } else if(fSigPass==6) {
-    sigModPass = new CBWCBPlusVoigt(m, true, ptMin, ptMax, ibin, name, fRefDir);
-  }
-
-  if(fBkgPass==1) { 
-    bkgModPass = new CExponential(m,true);
-  
-  } else if(fBkgPass==2) {
-    bkgModPass = new CErfcExpo(m,true);
-     
-  } else if(fBkgPass==3) {
-    bkgModPass = new CDoubleExp(m,true);
-  
-  } else if(fBkgPass==4) {
-    bkgModPass = new CLinearExp(m,true);
-  
-  } else if(fBkgPass==5) {
-    bkgModPass = new CQuadraticExp(m,true);
-  } else if(fBkgPass==6) {
-    bkgModPass = new CErfcExpoFixed(m, true, ibin, name, fRefDir);
-  }
-
-  if(fSigFail==1) {
-    sigModFail = new CBreitWignerConvCrystalBall(m,false);
-  
-  } else if(fSigFail==2) {
-    char hname[500];
-    sprintf(hname,"fail%s_%i",name.c_str(),ibin);
-    TH1D *h = (TH1D*)histfile->Get(hname);
-    assert(h);
-    sigModFail = new CMCTemplateConvGaussian(m,h,false);//,((CMCTemplateConvGaussian*)sigPass)->sigma);
-
-  } else if(fSigFail==3) {
-    sigModFail = new CVoigtianCBShape(m,false);
-  
-  } else if(fSigFail==4) {
-    char tname[500];
-    sprintf(tname,"fail%s_%i",name.c_str(),ibin);
-    TTree *t = (TTree*)datfile->Get(tname);
-    assert(t);
-    sigModFail = new CMCDatasetConvGaussian(m,t,false);
-  } else if(fSigFail==5) {
-    sigModFail = new CBWCBPlusVoigt(m, false, ptMin, ptMax);
-  } else if(fSigFail==6) {
-    sigModFail = new CBWCBPlusVoigt(m, false, ptMin, ptMax, ibin, name, fRefDir);
-  }
-  if(fBkgFail==1) { 
-    bkgModFail = new CExponential(m,false);
-  
-  } else if(fBkgFail==2) {
-    bkgModFail = new CErfcExpo(m,false);
-
-  } else if(fBkgFail==3) {
-    bkgModFail = new CDoubleExp(m,false);
-    
-  } else if(fBkgFail==4) {
-    bkgModFail = new CLinearExp(m,false);
-  
-  } else if(fBkgFail==5) {
-    bkgModFail = new CQuadraticExp(m,false);
-  } else if(fBkgPass==6) {
-    bkgModFail = new CErfcExpoFixed(m, false, ibin, name, fRefDir);
-  }
-  
-  // Define free parameters
+  } 
+  createModels(ptMin, ptMax, name, ibin);
+   
+  // Define free parameters and initial values
   double NsigMax     = doBinned ? histPass.Integral()+histFail.Integral() : passTree->GetEntries()+failTree->GetEntries();
   double NbkgFailMax = doBinned ? histFail.Integral() : failTree->GetEntries();
   double NbkgPassMax = doBinned ? histPass.Integral() : passTree->GetEntries();
-  // Fine tuning constraints
-  //if(name.compare("pt")==0) {
-  //  if(xbinLo>=20) NbkgFailMax = NbkgFailMax * 0.3;
-  //  else if(xbinLo>=50) NbkgFailMax = NbkgFailMax * 0.05;
-  //} else if(name.compare("etapt")==0) {
-  //  if(ybinLo>=20) NbkgFailMax = NbkgFailMax * 0.3;
-  //  else if(ybinLo>=50) NbkgFailMax = NbkgFailMax * 0.05;
-  //}
-  NbkgPassMax = NbkgPassMax * 0.05;
-  RooRealVar Nsig("Nsig","Signal Yield",0.80*NsigMax,0,NsigMax);
-  RooRealVar eff("eff","Efficiency",0.8,0,1.0);
-  RooRealVar NbkgPass("NbkgPass","Background count in PASS sample",0.01*NbkgPassMax,0,NbkgPassMax);
-  RooRealVar NbkgFail("NbkgFail","Background count in FAIL sample",0.2*NbkgFailMax,0,NbkgFailMax);  
-  if(ptMin<=10) {
+  
+  Nsig    .removeRange();
+  eff     .removeRange();
+  NbkgPass.removeRange();
+  NbkgFail.removeRange();
+  Nsig    .setRange(0,NsigMax);
+  eff     .setRange(0,1.0);
+  NbkgPass.setRange(0,NbkgPassMax);
+  NbkgFail.setRange(0,NbkgFailMax);  
+  Nsig    .setVal(ptMin<=30 ? 0.6*NsigMax : 0.8*NsigMax);
+  NbkgPass.setVal(0.01*NbkgPassMax);
+  
+  // cheap way to estimate the efficiency
+  if(doBinned)  eff.setVal( 1./ (1. + histFail.GetBinContent(histFail.GetMaximumBin())/histPass.GetBinContent(histPass.GetMaximumBin()) ) );
+  else eff.setVal(.8);
+  
+  if(ptMin<=20) {
     NbkgFail.setVal(0.5*NbkgFailMax);
-    NbkgFail.setMin(0.5*NbkgFailMax);
-  }
-  if(ptMin>=40) {
-    NbkgFail.setVal(0);
-    NbkgFail.setMax(0.1*NbkgFailMax);
-  }
-  if(fBkgPass==0) NbkgPass.setVal(0);
-  if(fBkgFail==0) NbkgFail.setVal(0);
-  RooFormulaVar NsigPass("NsigPass","eff*Nsig",RooArgList(eff,Nsig));
-  RooFormulaVar NsigFail("NsigFail","(1.0-eff)*Nsig",RooArgList(eff,Nsig));
-  RooAddPdf *modelPass=0, *modelFail=0;
-  RooExtendPdf *esignalPass=0, *ebackgroundPass=0, *esignalFail=0, *ebackgroundFail=0;
-  if(fMassLo!=fFitMassLo || fMassHi!=fFitMassHi) {
-    m.setRange("signalRange",fMassLo,fMassHi);
-    
-    esignalPass     = new RooExtendPdf("esignalPass","esignalPass",*(sigModPass->model),NsigPass,"signalRange");
-    ebackgroundPass = new RooExtendPdf("ebackgroundPass","ebackgroundPass",(fBkgPass>0) ? *(bkgModPass->model) : *(sigModPass->model),NbkgPass,"signalRange");
-    modelPass       = new RooAddPdf("modelPass","Model for PASS sample",(fBkgPass>0) ? RooArgList(*esignalPass,*ebackgroundPass) : RooArgList(*esignalPass));    
-
-    esignalFail     = new RooExtendPdf("esignalFail","esignalFail",*(sigModFail->model),NsigFail,"signalRange");
-    ebackgroundFail = new RooExtendPdf("ebackgroundFail","ebackgroundFail",*(bkgModFail->model),NbkgFail,"signalRange");
-    modelFail       = new RooAddPdf("modelFail","Model for FAIL sample", (fBkgFail>0) ? RooArgList(*esignalFail,*ebackgroundFail) : RooArgList(*esignalFail));
-  
+  } else if(ptMin<=30) {
+    NbkgFail.setVal(0.3*NbkgFailMax);  
   } else {
-    modelPass = new RooAddPdf("modelPass","Model for PASS sample",
-                              (fBkgPass>0) ? RooArgList(*(sigModPass->model),*(bkgModPass->model)) :  RooArgList(*(sigModPass->model)),
-                              (fBkgPass>0) ? RooArgList(NsigPass,NbkgPass) : RooArgList(NsigPass));
-  
-    //modelFail = new RooAddPdf("modelFail","Model for FAIL sample",RooArgList(*(sigModFail->model),*(bkgModFail->model)),RooArgList(NsigFail,NbkgFail));
-    modelFail = new RooAddPdf("modelFail","Model for FAIL sample",
-                              (fBkgFail>0) ? RooArgList(*(sigModFail->model),*(bkgModFail->model)) :  RooArgList(*(sigModFail->model)),
-                              (fBkgFail>0) ? RooArgList(NsigFail,NbkgFail) : RooArgList(NsigFail));
+    NbkgFail.setVal(0.05*NbkgFailMax);  
   }
-  
+
+  if(fBkgPass==CBackgroundModel::kNone) NbkgPass.setVal(0);
+  if(fBkgFail==CBackgroundModel::kNone) NbkgFail.setVal(0);
+    
   RooSimultaneous totalPdf("totalPdf","totalPdf",sample);
   totalPdf.addPdf(*modelPass,"Pass");  
   totalPdf.addPdf(*modelFail,"Fail");
 
   RooFitResult *fitResult=0;
+  if(numThreads<1) numThreads=1;
   fitResult = totalPdf.fitTo(*dataCombined,
                              RooFit::Extended(),
                              RooFit::Strategy(2),
                              RooFit::Minos(RooArgSet(eff)),
-                             RooFit::NumCPU(4),
+                             RooFit::NumCPU(numThreads),
                              RooFit::Save());
  
   // Refit w/o MINOS if MINOS errors are strange...
@@ -1593,67 +1571,69 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
   modelFail->plotOn(mframeFail);
   modelFail->plotOn(mframeFail,Components("backgroundFail"),LineStyle(kDashed),LineColor(kRed));
   
-  //
-  // Plot passing probes
-  //
-  sprintf(pname,"pass%s_%i",name.c_str(),ibin);
-  sprintf(yield,"%u Events",(int)passTree->GetEntries());
-  sprintf(ylabel,"Events / %.1f GeV",(double)BIN_SIZE_PASS);
-  sprintf(nsigstr,"N_{sig} = %.1f #pm %.1f",NsigPass.getVal(),NsigPass.getPropagatedError(*fitResult));
-  sprintf(chi2str,"#chi^{2}/dof = %.3f",mframePass->chiSquare());
-  if(fBkgPass>0)
-    sprintf(nbkgstr,"N_{bkg} = %.1f #pm %.1f",NbkgPass.getVal(),NbkgPass.getPropagatedError(*fitResult));
-  CPlot plotPass(pname,mframePass,"","tag-probe mass [GeV]",ylabel);
-  plotPass.AddTextBox("Passing probes",0.70,0.93,0.95,0.99,0,kBlack,62,-1);
-  plotPass.AddTextBox(binlabelx,0.21,0.84,0.51,0.89,0,kBlack,42,-1);
-  if((name.compare("etapt")==0) || (name.compare("etaphi")==0)) {
-    plotPass.AddTextBox(binlabely,0.21,0.79,0.51,0.84,0,kBlack,42,-1);        
-    plotPass.AddTextBox(yield,0.21,0.74,0.51,0.79,0,kBlack,42,-1);    
-  } else {
-    plotPass.AddTextBox(yield,0.21,0.79,0.51,0.84,0,kBlack,42,-1);
-  }
-  plotPass.AddTextBox(effstr,0.69,0.84,0.94,0.89,0,kBlack,42,-1);
-  if(fBkgPass>0) {
-    plotPass.AddTextBox(0.69,0.68,0.94,0.83,0,kBlack,42,-1,2,nsigstr,nbkgstr);
-    //plotPass.AddTextBox(0.69,0.68,0.94,0.83,0,kBlack,42,-1,3,nsigstr,nbkgstr,chi2str);
-  } else {
-    plotPass.AddTextBox(0.69,0.73,0.94,0.83,0,kBlack,42,-1,1,nsigstr);
-    //plotPass.AddTextBox(0.69,0.73,0.94,0.83,0,kBlack,42,-1,2,nsigstr,chi2str);
-  }
-  plotPass.Draw(cpass,true,"png");
-  plotPass.Draw(cpass,true,"pdf");
- 
-  //
-  // Plot failing probes
-  //
-  sprintf(pname,"fail%s_%i",name.c_str(),ibin);
-  sprintf(yield,"%u Events",(int)failTree->GetEntries());
-  sprintf(ylabel,"Events / %.1f GeV",(double)BIN_SIZE_FAIL);
-  sprintf(nsigstr,"N_{sig} = %.1f #pm %.1f",NsigFail.getVal(),NsigFail.getPropagatedError(*fitResult));
-  sprintf(nbkgstr,"N_{bkg} = %.1f #pm %.1f",NbkgFail.getVal(),NbkgFail.getPropagatedError(*fitResult));
-  sprintf(chi2str,"#chi^{2}/dof = %.3f",mframePass->chiSquare());
-  CPlot plotFail(pname,mframeFail,"","tag-probe mass [GeV]",ylabel);
-  plotFail.AddTextBox("Failing probes",0.70,0.93,0.95,0.99,0,kBlack,62,-1);
-  plotFail.AddTextBox(binlabelx,0.21,0.84,0.51,0.89,0,kBlack,42,-1);
-  if((name.compare("etapt")==0) || (name.compare("etaphi")==0)) {
-    plotFail.AddTextBox(binlabely,0.21,0.79,0.51,0.84,0,kBlack,42,-1);    
-    plotFail.AddTextBox(yield,0.21,0.74,0.51,0.79,0,kBlack,42,-1);    
-  } else {
-    plotFail.AddTextBox(yield,0.21,0.79,0.51,0.84,0,kBlack,42,-1);
-  }
-  plotFail.AddTextBox(effstr,0.69,0.84,0.94,0.89,0,kBlack,42,-1);  
-  plotFail.AddTextBox(0.69,0.68,0.94,0.83,0,kBlack,42,-1,2,nsigstr,nbkgstr);
-  //plotFail.AddTextBox(0.69,0.68,0.94,0.83,0,kBlack,42,-1,3,nsigstr,nbkgstr,chi2str);
-  plotFail.Draw(cfail,true,"png");  
-  plotFail.Draw(cfail,true,"pdf");  
-  
+  if(fFitResDir=="") {
+    //
+    // Plot passing probes
+    //
+    sprintf(pname,"pass%s_%i",name.c_str(),ibin);
+    sprintf(yield,"%u Events",(int)passTree->GetEntries());
+    sprintf(ylabel,"Events / %.1f GeV",(double)BIN_SIZE_PASS);
+    sprintf(nsigstr,"N_{sig} = %.1f #pm %.1f",NsigPass.getVal(),NsigPass.getPropagatedError(*fitResult));
+    sprintf(chi2str,"#chi^{2}/dof = %.3f",mframePass->chiSquare());
+    if(fBkgPass!=CBackgroundModel::kNone)
+      sprintf(nbkgstr,"N_{bkg} = %.1f #pm %.1f",NbkgPass.getVal(),NbkgPass.getPropagatedError(*fitResult));
+    CPlot plotPass(pname,mframePass,"","tag-probe mass [GeV]",ylabel);
+    plotPass.AddTextBox("Passing probes",0.70,0.93,0.95,0.99,0,kBlack,62,-1);
+    plotPass.AddTextBox(binlabelx,0.21,0.84,0.51,0.89,0,kBlack,42,-1);
+    if((name.compare("etapt")==0) || (name.compare("etaphi")==0)) {
+      plotPass.AddTextBox(binlabely,0.21,0.79,0.51,0.84,0,kBlack,42,-1);        
+      plotPass.AddTextBox(yield,0.21,0.74,0.51,0.79,0,kBlack,42,-1);    
+    } else {
+      plotPass.AddTextBox(yield,0.21,0.79,0.51,0.84,0,kBlack,42,-1);
+    }
+    plotPass.AddTextBox(effstr,0.69,0.84,0.94,0.89,0,kBlack,42,-1);
+    if(fBkgPass!=CBackgroundModel::kNone) {
+      plotPass.AddTextBox(0.69,0.68,0.94,0.83,0,kBlack,42,-1,2,nsigstr,nbkgstr);
+      //plotPass.AddTextBox(0.69,0.68,0.94,0.83,0,kBlack,42,-1,3,nsigstr,nbkgstr,chi2str);
+    } else {
+      plotPass.AddTextBox(0.69,0.73,0.94,0.83,0,kBlack,42,-1,1,nsigstr);
+      //plotPass.AddTextBox(0.69,0.73,0.94,0.83,0,kBlack,42,-1,2,nsigstr,chi2str);
+    }
+    plotPass.Draw(cpass,true,"png");
+    plotPass.Draw(cpass,true,"pdf");
+   
+    //
+    // Plot failing probes
+    //
+    sprintf(pname,"fail%s_%i",name.c_str(),ibin);
+    sprintf(yield,"%u Events",(int)failTree->GetEntries());
+    sprintf(ylabel,"Events / %.1f GeV",(double)BIN_SIZE_FAIL);
+    sprintf(nsigstr,"N_{sig} = %.1f #pm %.1f",NsigFail.getVal(),NsigFail.getPropagatedError(*fitResult));
+    sprintf(nbkgstr,"N_{bkg} = %.1f #pm %.1f",NbkgFail.getVal(),NbkgFail.getPropagatedError(*fitResult));
+    sprintf(chi2str,"#chi^{2}/dof = %.3f",mframePass->chiSquare());
+    CPlot plotFail(pname,mframeFail,"","tag-probe mass [GeV]",ylabel);
+    plotFail.AddTextBox("Failing probes",0.70,0.93,0.95,0.99,0,kBlack,62,-1);
+    plotFail.AddTextBox(binlabelx,0.21,0.84,0.51,0.89,0,kBlack,42,-1);
+    if((name.compare("etapt")==0) || (name.compare("etaphi")==0)) {
+      plotFail.AddTextBox(binlabely,0.21,0.79,0.51,0.84,0,kBlack,42,-1);    
+      plotFail.AddTextBox(yield,0.21,0.74,0.51,0.79,0,kBlack,42,-1);    
+    } else {
+      plotFail.AddTextBox(yield,0.21,0.79,0.51,0.84,0,kBlack,42,-1);
+    }
+    plotFail.AddTextBox(effstr,0.69,0.84,0.94,0.89,0,kBlack,42,-1);  
+    plotFail.AddTextBox(0.69,0.68,0.94,0.83,0,kBlack,42,-1,2,nsigstr,nbkgstr);
+    //plotFail.AddTextBox(0.69,0.68,0.94,0.83,0,kBlack,42,-1,3,nsigstr,nbkgstr,chi2str);
+    plotFail.Draw(cfail,true,"png");  
+    plotFail.Draw(cfail,true,"pdf");  
+  } 
   //
   // Write fit results
   //
   ofstream txtfile;
   char txtfname[1000];    
-  sprintf(txtfname,"%s/fitres%s_%i.txt",CPlot::sOutDir.Data(),name.c_str(),ibin);
-  printf("\n\nSaved results to %s/fitres%s_%i.txt\n\n",CPlot::sOutDir.Data(),name.c_str(),ibin);
+  if(fFitResDir=="" || fMethodName=="") sprintf(txtfname,"%s/fitres%s_%i.txt",CPlot::sOutDir.Data(),name.c_str(),ibin);
+  else sprintf(txtfname, "%s/%s_fitres%s_%i.txt", fFitResDir.c_str(), fMethodName.c_str(), name.c_str(), ibin);
+  printf("\n\nSaved results to %s\n\n", txtfname);
   txtfile.open(txtfname);
   assert(txtfile.is_open());
   fitResult->printStream(txtfile,RooPrintable::kValue,RooPrintable::kVerbose);
@@ -1664,21 +1644,10 @@ void CEffZFitter::performFit(double &resEff, double &resErrl, double &resErrh,
   //
   // Clean up
   //
-  delete esignalPass;
-  delete ebackgroundPass;
-  delete esignalFail;
-  delete ebackgroundFail;
-  delete modelPass;
-  delete modelFail;  
+  destroyModels();
   delete dataCombined;
   delete dataPass;
   delete dataFail;
-  delete sigModPass;
-  delete bkgModPass;
-  delete sigModFail;
-  delete bkgModFail;        
-  delete histfile;
-  delete datfile;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -1826,4 +1795,325 @@ void CEffZFitter::makeHTML(const std::string name, const unsigned int nbins)
   htmlfile << "</body>" << endl;
   htmlfile << "</html>" << endl;
   htmlfile.close();
+}
+
+void CEffZFitter::generateToys(
+  const int numtoys
+) {
+  std::cout << "   [CEffZFitter] Generating toys " << std::endl;
+  assert(fIsInitialized);
+  // set up output directory
+  gSystem->mkdir(("toys/"+fOutputDir).c_str(),true);
+
+  fSigRefDir = fOutputDir;
+  fBkgRefDir = fOutputDir;
+      
+  TFile *histfile = 0;
+  string outfile_name = "templates/" + fOutputDir + "/binnedTemplates.root";
+  histfile = new TFile(outfile_name.c_str());
+  assert(histfile);
+
+  const unsigned int NBINS_PT     = fPtBinEdgesv.size()-1;
+  const unsigned int NBINS_ETA    = fEtaBinEdgesv.size()-1;
+  //const unsigned int NBINS_PHI    = fPhiBinEdgesv.size()-1;
+  //const unsigned int NBINS_ETAPT  = NBINS_ETA*NBINS_PT;
+  //const unsigned int NBINS_ETAPHI = NBINS_ETA*NBINS_PHI;
+  //const unsigned int NBINS_NPV    = fNPVBinEdgesv.size()-1;
+  double ptBinEdges[fPtBinEdgesv.size()];   for(unsigned int i=0; i<fPtBinEdgesv.size();  i++) { ptBinEdges[i]  = fPtBinEdgesv[i];  }
+  //double etaBinEdges[fEtaBinEdgesv.size()]; for(unsigned int i=0; i<fEtaBinEdgesv.size(); i++) { etaBinEdges[i] = fEtaBinEdgesv[i]; }
+  //double phiBinEdges[fPhiBinEdgesv.size()]; for(unsigned int i=0; i<fPhiBinEdgesv.size(); i++) { phiBinEdges[i] = fPhiBinEdgesv[i]; }
+  
+  assert(fDoEtaPt); // only support eta-pt toy study for now
+  assert(fSigPass==CSignalModel::kMCTemplateConvGaussianInit); // only support generating toys for MC gaussian binned signal for now
+  assert(fSigFail==CSignalModel::kMCTemplateConvGaussianInit); // only support generating toys for MC gaussian binned signal for now
+  assert(fBkgPass==CBackgroundModel::kErfcExpoFixed); // only support generating toys for CMSShape background for now
+  assert(fBkgFail==CBackgroundModel::kErfcExpoFixed); // only support generating toys for CMSShape background for now
+
+  // Define signal and background models
+  // Need to formally put this in a separate function and probably enumerate the models -- to do later
+  // For now most of it is yanked from performFit
+  for(unsigned int iy=0; iy < NBINS_PT; iy++) { for(unsigned int ix=0; ix < NBINS_ETA; ix++) {
+    printf("hi1 \n");
+    int ibin = iy*(NBINS_ETA) + ix; 
+    double ptMin=ptBinEdges[iy];
+    double ptMax=ptBinEdges[iy+1];
+    string name="etapt"; 
+    char hname[500];
+    
+    //signal pdfs
+    RooRealVar m("m","mass",fFitMassLo,fFitMassHi);
+    m.setBins(10000);
+
+    sprintf(hname,"pass%s_%i",name.c_str(),ibin);
+    TH1D *hpass = (TH1D*)histfile->Get(hname);
+    assert(hpass);
+    sigModPass = new CMCTemplateConvGaussian(m,hpass,true, 1, ibin, name, fOutputDir);
+    sprintf(hname,"fail%s_%i",name.c_str(),ibin);
+    TH1D *hfail = (TH1D*)histfile->Get(hname);
+    assert(hfail);
+    sigModFail = new CMCTemplateConvGaussian(m,hfail,false, 1, ibin, name, fOutputDir);
+    
+    //background pdfs
+    bkgModPass = new CErfcExpoFixed(m, true, ibin, name, fOutputDir);
+    bkgModFail = new CErfcExpoFixed(m, false, ibin, name, fOutputDir);
+    
+    std::vector<std::string> paramNames = { "Nsig", "eff", "NbkgPass", "NbkgFail"};
+    std::vector<double> params = sigModPass->readSigParams(ibin, name, paramNames, fOutputDir);
+    Nsig    .removeRange();
+    eff     .removeRange();
+    NbkgPass.removeRange();
+    NbkgFail.removeRange();
+    Nsig.setVal(params[0]);
+    eff.setVal(params[1]);
+    NbkgPass.setVal(params[2]);
+    NbkgFail.setVal(params[3]);
+    
+    createModels(ptMin, ptMax, name, ibin);
+    RooMCStudy *passToyMachine = new RooMCStudy(*modelPass, RooArgSet(m));
+    RooMCStudy *failToyMachine = new RooMCStudy(*modelFail, RooArgSet(m));
+    
+    char toyDir[512], toyFileName[512];
+    // make directories for the toys
+    for(int iToy=0; iToy<numtoys; iToy++) {
+      sprintf(toyDir, "toys/%s/toy%06d", fOutputDir.c_str(), iToy);
+      gSystem->mkdir(toyDir, true);
+
+    }
+    sprintf(toyFileName, "toys/%s/toy%%06d/pass_etapt_%d.dat", fOutputDir.c_str(), ibin);
+    passToyMachine->generate(numtoys, params[0]*params[1]+params[2], kFALSE, toyFileName);
+    
+    sprintf(toyFileName, "toys/%s/toy%%06d/fail_etapt_%d.dat", fOutputDir.c_str(), ibin);
+    failToyMachine->generate(numtoys, params[0]*(1.-params[1])+params[3] , kFALSE, toyFileName);
+    
+    delete passToyMachine,
+    delete failToyMachine,
+    delete esignalPass;
+    delete ebackgroundPass;
+    delete esignalFail;
+    delete ebackgroundFail;
+    delete modelPass;
+    delete modelFail;  
+    delete sigModPass;
+    delete bkgModPass;
+    delete sigModFail;
+    delete bkgModFail;        
+    //delete datfile;
+  }}
+  delete histfile;
+}
+
+void CEffZFitter::fitToy(
+  const std::string methodname,
+  const int toynum
+) {
+  fMethodName=methodname;
+  assert(fIsInitialized);
+  std::cout << "   [CEffZFitter] Fitting toy... " << std::endl;
+
+  const unsigned int NBINS_PT     = fPtBinEdgesv.size()-1;
+  const unsigned int NBINS_ETA    = fEtaBinEdgesv.size()-1;
+  //const unsigned int NBINS_PHI    = fPhiBinEdgesv.size()-1;
+  //const unsigned int NBINS_ETAPT  = NBINS_ETA*NBINS_PT;
+  //const unsigned int NBINS_ETAPHI = NBINS_ETA*NBINS_PHI;
+  //const unsigned int NBINS_NPV    = fNPVBinEdgesv.size()-1;
+  double ptBinEdges[fPtBinEdgesv.size()];   for(unsigned int i=0; i<fPtBinEdgesv.size();  i++) { ptBinEdges[i]  = fPtBinEdgesv[i];  }
+  double etaBinEdges[fEtaBinEdgesv.size()]; for(unsigned int i=0; i<fEtaBinEdgesv.size(); i++) { etaBinEdges[i] = fEtaBinEdgesv[i]; }
+  //double phiBinEdges[fPhiBinEdgesv.size()]; for(unsigned int i=0; i<fPhiBinEdgesv.size(); i++) { phiBinEdges[i] = fPhiBinEdgesv[i]; }
+  
+  assert(fDoEtaPt); // only support eta-pt toy study for now
+
+  // Define signal and background models
+  // For now most of it is yanked from performFit
+  for(unsigned int iy=0; iy < NBINS_PT; iy++) { for(unsigned int ix=0; ix < NBINS_ETA; ix++) {
+    int ibin = iy*(NBINS_ETA) + ix; 
+    double ptMin=ptBinEdges[iy];
+    double ptMax=ptBinEdges[iy+1];
+    double etaMin = etaBinEdges[ix];
+    double etaMax = etaBinEdges[ix+1];
+    string name="etapt"; 
+    
+    double eff, errl, errh;
+
+    char toyFileName[512];
+    TBranch *weightBranch;
+    float w=1;
+    
+    TTree *passTree = new TTree("passTree", "passTree");
+    passTree->SetDirectory(0);
+    sprintf(toyFileName, "toys/%s/toy%06d/pass_etapt_%d.dat", fOutputDir.c_str(), toynum, ibin);
+    passTree->ReadFile(toyFileName, "m");
+    weightBranch = passTree->Branch("w", &w, "w/F");
+    for(Long64_t i=0; i<passTree->GetEntries(); i++) {
+      weightBranch->Fill();
+    }
+    TTree *failTree = new TTree("failTree", "failTree");
+    failTree->SetDirectory(0);
+    sprintf(toyFileName, "toys/%s/toy%06d/fail_etapt_%d.dat", fOutputDir.c_str(), toynum, ibin);
+    failTree->ReadFile(toyFileName, "m");
+    weightBranch = failTree->Branch("w", &w, "w/F");
+    for(Long64_t i=0; i<failTree->GetEntries(); i++) {
+      weightBranch->Fill();
+    }
+    
+    //garbage canvases
+    TCanvas *cpass = new TCanvas ("cpass", "cpass");
+    TCanvas *cfail = new TCanvas ("cfail", "cfail");
+    char fitResDirStr[512];
+    sprintf(fitResDirStr, "toys/%s/toy%06d", fOutputDir.c_str(), toynum);
+    fFitResDir = string(fitResDirStr);
+    //printf("fFitResDir=\"%s\"\n", fFitResDir.c_str());
+    performFit(eff, errl, errh, ibin, etaMin, etaMax, ptMin, ptMax, passTree, failTree, name, cpass, cfail, 1);
+    
+    sprintf(toyFileName, "toys/%s/toy%06d/eff_%s_etapt_%d.txt", fOutputDir.c_str(), toynum, methodname.c_str(), ibin);
+    ofstream efficiencyFile;
+    efficiencyFile.open(toyFileName);
+    efficiencyFile << eff << " " << errl << " " << errh << std::endl;
+    efficiencyFile.close();
+
+    delete passTree;
+    delete failTree;
+    delete cpass;
+    delete cfail;
+  }}
+
+}
+void CEffZFitter::destroyModels() {
+  if(modelPass) delete modelPass;
+  if(modelFail) delete modelFail;
+  if(esignalPass)     delete esignalPass;
+  if(ebackgroundPass) delete ebackgroundPass;
+  if(esignalFail)     delete esignalFail;
+  if(ebackgroundFail) delete ebackgroundFail;
+  if(sigModPass) delete sigModPass;
+  if(bkgModPass) delete bkgModPass;
+  if(sigModFail) delete sigModFail;
+  if(bkgModFail) delete bkgModFail;
+}
+void CEffZFitter::createModels(
+  double ptMin, double ptMax, const std::string name, const int ibin
+) {
+  assert(fIsInitialized);
+  TFile *histfile = 0, *datfile = 0;
+  if(
+    fSigPass==CSignalModel::kMCTemplateConvGaussian || 
+    fSigPass==CSignalModel::kMCTemplateConvGaussianInit ||
+    fSigFail==CSignalModel::kMCTemplateConvGaussian || 
+    fSigFail==CSignalModel::kMCTemplateConvGaussianInit
+  ) {
+    string outfile_name = "templates/" + fOutputDir + "/binnedTemplates.root";
+    histfile = new TFile(outfile_name.c_str());
+    assert(histfile);
+  } else if(
+    fSigPass==CSignalModel::kMCDatasetConvGaussian ||
+    fSigFail==CSignalModel::kMCDatasetConvGaussian
+  ) {
+    string outfile_name = "templates/" + fOutputDir + "/unbinnedTemplates.root";
+    datfile = new TFile(outfile_name.c_str());
+    assert(datfile);
+  }
+ 
+  // Define signal and background models
+  if(fSigPass == CSignalModel::kBreitWignerConvCrystalBall) {
+    sigModPass = new CBreitWignerConvCrystalBall(m,true);
+  } else if(fSigPass==CSignalModel::kMCTemplateConvGaussian || fSigPass==CSignalModel::kMCTemplateConvGaussianInit) { 
+    char hname[500];
+    sprintf(hname,"pass%s_%i",name.c_str(),ibin);
+    TH1D *h = (TH1D*)histfile->Get(hname);
+    assert(h);
+    if(fSigPass==CSignalModel::kMCTemplateConvGaussian)
+      sigModPass = new CMCTemplateConvGaussian(m,h,true);
+    else if(fSigPass==CSignalModel::kMCTemplateConvGaussianInit)
+      sigModPass = new CMCTemplateConvGaussian(m,h,true,1,ibin,name,fSigRefDir);
+  } else if(fSigPass==CSignalModel::kVoigtianCBShape) {
+    sigModPass = new CVoigtianCBShape(m,true);
+  } else if(fSigPass==CSignalModel::kMCDatasetConvGaussian) {
+    char tname[500];
+    sprintf(tname,"pass%s_%i",name.c_str(),ibin);
+    TTree *t = (TTree*)datfile->Get(tname);
+    assert(t);
+    sigModPass = new CMCDatasetConvGaussian(m,t,true);
+  } else if(fSigPass==CSignalModel::kBWCBPlusVoigt) {
+    sigModPass = new CBWCBPlusVoigt(m, true, ptMin, ptMax);
+  } else if(fSigPass==CSignalModel::kBWCBPlusVoigtBounded) {
+    sigModPass = new CBWCBPlusVoigt(m, true, ptMin, ptMax, ibin, name, fSigRefDir);
+  }
+
+  //Passing background model
+  if(fBkgPass==CBackgroundModel::kExponential) { 
+    bkgModPass = new CExponential(m,true);
+  } else if(fBkgPass==CBackgroundModel::kErfcExpo) {
+    bkgModPass = new CErfcExpo(m,true);
+  } else if(fBkgPass==CBackgroundModel::kErfcExpoFixed) {
+    bkgModPass = new CErfcExpoFixed(m, true, ibin, name, fBkgRefDir);
+  } else if(fBkgPass==CBackgroundModel::kDoubleExp) {
+    bkgModPass = new CDoubleExp(m,true);
+  } else if(fBkgPass==CBackgroundModel::kLinearExp) {
+    bkgModPass = new CLinearExp(m,true);
+  } else if(fBkgPass==CBackgroundModel::kQuadraticExp) {
+    bkgModPass = new CQuadraticExp(m,true);
+  }
+
+  //Failing signal model
+  if(fSigFail == CSignalModel::kBreitWignerConvCrystalBall) {
+    sigModFail = new CBreitWignerConvCrystalBall(m,false);
+  } else if(fSigFail==CSignalModel::kMCTemplateConvGaussian || fSigFail==CSignalModel::kMCTemplateConvGaussianInit) { 
+    char hname[500];
+    sprintf(hname,"fail%s_%i",name.c_str(),ibin);
+    TH1D *h = (TH1D*)histfile->Get(hname);
+    assert(h);
+    if(fSigFail==CSignalModel::kMCTemplateConvGaussian)
+      sigModFail = new CMCTemplateConvGaussian(m,h,false);
+    else if(fSigFail==CSignalModel::kMCTemplateConvGaussianInit)
+      sigModFail = new CMCTemplateConvGaussian(m,h,false,1,ibin,name,fSigRefDir);
+  } else if(fSigFail==CSignalModel::kVoigtianCBShape) {
+    sigModFail = new CVoigtianCBShape(m,false);
+  } else if(fSigFail==CSignalModel::kMCDatasetConvGaussian) {
+    char tname[500];
+    sprintf(tname,"fail%s_%i",name.c_str(),ibin);
+    TTree *t = (TTree*)datfile->Get(tname);
+    assert(t);
+    sigModFail = new CMCDatasetConvGaussian(m,t,false);
+  } else if(fSigFail==CSignalModel::kBWCBPlusVoigt) {
+    sigModFail = new CBWCBPlusVoigt(m, false, ptMin, ptMax);
+  } else if(fSigFail==CSignalModel::kBWCBPlusVoigtBounded) {
+    sigModFail = new CBWCBPlusVoigt(m, false, ptMin, ptMax, ibin, name, fSigRefDir);
+  }
+
+  //Failing background model
+  if(fBkgFail==CBackgroundModel::kExponential) { 
+    bkgModFail = new CExponential(m,false);
+  } else if(fBkgFail==CBackgroundModel::kErfcExpo) {
+    bkgModFail = new CErfcExpo(m,false);
+  } else if(fBkgFail==CBackgroundModel::kErfcExpoFixed) {
+    bkgModFail = new CErfcExpoFixed(m, false, ibin, name, fBkgRefDir);
+  } else if(fBkgFail==CBackgroundModel::kDoubleExp) {
+    bkgModFail = new CDoubleExp(m,false);
+  } else if(fBkgFail==CBackgroundModel::kLinearExp) {
+    bkgModFail = new CLinearExp(m,false);
+  } else if(fBkgFail==CBackgroundModel::kQuadraticExp) {
+    bkgModFail = new CQuadraticExp(m,false);
+  }
+
+  if(fMassLo!=fFitMassLo || fMassHi!=fFitMassHi) {
+      m.setRange("signalRange",fMassLo,fMassHi);
+      
+      esignalPass     = new RooExtendPdf("esignalPass","esignalPass",*(sigModPass->model),NsigPass,"signalRange");
+      ebackgroundPass = new RooExtendPdf("ebackgroundPass","ebackgroundPass",(fBkgPass>0) ? *(bkgModPass->model) : *(sigModPass->model),NbkgPass,"signalRange");
+      modelPass       = new RooAddPdf("modelPass","Model for PASS sample",(fBkgPass>0) ? RooArgList(*esignalPass,*ebackgroundPass) : RooArgList(*esignalPass));    
+  
+      esignalFail     = new RooExtendPdf("esignalFail","esignalFail",*(sigModFail->model),NsigFail,"signalRange");
+      ebackgroundFail = new RooExtendPdf("ebackgroundFail","ebackgroundFail",*(bkgModFail->model),NbkgFail,"signalRange");
+      modelFail       = new RooAddPdf("modelFail","Model for FAIL sample", (fBkgFail>0) ? RooArgList(*esignalFail,*ebackgroundFail) : RooArgList(*esignalFail));
+    
+    } else {
+      modelPass = new RooAddPdf("modelPass","Model for PASS sample",
+                                (fBkgPass!=CBackgroundModel::kNone) ? RooArgList(*(sigModPass->model),*(bkgModPass->model)) :  RooArgList(*(sigModPass->model)),
+                                (fBkgPass!=CBackgroundModel::kNone) ? RooArgList(NsigPass,NbkgPass) : RooArgList(NsigPass));
+    
+      //modelFail = new RooAddPdf("modelFail","Model for FAIL sample",RooArgList(*(sigModFail->model),*(bkgModFail->model)),RooArgList(NsigFail,NbkgFail));
+      modelFail = new RooAddPdf("modelFail","Model for FAIL sample",
+                                (fBkgFail!=CBackgroundModel::kNone) ? RooArgList(*(sigModFail->model),*(bkgModFail->model)) :  RooArgList(*(sigModFail->model)),
+                                (fBkgFail!=CBackgroundModel::kNone) ? RooArgList(NsigFail,NbkgFail) : RooArgList(NsigFail));
+    }
+
 }

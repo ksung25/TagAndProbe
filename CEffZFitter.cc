@@ -497,8 +497,10 @@ void CEffZFitter::computeEff()
 
     CPlot plotEffPt("effpt","","probe p_{T} [GeV/c]","#varepsilon");
     plotEffPt.AddGraph(grEffPt,"",kBlack);
-    plotEffPt.SetYRange(0.6, 1.03);
-    plotEffPt.SetXRange(0.9*(fPtBinEdgesv[0]),1.1*(fPtBinEdgesv[NBINS_PT-1]));
+    //plotEffPt.SetYRange(0.6, 1.03);
+    plotEffPt.SetYRange(-0.03, 1.03);
+    plotEffPt.SetXRange(0.9*(fPtBinEdgesv[0]),1.1*(fPtBinEdgesv[NBINS_PT]));
+    plotEffPt.SetLogx();
     plotEffPt.Draw(c,true,"png"); 
     plotEffPt.Draw(c,true,"pdf"); 
   }
@@ -556,7 +558,7 @@ void CEffZFitter::computeEff()
     CPlot plotEffNPV("effnpv","","N_{PV}","#varepsilon");
     plotEffNPV.AddGraph(grEffNPV,"",kBlack);
     plotEffNPV.SetYRange(0.6, 1.03);
-    plotEffNPV.SetXRange(0.9*(fNPVBinEdgesv[0]),1.1*(fNPVBinEdgesv[NBINS_NPV-1]));
+    plotEffNPV.SetXRange(0.9*(fNPVBinEdgesv[0]),1.1*(fNPVBinEdgesv[NBINS_NPV]));
     plotEffNPV.Draw(c,true,"png"); 
     plotEffNPV.Draw(c,true,"pdf"); 
   }
@@ -588,26 +590,29 @@ void CEffZFitter::computeEff()
     txtfile << endl;
 
     hEffEtaPt->SetTitleOffset(1.2,"Y");
-    if(NBINS_PT>2) { hEffEtaPt->GetYaxis()->SetRangeUser(fPtBinEdgesv[0],fPtBinEdgesv[NBINS_PT-2]); }
+    if(NBINS_PT>2) { hEffEtaPt->GetYaxis()->SetRangeUser(fPtBinEdgesv[0],fPtBinEdgesv[NBINS_PT]); }
     CPlot plotEffEtaPt("effetapt","","probe #eta","probe p_{T} [GeV/c]");
     if(fDoAbsEta) { plotEffEtaPt.SetXTitle("probe |#eta|"); }
     plotEffEtaPt.AddHist2D(hEffEtaPt,"TEXT COLZ");
+    plotEffEtaPt.SetLogy();
     plotEffEtaPt.Draw(c,true,"png");
     plotEffEtaPt.Draw(c,true,"pdf");
 
     hErrlEtaPt->SetTitleOffset(1.2,"Y");
-    if(NBINS_PT>2) { hErrlEtaPt->GetYaxis()->SetRangeUser(fPtBinEdgesv[0],fPtBinEdgesv[NBINS_PT-2]); }
+    if(NBINS_PT>2) { hErrlEtaPt->GetYaxis()->SetRangeUser(fPtBinEdgesv[0],fPtBinEdgesv[NBINS_PT]); }
     CPlot plotErrlEtaPt("errletapt","","probe #eta","probe p_{T} [GeV/c]");
     if(fDoAbsEta) { plotErrlEtaPt.SetXTitle("probe |#eta|"); }
     plotErrlEtaPt.AddHist2D(hErrlEtaPt,"TEXT COLZ");
+    plotErrlEtaPt.SetLogy();
     plotErrlEtaPt.Draw(c,true,"png");
     plotErrlEtaPt.Draw(c,true,"pdf");
 
     hErrhEtaPt->SetTitleOffset(1.2,"Y");
-    if(NBINS_PT>2) { hErrhEtaPt->GetYaxis()->SetRangeUser(fPtBinEdgesv[0],fPtBinEdgesv[NBINS_PT-2]); }
+    if(NBINS_PT>2) { hErrhEtaPt->GetYaxis()->SetRangeUser(fPtBinEdgesv[0],fPtBinEdgesv[NBINS_PT]); }
     CPlot plotErrhEtaPt("errhetapt","","probe #eta","probe p_{T} [GeV/c]");
     if(fDoAbsEta) { plotErrhEtaPt.SetXTitle("probe |#eta|"); }
     plotErrhEtaPt.AddHist2D(hErrhEtaPt,"TEXT COLZ");
+    plotErrhEtaPt.SetLogy();
     plotErrhEtaPt.Draw(c,true,"png");
     plotErrhEtaPt.Draw(c,true,"pdf");
   }
@@ -622,13 +627,13 @@ void CEffZFitter::computeEff()
     hEffEtaPhi->SetTitleOffset(1.2,"Y");
     CPlot plotEffEtaPhi("effetaphi","","probe #eta","probe #phi");
     if(fDoAbsEta) { plotEffEtaPhi.SetXTitle("probe |#eta|"); }
-    plotEffEtaPhi.AddHist2D(hEffEtaPhi,"COLZ");
+    plotEffEtaPhi.AddHist2D(hEffEtaPhi,"TEXTE COLZ");
     plotEffEtaPhi.Draw(c,true,"png");
     plotEffEtaPhi.Draw(c,true,"pdf");
 
     hErrlEtaPhi->SetTitleOffset(1.2,"Y");
     CPlot plotErrlEtaPhi("errletaphi","","probe #eta","probe #phi");
-    plotErrlEtaPhi.AddHist2D(hErrlEtaPhi,"COLZ");
+    plotErrlEtaPhi.AddHist2D(hErrlEtaPhi,"TEXT COLZ");
     if(fDoAbsEta) { plotErrlEtaPhi.SetXTitle("probe |#eta|"); }
     plotErrlEtaPhi.Draw(c,true,"png");
     plotErrlEtaPhi.Draw(c,true,"pdf");
@@ -636,7 +641,7 @@ void CEffZFitter::computeEff()
     hErrhEtaPhi->SetTitleOffset(1.2,"Y");
     CPlot plotErrhEtaPhi("errhetaphi","","probe #eta","probe #phi");
     if(fDoAbsEta) { plotErrhEtaPhi.SetXTitle("probe |#eta|"); }
-    plotErrhEtaPhi.AddHist2D(hErrhEtaPhi,"COLZ");
+    plotErrhEtaPhi.AddHist2D(hErrhEtaPhi,"TEXT COLZ");
     plotErrhEtaPhi.Draw(c,true,"png");
     plotErrhEtaPhi.Draw(c,true,"pdf");
   }
@@ -1274,10 +1279,17 @@ void CEffZFitter::makeEffHist2D(TH2D *hEff, TH2D *hErrl, TH2D *hErrh,
       }
 
       hEff ->SetBinContent(hEff->GetBin(ix+1, iy+1), eff);
+      hEff ->SetBinError(hEff->GetBin(ix+1, iy+1), TMath::Max(errl,errh));
       hErrl->SetBinContent(hErrl->GetBin(ix+1, iy+1), errl);
       hErrh->SetBinContent(hErrh->GetBin(ix+1, iy+1), errh);
     }    
-  }  
+  }
+  hEff->SetMaximum(1.);
+  hEff->SetMinimum(0.);
+  hErrl->SetMaximum(.4);
+  hErrl->SetMinimum(0);
+  hErrh->SetMaximum(.4);
+  hErrh->SetMinimum(0);
   delete cpass;
   delete cfail;  
 }

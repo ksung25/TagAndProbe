@@ -31,8 +31,8 @@ mkdir -p ${tarballDir}/${7}
 libs="${repo_dir}/toyFitJob.sh ${repo_dir}/fitToy ${repo_dir}/${2} ${repo_dir}/CEffUser1D.o  ${repo_dir}/CEffUser2D.o  ${repo_dir}/CEffZFitter.o  ${repo_dir}/CPlot.o  ${repo_dir}/KStyle.o  ${repo_dir}/RooCMSShape.o  ${repo_dir}/RooVoigtianShape.o ${repo_dir}/libCEffUser1D.so  ${repo_dir}/libCEffUser2D.so  ${repo_dir}/libCEffZFitter.so  ${repo_dir}/libCPlot.so  ${repo_dir}/libKStyle.so  ${repo_dir}/libRooCMSShape.so  ${repo_dir}/libRooVoigtianShape.so"
 for i in `seq ${13} ${14}`
 do
-    dataTarball=`printf "${tarballDir}/${7}/${1}_toy%06d_tnpData.tgz" $i`
     selection_basename=`splitPath $7`
+    dataTarball=`printf "${tarballDir}/${7}/${1}_${selection_basename}_toy%06d_tnpData.tgz" $i`
     outputTarball=`printf "${1}_${selection_basename}_toy%06d_tnpOutput.tgz" $i`
     echo "Making tarball for the toy input files, fit result reference directories, and any existing MC templates: \"$dataTarball\""
     echo "Output tarball will arrive at: \"${work_dir}/$outputTarball\""

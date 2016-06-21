@@ -7,6 +7,7 @@
 #include <TLorentzVector.h>
 #include <vector>
 #include <fstream>
+#include <sstream>
 #include <TH1.h>
 #include <TH1F.h>
 #include <TH2.h>

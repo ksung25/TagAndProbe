@@ -52,8 +52,7 @@ void make_tnp_skim(
   int tau_trigger=6,
   double tag_pt_min = 30,
   double tag_eta_max = 2.1,
-  double truth_matching_dR = 0.3,
-  int electron_pretend_trigger=0 // when electron triggers aren't properly marked per-electron in the ntuples, need to improvise
+  double truth_matching_dR = 0.3
 ) {	
   ifstream ifs(list_of_files.c_str());
   if (!ifs) {
@@ -85,6 +84,8 @@ void make_tnp_skim(
   float        mass;                      // tag-probe mass
   int          qtag, qprobe;              // tag, probe charge
   float        truth_tag, truth_probe;              // tag, probe truth
+  float        met;                             // missing ET
+  int          njets;                           // number of jets
   TLorentzVector *p4_tag=0, *p4_probe=0;        // tag, probe 4-vector 
 
   TFile *electron_outfile;
@@ -105,8 +106,12 @@ void make_tnp_skim(
     electron_pair_tree->Branch("npu",      &npu,      "npu/F"      );  
     electron_pair_tree->Branch("scale1fb", &scale1fb, "scale1fb/F" );
     electron_pair_tree->Branch("mass",     &mass,     "mass/F"     );  
+    electron_pair_tree->Branch("mass",     &mass,     "mass/F"     );  
+    electron_pair_tree->Branch("mass",     &mass,     "mass/F"     );  
     electron_pair_tree->Branch("qtag",     &qtag,     "qtag/I"     );  
     electron_pair_tree->Branch("qprobe",   &qprobe,   "qprobe/I"   );  
+    electron_pair_tree->Branch("njets",    &njets,    "qprobe/I"   );  
+    electron_pair_tree->Branch("met",      &met,      "qprobe/F"   );  
     electron_pair_tree->Branch("tag",   "TLorentzVector", &p4_tag   );  
     electron_pair_tree->Branch("probe", "TLorentzVector", &p4_probe );          
     if(!real_data) {
@@ -129,6 +134,8 @@ void make_tnp_skim(
     muon_pair_tree->Branch("qprobe",   &qprobe,   "qprobe/I"   );  
     muon_pair_tree->Branch("tag",   "TLorentzVector", &p4_tag   );  
     muon_pair_tree->Branch("probe", "TLorentzVector", &p4_probe );      
+    muon_pair_tree->Branch("njets",    &njets,    "qprobe/I"   );  
+    muon_pair_tree->Branch("met",      &met,      "qprobe/F"   );  
     if(!real_data) {
       muon_pair_tree->Branch("truth_tag",     &truth_tag,     "truth_tag/F"     );  
       muon_pair_tree->Branch("truth_probe",   &truth_probe,   "truth_probe/F"   );  
@@ -149,6 +156,8 @@ void make_tnp_skim(
     tau_pair_tree->Branch("qprobe",   &qprobe,   "qprobe/I"   );  
     tau_pair_tree->Branch("tag",   "TLorentzVector", &p4_tag   );  
     tau_pair_tree->Branch("probe", "TLorentzVector", &p4_probe );      
+    tau_pair_tree->Branch("njets",    &njets,    "qprobe/I"   );  
+    tau_pair_tree->Branch("met",      &met,      "qprobe/F"   );  
     if(!real_data) {
       tau_pair_tree->Branch("truth_tag",     &truth_tag,     "truth_tag/I"     );  
       tau_pair_tree->Branch("truth_probe",   &truth_probe,   "truth_probe/I"   );  
@@ -405,10 +414,10 @@ void make_tnp_skim(
     for (Long64_t i=0; i<nentries;i++) {
       nbytes += events->GetEntry(i);
       //printf("runNum %d lumiNum %d\n", runNum, lumiNum);
-      if(real_data && !(good_run(runNum, lumiNum) )) { 
-        if(verbose) printf("rejecting event outside of good lumi list (runNumber=%d, lumiNum=%d)\n", runNum, lumiNum);  
-        continue;
-      }
+      //if(real_data && !(good_run(runNum, lumiNum) )) { 
+      //  if(verbose) printf("rejecting event outside of good lumi list (runNumber=%d, lumiNum=%d)\n", runNum, lumiNum);  
+      //  continue;
+      //}
       if(real_data && runNum > max_runNum) max_runNum=runNum;
       if(real_data && runNum < min_runNum) min_runNum=runNum;
       //reweighting
@@ -423,23 +432,20 @@ void make_tnp_skim(
       if(do_taus) n_tau = tauQ->size();
       //printf("%d leptons in event %lld\n",n_lep,eventNum);
 
-      //###################################################################################################
-      // Commented out code to veto events with jets and met for now
+      // Get number of tag leptons
+      vector<int> idLep; vector<int> idTight; vector<int> idSoft; unsigned int goodIsTight = 0;
+      for(unsigned int il=0; il<n_lep; il++) {
+        TLorentzVector *P4=(TLorentzVector*)lepP4->At(il);
+        if(
+          selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), tag_id, tag_iso)
+        ) {
+          idTight.push_back(1); idLep.push_back(il); goodIsTight++;
+        }
+      }
+      if(goodIsTight == 0) continue;
 
-      // Get the number of tight leptons
-      // if it's 0, there are no tags, so we should nopt waste any more time
-      //vector<int> idLep; vector<int> idTight; vector<int> idSoft; unsigned int goodIsTight = 0;
-      //for(unsigned int il=0; il<n_lep; il++) {
-      //  TLorentzVector *P4=(TLorentzVector*)lepP4->At(il);
-      //  if(
-      //    selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), 6, 6)
-      //  ) {
-      //    idTight.push_back(1); idLep.push_back(il); goodIsTight++;
-      //  }
-      //}
-      //if(goodIsTight == 0) continue;
-
-      // Veto events with significant MET
+      // Get the MET
+      met=((TLorentzVector*)metP4->At(0))->Pt();
       //double minMET  = TMath::Min(((TLorentzVector*)metP4->At(0))->Pt(),(double)trackMet->Pt());
       //if(minMET >= 30) {
       //  if(verbose) printf("rejecting event with MET %f >= 30\n", minMET);
@@ -448,43 +454,38 @@ void make_tnp_skim(
       //  if(verbose) printf("event passed MET cut with MET %f <= 30\n", minMET); 
       //}
       
-      // Veto events with jets
+      //Get the number of jets
       Float_t fMVACut[4][4];
       InitializeJetIdCuts(fMVACut);
 
-      //vector<int> idJet;
-      //bool isBtag = kFALSE;
-      //double bDiscrMax = 0.0;
-      //double dPhiJetMET = -1.0;
-      //for(int nj=0; nj<jetP4->GetEntriesFast(); nj++){
-      //  if(((TLorentzVector*)jetP4->At(nj))->Pt() < 10) continue;
-      //  bool passId = passJetId(fMVACut, (float)(*jetPuId)[nj], ((TLorentzVector*)(jetP4->At(nj)))->Pt(), TMath::Abs(((TLorentzVector*)(jetP4->At(nj)))->Eta()));
-      //  if(((TLorentzVector*)(jetP4->At(nj)))->Pt() < 30) continue;
-      //  if(passId == false) continue;        
+      vector<int> idJet;
+      bool isBtag = kFALSE;
+      double bDiscrMax = 0.0;
+      double dPhiJetMET = -1.0;
+      for(int nj=0; nj<jetP4->GetEntriesFast(); nj++){
+        if(((TLorentzVector*)jetP4->At(nj))->Pt() < 10) continue;
+        bool passId = passJetId(fMVACut, (float)(*jetPuId)[nj], ((TLorentzVector*)(jetP4->At(nj)))->Pt(), TMath::Abs(((TLorentzVector*)(jetP4->At(nj)))->Eta()));
+        if(((TLorentzVector*)(jetP4->At(nj)))->Pt() < 30) continue;
+        if(passId == false) continue;        
   
-      //  Bool_t isLepton = kFALSE;
-      //  // Check delta-R match of jet with the tight leptons
-      //  for(unsigned int jl=0; jl < n_lep; jl++) {
-      //    if(((TLorentzVector*)(jetP4->At(nj)))->DeltaR( *((TLorentzVector*)(*lepP4)[jl])) < 0.3)
-      //      isLepton = kTRUE;
-      //  }   
-      //  if(isLepton == kTRUE) continue;
+        Bool_t isLepton = kFALSE;
+        // Check delta-R match of jet with the tight leptons
+        for(unsigned int jl=0; jl < n_lep; jl++) {
+          if(((TLorentzVector*)(jetP4->At(nj)))->DeltaR( *((TLorentzVector*)(*lepP4)[jl])) < 0.3)
+            isLepton = kTRUE;
+        }   
+        if(isLepton == kTRUE) continue;
   
-      //  //if(dPhiJetMET   == -1) dPhiJetMET = TMath::Abs(((TLorentzVector*)(jetP4->At(nj)))->DeltaPhi( *((TLorentzVector*)(*metP4->At(0))) )*180./3.14159265;
+        //if(dPhiJetMET   == -1) dPhiJetMET = TMath::Abs(((TLorentzVector*)(jetP4->At(nj)))->DeltaPhi( *((TLorentzVector*)(*metP4->At(0))) )*180./3.14159265;
   
-      //  if(((TLorentzVector*)(jetP4->At(nj)))->Pt() > 15 &&  (float)((*jetBdiscr)[nj]) > bDiscrMax)
-      //    bDiscrMax = (float)((*jetBdiscr)[nj]);
+        if(((TLorentzVector*)(jetP4->At(nj)))->Pt() > 15 &&  (float)((*jetBdiscr)[nj]) > bDiscrMax)
+          bDiscrMax = (float)((*jetBdiscr)[nj]);
   
-      //  idJet.push_back(nj);
-      //}   
-      //if(idJet.size() > 0) {
-      //  if(verbose) printf("rejecting event with %lu jets\n", idJet.size());
-      //  continue;
-      //} else {
-      //  if(verbose) printf("event passed Njets cut with %lu jets\n", idJet.size());
-      //}
-      //###################################################################################################
-      
+        idJet.push_back(nj);
+      }   
+      njets=idJet.size();      
+
+      // Start collecting lepton and muon tags/probes
       std::vector<TLorentzVector> p4_ele_tag_, p4_ele_passing_probe_, p4_ele_failing_probe_, p4_mu_tag_, p4_mu_passing_probe_, p4_mu_failing_probe_;
       std::vector<int> q_ele_tag_, q_ele_passing_probe_, q_ele_failing_probe_, q_mu_tag_, q_mu_passing_probe_, q_mu_failing_probe_;
       // record truth info as 1 or 0
@@ -500,7 +501,6 @@ void make_tnp_skim(
           }
         }
         bool electron_trigger_matched=false, muon_trigger_matched=false;
-        // Now find tags and probes
         TLorentzVector *P4=(TLorentzVector*)lepP4->At(il);
         if( P4->Pt() >= 10.) {
           double truth=0;
@@ -522,9 +522,13 @@ void make_tnp_skim(
             }}
             if(truth==0 && !real_data && truth_matching) continue;
           }
-          
+          bool pass_tag_trigger;
           // Record Electron tags and probes
           if(abs( (*lepPdgId)[il]) == 11 && do_electrons) {
+            pass_tag_trigger=false;
+            if(real_data) {
+              pass_tag_trigger= (((*triggerLeps)[il] & (0x1 << electron_trigger)) != 0);
+            } else pass_tag_trigger=true;
             if(
               (passing_probe_iso >= 0 && (
                 selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), probe_id, probe_iso) &&
@@ -560,7 +564,7 @@ void make_tnp_skim(
               P4->Pt() >= tag_pt_min &&
               TMath::Abs(P4->Eta()) <= tag_eta_max &&
               selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), tag_id, tag_iso) &&
-              ( (((*triggerLeps)[il] & (0x1 << electron_trigger)) != 0) || !real_data)
+              pass_tag_trigger
             ) { // pass tag ID, and trigger matching
               p4_ele_tag_.push_back((*P4));
               if(verbose) printf("passed tag ID, relIso = %f < %f\n",(*lepIso)[il] / P4->Pt(), selectIsoCut(tag_id, (*lepPdgId)[il], P4->Eta()));
@@ -568,12 +572,17 @@ void make_tnp_skim(
               truth_ele_tag_.push_back(truth);
             } else {
               if((P4->Pt() < tag_pt_min || TMath::Abs(P4->Eta()) > tag_eta_max)  && verbose) printf("failed tag selection: (pT, eta) = (%f, %f)\n", P4->Pt(), P4->Eta());
-              if(! ( (((*triggerLeps)[il] & (0x1 << electron_trigger)) != 0) || !real_data) && verbose) printf("failed tag selection: trigger matching. triggerLeps = %d \n", (*triggerLeps)[il]);
+              if(!pass_tag_trigger && verbose) printf("failed tag selection: trigger matching. triggerLeps = %d \n", (*triggerLeps)[il]);
             }
           }
            
           //Record Muon tags and probes
           if(abs( (*lepPdgId)[il] ) == 13 && do_muons) {
+            pass_tag_trigger=false;
+            if(real_data) {
+              pass_tag_trigger= (((*triggerLeps)[il] & (0x1 << muon_trigger)) != 0);
+            } else pass_tag_trigger=true;
+ 
             if(
               (passing_probe_iso >= 0 && (
                 selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), probe_id, probe_iso) &&
@@ -604,13 +613,12 @@ void make_tnp_skim(
               q_mu_passing_probe_.push_back(charge);
               truth_mu_passing_probe_.push_back(truth);
             }
-          }
-          if(abs( (*lepPdgId)[il] ) == 13 && (do_muons)) {
+           
             if(
               P4->Pt() >= tag_pt_min &&
               TMath::Abs(P4->Eta()) <= tag_eta_max &&
               selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), tag_id, tag_iso) &&
-              ( (((*triggerLeps)[il] & (0x1 << muon_trigger)) != 0) || !real_data)
+              pass_tag_trigger
             ) { // pass tag muon ID, and trigger matching
               if(verbose) printf("passed tag ID, relIso = %f < %f\n",(*lepIso)[il] / P4->Pt(), selectIsoCut(tag_id, (*lepPdgId)[il], P4->Eta()));
               p4_mu_tag_.push_back((*P4));
@@ -618,13 +626,12 @@ void make_tnp_skim(
               truth_mu_tag_.push_back(truth);
             } else {
               if((P4->Pt() < tag_pt_min || TMath::Abs(P4->Eta()) > tag_eta_max)  && verbose) printf("failed tag selection: (pT, eta) = (%f, %f)\n", P4->Pt(), P4->Eta());
-              if(! ( (((*triggerLeps)[il] & (0x1 << muon_trigger)) != 0) || !real_data) && verbose) printf("failed tag selection: trigger matching. triggerLeps = %d \n", (*triggerLeps)[il]);
+              if(!pass_tag_trigger && verbose)  printf("failed tag selection: trigger matching. triggerLeps = %d \n", (*triggerLeps)[il]);
             }
           }
           
         }
       }}
-      
       
       std::vector<TLorentzVector> p4_tau_tag_, p4_tau_passing_probe_, p4_tau_failing_probe_;
       std::vector<int> q_tau_tag_, q_tau_passing_probe_, q_tau_failing_probe_;
@@ -972,10 +979,10 @@ void make_trigger_soup_skim(
   double tag_pt_min = 10,
   double tag_eta_max = 2.5
 ) {	
-  int tag_id            = 6;
-  int tag_iso           = 6;
-  int probe_id          = 6;
-  int probe_iso         = 6;
+  int tag_id            = 5;
+  int tag_iso           = 5;
+  int probe_id          = 5;
+  int probe_iso         = 5;
   std::vector<std::string> soup_triggers_ = split(list_of_soup_triggers, ',');
   //bool do_electrons = (flavor=="electrons");
   //bool do_muons = (flavor=="muons");
@@ -1101,10 +1108,10 @@ void make_trigger_soup_skim(
       usleep(30*1000*1000);
     }
  
-    TTree *events=(TTree*)input_file->Get("nero/events");
+    TTree *events=(TTree*)input_file->FindObjectAny("events");
     n_events+=events->GetEntriesFast();
     if(first_file) {
-      string list_of_trigger_names( ((TNamed*)input_file->Get("nero/triggerNames"))->GetTitle());
+      string list_of_trigger_names( ((TNamed*)input_file->FindObjectAny("triggerNames"))->GetTitle());
       std::vector< std::string > trigger_names_ = split(list_of_trigger_names,',');
       ofstream descriptor_file;
       descriptor_file.open(output_descriptor.c_str());
@@ -1275,14 +1282,16 @@ void make_emu_trigger_skim_ttbar(
   int tag_trigger=0,
   string tag_flavor="muons",
   string list_of_soup_triggers="1", // comma delimited list of trigger bits "1,2,3"
+  bool real_data = true,
   bool verbose = false,
-  double tag_pt_min = 30,
-  double tag_eta_max = 2.1
+  double tag_pt_min = 10,
+  double tag_eta_max = 2.4,
+  unsigned int minimum_b_jets = 1
 ) {	
-  int tag_id            = 4;
-  int tag_iso           = 4;
-  int probe_id          = 4;
-  int probe_iso         = 4;
+  int tag_id            = 5;
+  int tag_iso           = 5;
+  int probe_id          = 5;
+  int probe_iso         = 5;
   std::vector<std::string> soup_triggers_ = split(list_of_soup_triggers, ',');
 
   ifstream ifs(list_of_files.c_str());
@@ -1479,11 +1488,11 @@ void make_emu_trigger_skim_ttbar(
       usleep(30*1000*1000);
     }
  
-    TTree *events=(TTree*)input_file->Get("nero/events");
+    TTree *events=(TTree*)input_file->FindObjectAny("events");
     n_events+=events->GetEntriesFast();
     
-    if(first_file) {
-      string list_of_trigger_names( ((TNamed*)input_file->Get("nero/triggerNames"))->GetTitle());
+    if(first_file && real_data) {
+      string list_of_trigger_names( ((TNamed*)input_file->FindObjectAny("triggerNames"))->GetTitle());
       std::vector< std::string > trigger_names_ = split(list_of_trigger_names,',');
       ofstream descriptor_file;
       descriptor_file.open(output_descriptor.c_str());
@@ -1564,7 +1573,7 @@ void make_emu_trigger_skim_ttbar(
     nentries = events->GetEntries();
     for (Long64_t i=0; i<nentries;i++) {
       nbytes += events->GetEntry(i);
-      //printf("runNum %d lumiNum %d\n", runNum, lumiNum);
+      if(verbose) printf("runNum %d lumiNum %d\n", runNum, lumiNum);
       //if(!(good_run(runNum, lumiNum) )) { 
       //  if(verbose) printf("rejecting event outside of good lumi list (runNumber=%d, lumiNum=%d)\n", runNum, lumiNum);  
       //  continue;
@@ -1582,12 +1591,15 @@ void make_emu_trigger_skim_ttbar(
       for(unsigned int il=0; il<n_lep; il++) {
         TLorentzVector *P4=(TLorentzVector*)lepP4->At(il);
         if(
-          selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), 6, 6)
+          selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), 5, 5)
         ) {
           idTight.push_back(1); idLep.push_back(il); goodIsTight++;
         }
       }
-      if(goodIsTight == 0) continue;
+      if(goodIsTight == 0) {
+        if(verbose) printf("\tNo good leptons in this event\n");
+        continue;
+      }
 
       // Veto events with significant MET
       //double minMET  = TMath::Min(((TLorentzVector*)metP4->At(0))->Pt(),(double)trackMet->Pt());
@@ -1604,7 +1616,6 @@ void make_emu_trigger_skim_ttbar(
 
       vector<int> idJet;
       vector<double> jet_bDiscr;
-      bool isBtag = kFALSE;
       double bDiscrMax = 0.0;
       double dPhiJetMET = -1.0;
       for(int nj=0; nj<jetP4->GetEntriesFast(); nj++){
@@ -1637,14 +1648,24 @@ void make_emu_trigger_skim_ttbar(
       //  if(verbose) printf("One or more of the jets failed the btag (jet #0 bDiscr = %f, jet #1 bDiscr = %f)\n", jet_bDiscr[0], jet_bDiscr[1]);
       //  continue;
       //}
-      if(idJet.size() < 1) {
-        if(verbose) printf("rejecting event with njets=%lu (< 1)\n", idJet.size());
+      if(idJet.size() < minimum_b_jets) {
+        if(verbose) printf("\trejecting event with njets=%lu (< %d)\n", idJet.size(), minimum_b_jets);
         continue;
       }
       if(bDiscrMax < 0.4) {
-        if(verbose) printf("No btagged jets in this event (bDiscrMax = %f)\n", bDiscrMax);
+        if(verbose) printf("\tNo btagged jets in this event (bDiscrMax = %f)\n", bDiscrMax);
         continue;
       }
+      bool enough_b_jets=true;
+      for(unsigned int nj=0; nj<minimum_b_jets; nj++) {
+        if(jet_bDiscr[nj] < 0.4) {
+          if(verbose) printf("\tJet #%d not btagged enough (bDiscr %f  < 0.4)\n", nj, jet_bDiscr[nj]);
+          enough_b_jets=false;
+          break;
+        }
+      }
+      if(!enough_b_jets) continue;
+
       std::vector<TLorentzVector> p4_soup_tag_, p4_soup_passing_probe_, p4_soup_failing_probe_;
       std::vector<int> q_soup_tag_, q_soup_passing_probe_, q_soup_failing_probe_;
       unsigned int il;
@@ -1655,22 +1676,26 @@ void make_emu_trigger_skim_ttbar(
         if(P4->Pt() < 3) continue;
         int charge=1;
         if((*lepPdgId)[il] > 0)  charge=-1;
-        bool is_tag=false, is_probe_candidate=false, pass_trigger_soup=false;
+        bool pass_tag_trigger=false, is_tag=false, is_probe_candidate=false, pass_trigger_soup=false;
 
         // Loop over the trigger soup to see if this lepton passes any of those triggers
-        for(unsigned int it=0; it<soup_triggers_.size() && !pass_trigger_soup; it++) {
+        if(real_data) { for(unsigned int it=0; it<soup_triggers_.size() && !pass_trigger_soup; it++) {
           int soup_trigger;
           std::istringstream(soup_triggers_[it]) >> soup_trigger;
           if( ((*triggerLeps)[il] & (0x1 << soup_trigger)) != 0) pass_trigger_soup=true;
-        }
- 
+        }} 
+        else pass_trigger_soup=true;
+        
+        if(real_data) {
+          if(((*triggerLeps)[il] & (0x1 << tag_trigger)) == 0) pass_tag_trigger=true;
+        } else pass_tag_trigger=true;
         if(
           ((tag_flavor=="muons"     && abs((*lepPdgId)[il])==13 ) ||
            (tag_flavor=="electrons" && abs((*lepPdgId)[il])==11 )) &&
           P4->Pt() >= tag_pt_min &&
           TMath::Abs(P4->Eta()) <= tag_eta_max &&
           selector((*lepSelBits)[il], (*lepIso)[il] / P4->Pt(), P4->Eta(), abs( (*lepPdgId)[il]), tag_id, tag_iso) &&
-          ((*triggerLeps)[il] & (0x1 << tag_trigger)) == 0
+          pass_tag_trigger
         ) is_tag=true;
         
         if(
@@ -1680,17 +1705,17 @@ void make_emu_trigger_skim_ttbar(
         ) is_probe_candidate=true;
         
         if(is_tag) {
-          if(verbose) printf("passed tag ID\n");
+          if(verbose) printf("\tpassed tag ID\n");
           p4_soup_tag_.push_back((*P4));
           q_soup_tag_.push_back(charge);
         }
         if(is_probe_candidate && !pass_trigger_soup) {
-          if(verbose) printf("probe failed test ID, triggerLeps=%d\n", ((*triggerLeps)[il]) );
+          if(verbose) printf("\tprobe failed test ID, triggerLeps=%d\n", ((*triggerLeps)[il]) );
           p4_soup_failing_probe_.push_back((*P4));
           q_soup_failing_probe_.push_back(charge);
         }
         if(is_probe_candidate && pass_trigger_soup) {
-          if(verbose) printf("passed test ID\n");
+          if(verbose) printf("\tpassed test ID\n");
           p4_soup_passing_probe_.push_back((*P4));
           q_soup_passing_probe_.push_back(charge);
         }
@@ -1702,7 +1727,12 @@ void make_emu_trigger_skim_ttbar(
       out_evtNum=eventNum;
       out_npv=npv;
       npu=puTrueInt;
-      
+     if(p4_soup_tag_.size() > 0 && p4_soup_passing_probe_.size() + p4_soup_failing_probe_.size() > 0) {
+       if(verbose) printf("\tattempting to associate tag-probe pairs\n");
+     } else {
+       if(verbose) printf("\tcan't make any pairs in this event\n");
+       continue;
+     }
       // associate pairs
      for(unsigned int iTag=0; iTag < p4_soup_tag_.size(); iTag++) {
         // passing probes for electrons

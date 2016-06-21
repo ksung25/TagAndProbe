@@ -186,13 +186,51 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     h_sf->GetYaxis()->SetTitleSize(0.04);
     h_sf->GetYaxis()->SetLabelSize(0.02);
     h_sf->GetYaxis()->SetRangeUser(10, TMath::Min(h_sf->GetYaxis()->GetBinUpEdge(h_sf->GetNbinsY()), 200.));
-    h_sf->SetMinimum(.8);
-    h_sf->SetMaximum(1.2);
+    h_sf->SetMinimum(.5);
+    h_sf->SetMaximum(1.5);
     h_sf->SetMarkerSize(.9);
     palette_axis = (TPaletteAxis*) h_sf->GetListOfFunctions()->FindObject("palette"); 
     palette_axis->SetLabelSize(0.02);
     canvas->Update();
     canvas->Print((plots_dir + string(h_sf->GetName()) + ".png").c_str());
+
+    mitPalette();
+    h_sf_error_lo->Draw("TEXTE COLZ");
+    canvas->Update();
+    h_sf_error_lo->GetXaxis()->SetTitle("| #eta |");
+    h_sf_error_lo->GetXaxis()->SetTitleOffset(0.9);
+    h_sf_error_lo->GetXaxis()->SetTitleSize(0.04);
+    h_sf_error_lo->GetXaxis()->SetLabelSize(0.02);
+    h_sf_error_lo->GetYaxis()->SetTitle("p_{T} [GeV]");
+    h_sf_error_lo->GetYaxis()->SetTitleOffset(0.9);
+    h_sf_error_lo->GetYaxis()->SetTitleSize(0.04);
+    h_sf_error_lo->GetYaxis()->SetLabelSize(0.02);
+    h_sf_error_lo->GetYaxis()->SetRangeUser(10, TMath::Min(h_sf_error_lo->GetYaxis()->GetBinUpEdge(h_sf_error_lo->GetNbinsY()), 200.));
+    h_sf_error_lo->SetMinimum(0);
+    h_sf_error_lo->SetMaximum(0.5);
+    h_sf_error_lo->SetMarkerSize(.9);
+    palette_axis = (TPaletteAxis*) h_sf_error_lo->GetListOfFunctions()->FindObject("palette"); 
+    palette_axis->SetLabelSize(0.02);
+    canvas->Update();
+    canvas->Print((plots_dir + string(h_sf_error_lo->GetName()) + ".png").c_str());
+    h_sf_error_hi->Draw("TEXTE COLZ");
+    canvas->Update();
+    h_sf_error_hi->GetXaxis()->SetTitle("| #eta |");
+    h_sf_error_hi->GetXaxis()->SetTitleOffset(0.9);
+    h_sf_error_hi->GetXaxis()->SetTitleSize(0.04);
+    h_sf_error_hi->GetXaxis()->SetLabelSize(0.02);
+    h_sf_error_hi->GetYaxis()->SetTitle("p_{T} [GeV]");
+    h_sf_error_hi->GetYaxis()->SetTitleOffset(0.9);
+    h_sf_error_hi->GetYaxis()->SetTitleSize(0.04);
+    h_sf_error_hi->GetYaxis()->SetLabelSize(0.02);
+    h_sf_error_hi->GetYaxis()->SetRangeUser(10, TMath::Min(h_sf_error_hi->GetYaxis()->GetBinUpEdge(h_sf_error_hi->GetNbinsY()), 200.));
+    h_sf_error_hi->SetMinimum(0);
+    h_sf_error_hi->SetMaximum(0.5);
+    h_sf_error_hi->SetMarkerSize(.9);
+    palette_axis = (TPaletteAxis*) h_sf_error_hi->GetListOfFunctions()->FindObject("palette"); 
+    palette_axis->SetLabelSize(0.02);
+    canvas->Update();
+    canvas->Print((plots_dir + string(h_sf_error_hi->GetName()) + ".png").c_str());
 
     // Write to file
     output_rootfile->cd();
@@ -885,5 +923,456 @@ void plot_scale_factors(string plots_dir, string root_dir) {
   c_ele_sf_tight->Update();
   c_ele_sf_tight->Print((plots_dir+"unfactorized_scalefactors_Tight_ele.png").c_str());
   
+
+}
+/////////////////////////////////////////////////////////////////////////////
+void plot_sf_1d(string data_dir, string mc_dir, bool do_pt=true, bool do_eta=true, bool do_phi=true, bool do_npv=true, bool do_etapt=true) {
+  TColor *col_mit_red  = new TColor(mit_red,  163/255., 31/255.,  52/255.);
+  TColor *col_mit_gray = new TColor(mit_gray, 138/255., 139/255., 140/255.);
+
+  if( data_dir[data_dir.size()-1]  != '/' ) data_dir = data_dir + "/";
+  if( mc_dir[mc_dir.size()-1]  != '/' )  mc_dir  = mc_dir + "/";
+  TFile *f_data=TFile::Open((data_dir+"eff.root").c_str());
+  TFile *f_mc  =TFile::Open((mc_dir+"eff.root").c_str());
+  TGraphAsymmErrors *g_data_pt, 
+                    *g_data_eta,
+                    *g_data_phi,
+                    *g_data_npv,
+                    *g_mc_pt,  
+                    *g_mc_eta, 
+                    *g_mc_phi, 
+                    *g_mc_npv, 
+                    *g_ratio_pt, 
+                    *g_ratio_eta,
+                    *g_ratio_phi,
+                    *g_ratio_npv;
+  bool logx;
+  if(do_pt) {
+    g_data_pt  = (TGraphAsymmErrors*) f_data->Get("grEffPt");
+    g_mc_pt  = (TGraphAsymmErrors*) f_mc->Get("grEffPt");
+    g_ratio_pt  = (TGraphAsymmErrors*) g_data_pt ->Clone("g_ratio_pt");
+    g_data_pt ->SetTitle("");
+    g_mc_pt   ->SetTitle("");
+    g_ratio_pt ->SetTitle(""); 
+    unsigned int np_pt  = g_data_pt ->GetN();
+    for(unsigned int ip = 0; ip < np_pt; ip++) {
+      Double_t x_data,y_data,x_mc,y_mc;
+      g_data_pt->GetPoint(ip,x_data,y_data);
+      g_mc_pt->GetPoint(ip,x_mc,y_mc);
+      g_ratio_pt->SetPoint(ip, x_data, y_data/y_mc);
+      g_ratio_pt->SetPointError(ip,
+        g_data_pt->GetErrorXlow(ip),
+        g_data_pt->GetErrorXhigh(ip),
+        sqrt(pow(g_data_pt->GetErrorYlow(ip)/y_mc,2) + pow(g_mc_pt->GetErrorYhigh(ip)*y_data/(y_mc*y_mc),2)),
+        sqrt(pow(g_data_pt->GetErrorYhigh(ip)/y_mc,2) + pow(g_mc_pt->GetErrorYlow(ip)*y_data/(y_mc*y_mc),2))
+      );
+    }
+    logx=true;
+    TCanvas *canvas_pt = new TCanvas("canvas_pt", "canvas_pt", 640,480);
+    canvas_pt->SetMargin(0,0,0,0);
+    TPad *pad1_pt = new TPad("pad1_pt", "pad1_pt", 0, .3, 1, 1);
+    pad1_pt->SetGrid(0,1);
+    pad1_pt->SetMargin(0.1,0.04,0,.1);
+    pad1_pt->Draw();
+    pad1_pt->cd();
+    if(logx) pad1_pt->SetLogx();
+    g_mc_pt->GetYaxis()->SetTitleSize(15);
+    g_mc_pt->GetYaxis()->SetTitleFont(43);
+    g_mc_pt->GetYaxis()->SetTitleOffset(1.55);
+    g_mc_pt->SetMarkerColor(mit_red);
+    g_mc_pt->SetLineColor(mit_red);
+    g_mc_pt->GetYaxis()->SetTitle("#varepsilon");
+    g_mc_pt->Draw("ap");
+    g_mc_pt->SetMaximum(1.1);
+    g_mc_pt->SetMinimum(0.15);
+    g_data_pt->Draw("p same");
+    TPad *pad2_pt = new TPad("pad2_pt", "pad2_pt", 0, 0.05, 1, 0.3);
+    canvas_pt->cd();
+    pad2_pt->SetMargin(0.1,0.04,0.3,0);
+    pad2_pt->Draw();
+    pad2_pt->cd();
+    if(logx) pad2_pt->SetLogx();
+    g_ratio_pt->SetMaximum(1.2);
+    g_ratio_pt->SetMinimum(0.8);
+    if(logx) g_ratio_pt->GetXaxis()->SetMoreLogLabels();
+    g_ratio_pt->GetXaxis()->SetTitle("p_{T} [GeV]");
+    g_ratio_pt->GetYaxis()->SetTitle("Data/MC");
+    g_ratio_pt->GetYaxis()->SetNdivisions(5);
+    g_ratio_pt->GetYaxis()->SetTitleSize(15);
+    g_ratio_pt->GetYaxis()->SetTitleFont(43);
+    g_ratio_pt->GetYaxis()->SetTitleOffset(1.55);
+    g_ratio_pt->GetYaxis()->SetLabelFont(43); 
+    g_ratio_pt->GetYaxis()->SetLabelSize(15);
+    g_ratio_pt->GetXaxis()->SetTitleSize(15);
+    g_ratio_pt->GetXaxis()->SetTitleFont(43);
+    g_ratio_pt->GetXaxis()->SetTitleOffset(5.);
+    g_ratio_pt->GetXaxis()->SetLabelFont(43);
+    g_ratio_pt->GetXaxis()->SetLabelSize(15);
+    TLine *oneline_pt = new TLine(g_ratio_pt->GetXaxis()->GetXmin(),1,g_ratio_pt->GetXaxis()->GetXmax(),1);
+    oneline_pt->SetLineColor(mit_gray);
+    oneline_pt->SetLineWidth(1);
+    oneline_pt->SetLineStyle(3);
+    g_ratio_pt->Draw("ap");
+    oneline_pt->Draw("SAME");
+    g_ratio_pt->Draw("p same");
+    canvas_pt->Print((data_dir+"eff_ratio_pt.png").c_str());
+  }
+  if(do_eta) {
+    TGraphAsymmErrors *g_data_eta = (TGraphAsymmErrors*) f_data->Get("grEffEta");
+    TGraphAsymmErrors *g_mc_eta = (TGraphAsymmErrors*) f_mc->Get("grEffEta");
+    TGraphAsymmErrors *g_ratio_eta = (TGraphAsymmErrors*) g_data_eta->Clone("g_ratio_eta");
+    g_data_eta->SetTitle("");
+    g_mc_eta  ->SetTitle("");
+    g_ratio_eta->SetTitle(""); 
+    unsigned int np_eta = g_data_eta->GetN();
+    for(unsigned int ip = 0; ip < np_eta; ip++) {
+      Double_t x_data,y_data,x_mc,y_mc;
+      g_data_eta->GetPoint(ip,x_data,y_data);
+      g_mc_eta->GetPoint(ip,x_mc,y_mc);
+      g_ratio_eta->SetPoint(ip, x_data, y_data/y_mc);
+      g_ratio_eta->SetPointError(ip,
+        g_data_eta->GetErrorXlow(ip),
+        g_data_eta->GetErrorXhigh(ip),
+        sqrt(pow(g_data_eta->GetErrorYlow(ip)/y_mc,2) + pow(g_mc_eta->GetErrorYhigh(ip)*y_data/(y_mc*y_mc),2)),
+        sqrt(pow(g_data_eta->GetErrorYhigh(ip)/y_mc,2) + pow(g_mc_eta->GetErrorYlow(ip)*y_data/(y_mc*y_mc),2))
+      );
+    }
+    logx=false;
+    TCanvas *canvas_eta = new TCanvas("canvas_eta", "canvas_eta", 640,480);
+    canvas_eta->SetMargin(0,0,0,0);
+    TPad *pad1_eta = new TPad("pad1_eta", "pad1_eta", 0, .3, 1, 1);
+    pad1_eta->SetGrid(0,1);
+    pad1_eta->SetMargin(0.1,0.04,0,.1);
+    pad1_eta->Draw();
+    pad1_eta->cd();
+    if(logx) pad1_eta->SetLogx();
+    g_mc_eta->GetYaxis()->SetTitleSize(15);
+    g_mc_eta->GetYaxis()->SetTitleFont(43);
+    g_mc_eta->GetYaxis()->SetTitleOffset(1.55);
+    g_mc_eta->SetMarkerColor(mit_red);
+    g_mc_eta->SetLineColor(mit_red);
+    g_data_eta->GetYaxis()->SetTitle("#varepsilon");
+    g_data_eta->Draw("ap");
+    g_data_eta->SetMaximum(1.1);
+    g_data_eta->SetMinimum(0.15);
+    g_mc_eta->Draw("p same");
+    TPad *pad2_eta = new TPad("pad2_eta", "pad2_eta", 0, 0.05, 1, 0.3);
+    canvas_eta->cd();
+    pad2_eta->SetMargin(0.1,0.04,0.3,0);
+    pad2_eta->Draw();
+    pad2_eta->cd();
+    if(logx) pad2_eta->SetLogx();
+    g_ratio_eta->SetMaximum(1.2);
+    g_ratio_eta->SetMinimum(0.8);
+    if(logx) g_ratio_eta->GetXaxis()->SetMoreLogLabels();
+    g_ratio_eta->GetXaxis()->SetTitle("#eta");
+    g_ratio_eta->GetYaxis()->SetTitle("Data/MC");
+    g_ratio_eta->GetYaxis()->SetNdivisions(5);
+    g_ratio_eta->GetYaxis()->SetTitleSize(15);
+    g_ratio_eta->GetYaxis()->SetTitleFont(43);
+    g_ratio_eta->GetYaxis()->SetTitleOffset(1.55);
+    g_ratio_eta->GetYaxis()->SetLabelFont(43); 
+    g_ratio_eta->GetYaxis()->SetLabelSize(15);
+    g_ratio_eta->GetXaxis()->SetTitleSize(15);
+    g_ratio_eta->GetXaxis()->SetTitleFont(43);
+    g_ratio_eta->GetXaxis()->SetTitleOffset(5.);
+    g_ratio_eta->GetXaxis()->SetLabelFont(43);
+    g_ratio_eta->GetXaxis()->SetLabelSize(15);
+    TLine *oneline_eta = new TLine(g_ratio_eta->GetXaxis()->GetXmin(),1,g_ratio_eta->GetXaxis()->GetXmax(),1);
+    oneline_eta->SetLineColor(mit_gray);
+    oneline_eta->SetLineWidth(1);
+    oneline_eta->SetLineStyle(3);
+    g_ratio_eta->Draw("ap");
+    oneline_eta->Draw("SAME");
+    g_ratio_eta->Draw("p same");
+    canvas_eta->Print((data_dir+"eff_ratio_eta.png").c_str());
+  }
+  if(do_phi) {
+    TGraphAsymmErrors *g_data_phi = (TGraphAsymmErrors*) f_data->Get("grEffPhi");
+    TGraphAsymmErrors *g_mc_phi = (TGraphAsymmErrors*) f_mc->Get("grEffPhi");
+    TGraphAsymmErrors *g_ratio_phi = (TGraphAsymmErrors*) g_data_phi->Clone("g_ratio_phi");
+    g_data_phi->SetTitle("");
+    g_mc_phi  ->SetTitle("");
+    g_ratio_phi->SetTitle(""); 
+    unsigned int np_phi = g_data_phi->GetN();
+    for(unsigned int ip = 0; ip < np_phi; ip++) {
+      Double_t x_data,y_data,x_mc,y_mc;
+      g_data_phi->GetPoint(ip,x_data,y_data);
+      g_mc_phi->GetPoint(ip,x_mc,y_mc);
+      g_ratio_phi->SetPoint(ip, x_data, y_data/y_mc);
+      g_ratio_phi->SetPointError(ip,
+        g_data_phi->GetErrorXlow(ip),
+        g_data_phi->GetErrorXhigh(ip),
+        sqrt(pow(g_data_phi->GetErrorYlow(ip)/y_mc,2) + pow(g_mc_phi->GetErrorYhigh(ip)*y_data/(y_mc*y_mc),2)),
+        sqrt(pow(g_data_phi->GetErrorYhigh(ip)/y_mc,2) + pow(g_mc_phi->GetErrorYlow(ip)*y_data/(y_mc*y_mc),2))
+      );
+    }
+    logx=false;
+    TCanvas *canvas_phi = new TCanvas("canvas_phi", "canvas_phi", 640,480);
+    canvas_phi->SetMargin(0,0,0,0);
+    TPad *pad1_phi = new TPad("pad1_phi", "pad1_phi", 0, .3, 1, 1);
+    pad1_phi->SetGrid(0,1);
+    pad1_phi->SetMargin(0.1,0.04,0,.1);
+    pad1_phi->Draw();
+    pad1_phi->cd();
+    if(logx) pad1_phi->SetLogx();
+    g_mc_phi->GetYaxis()->SetTitleSize(15);
+    g_mc_phi->GetYaxis()->SetTitleFont(43);
+    g_mc_phi->GetYaxis()->SetTitleOffset(1.55);
+    g_mc_phi->SetMarkerColor(mit_red);
+    g_mc_phi->SetLineColor(mit_red);
+    g_data_phi->GetYaxis()->SetTitle("#varepsilon");
+    g_data_phi->Draw("ap");
+    g_data_phi->SetMaximum(1.1);
+    g_data_phi->SetMinimum(0.15);
+    g_mc_phi->Draw("p same");
+    TPad *pad2_phi = new TPad("pad2_phi", "pad2_phi", 0, 0.05, 1, 0.3);
+    canvas_phi->cd();
+    pad2_phi->SetMargin(0.1,0.04,0.3,0);
+    pad2_phi->Draw();
+    pad2_phi->cd();
+    if(logx) pad2_phi->SetLogx();
+    g_ratio_phi->SetMaximum(1.2);
+    g_ratio_phi->SetMinimum(0.8);
+    if(logx) g_ratio_phi->GetXaxis()->SetMoreLogLabels();
+    g_ratio_phi->GetXaxis()->SetTitle("#phi");
+    g_ratio_phi->GetYaxis()->SetTitle("Data/MC");
+    g_ratio_phi->GetYaxis()->SetNdivisions(5);
+    g_ratio_phi->GetYaxis()->SetTitleSize(15);
+    g_ratio_phi->GetYaxis()->SetTitleFont(43);
+    g_ratio_phi->GetYaxis()->SetTitleOffset(1.55);
+    g_ratio_phi->GetYaxis()->SetLabelFont(43); 
+    g_ratio_phi->GetYaxis()->SetLabelSize(15);
+    g_ratio_phi->GetXaxis()->SetTitleSize(15);
+    g_ratio_phi->GetXaxis()->SetTitleFont(43);
+    g_ratio_phi->GetXaxis()->SetTitleOffset(5.);
+    g_ratio_phi->GetXaxis()->SetLabelFont(43);
+    g_ratio_phi->GetXaxis()->SetLabelSize(15);
+    TLine *oneline_phi = new TLine(g_ratio_phi->GetXaxis()->GetXmin(),1,g_ratio_phi->GetXaxis()->GetXmax(),1);
+    oneline_phi->SetLineColor(mit_gray);
+    oneline_phi->SetLineWidth(1);
+    oneline_phi->SetLineStyle(3);
+    g_ratio_phi->Draw("ap");
+    oneline_phi->Draw("SAME");
+    g_ratio_phi->Draw("p same");
+    canvas_phi->Print((data_dir+"eff_ratio_phi.png").c_str());
+  }
+  if(do_npv) {
+    TGraphAsymmErrors *g_data_npv = (TGraphAsymmErrors*) f_data->Get("grEffNPV");
+    TGraphAsymmErrors *g_mc_npv = (TGraphAsymmErrors*) f_mc->Get("grEffNPV");
+    TGraphAsymmErrors *g_ratio_npv = (TGraphAsymmErrors*) g_data_npv->Clone("g_ratio_npv");
+    g_data_npv->SetTitle("");
+    g_mc_npv  ->SetTitle("");
+    g_ratio_npv->SetTitle(""); 
+    unsigned int np_npv = g_data_npv->GetN();
+    for(unsigned int ip = 0; ip < np_npv; ip++) {
+      Double_t x_data,y_data,x_mc,y_mc;
+      g_data_npv->GetPoint(ip,x_data,y_data);
+      g_mc_npv->GetPoint(ip,x_mc,y_mc);
+      g_ratio_npv->SetPoint(ip, x_data, y_data/y_mc);
+      g_ratio_npv->SetPointError(ip,
+        g_data_npv->GetErrorXlow(ip),
+        g_data_npv->GetErrorXhigh(ip),
+        sqrt(pow(g_data_npv->GetErrorYlow(ip)/y_mc,2) + pow(g_mc_npv->GetErrorYhigh(ip)*y_data/(y_mc*y_mc),2)),
+        sqrt(pow(g_data_npv->GetErrorYhigh(ip)/y_mc,2) + pow(g_mc_npv->GetErrorYlow(ip)*y_data/(y_mc*y_mc),2))
+      );
+    }
+    logx=false;
+    TCanvas *canvas_npv = new TCanvas("canvas_npv", "canvas_npv", 640,480);
+    canvas_npv->SetMargin(0,0,0,0);
+    TPad *pad1_npv = new TPad("pad1_npv", "pad1_npv", 0, .3, 1, 1);
+    pad1_npv->SetGrid(0,1);
+    pad1_npv->SetMargin(0.1,0.04,0,.1);
+    pad1_npv->Draw();
+    pad1_npv->cd();
+    if(logx) pad1_npv->SetLogx();
+    g_mc_npv->GetYaxis()->SetTitleSize(15);
+    g_mc_npv->GetYaxis()->SetTitleFont(43);
+    g_mc_npv->GetYaxis()->SetTitleOffset(1.55);
+    g_mc_npv->SetMarkerColor(mit_red);
+    g_mc_npv->SetLineColor(mit_red);
+    g_data_npv->GetYaxis()->SetTitle("#varepsilon");
+    g_data_npv->Draw("ap");
+    g_data_npv->SetMaximum(1.1);
+    g_data_npv->SetMinimum(0.15);
+    g_mc_npv->Draw("p same");
+    TPad *pad2_npv = new TPad("pad2_npv", "pad2_npv", 0, 0.05, 1, 0.3);
+    canvas_npv->cd();
+    pad2_npv->SetMargin(0.1,0.04,0.3,0);
+    pad2_npv->Draw();
+    pad2_npv->cd();
+    if(logx) pad2_npv->SetLogx();
+    g_ratio_npv->SetMaximum(1.2);
+    g_ratio_npv->SetMinimum(0.8);
+    if(logx) g_ratio_npv->GetXaxis()->SetMoreLogLabels();
+    g_ratio_npv->GetXaxis()->SetTitle("Number of primary vertices");
+    g_ratio_npv->GetYaxis()->SetTitle("Data/MC");
+    g_ratio_npv->GetYaxis()->SetNdivisions(5);
+    g_ratio_npv->GetYaxis()->SetTitleSize(15);
+    g_ratio_npv->GetYaxis()->SetTitleFont(43);
+    g_ratio_npv->GetYaxis()->SetTitleOffset(1.55);
+    g_ratio_npv->GetYaxis()->SetLabelFont(43); 
+    g_ratio_npv->GetYaxis()->SetLabelSize(15);
+    g_ratio_npv->GetXaxis()->SetTitleSize(15);
+    g_ratio_npv->GetXaxis()->SetTitleFont(43);
+    g_ratio_npv->GetXaxis()->SetTitleOffset(5.);
+    g_ratio_npv->GetXaxis()->SetLabelFont(43);
+    g_ratio_npv->GetXaxis()->SetLabelSize(15);
+    TLine *oneline_npv = new TLine(g_ratio_npv->GetXaxis()->GetXmin(),1,g_ratio_npv->GetXaxis()->GetXmax(),1);
+    oneline_npv->SetLineColor(mit_gray);
+    oneline_npv->SetLineWidth(1);
+    oneline_npv->SetLineStyle(3);
+    g_ratio_npv->Draw("ap");
+    oneline_npv->Draw("SAME");
+    g_ratio_npv->Draw("p same");
+    canvas_npv->Print((data_dir+"eff_ratio_npv.png").c_str());
+  }
+  TH2D *h_data_etapt_eff, *h_data_etapt_error_hi, *h_data_etapt_error_lo,
+       *h_mc_etapt_eff, *h_mc_etapt_error_hi, *h_mc_etapt_error_lo;
+  if(do_etapt) {
+    if(!do_pt) g_data_pt  = (TGraphAsymmErrors*) f_data->Get("grEffPt");
+    h_data_etapt_eff      = (TH2D*) f_data->Get("hEffEtaPt");
+    h_data_etapt_error_hi = (TH2D*) f_data->Get("hErrhEtaPt");
+    h_data_etapt_error_lo = (TH2D*) f_data->Get("hErrlEtaPt");
+    h_mc_etapt_eff      = (TH2D*) f_mc->Get("hEffEtaPt");
+    h_mc_etapt_error_hi = (TH2D*) f_mc->Get("hErrhEtaPt");
+    h_mc_etapt_error_lo = (TH2D*) f_mc->Get("hErrlEtaPt");
+    unsigned int nbins_eta = h_data_etapt_eff->GetNbinsX();
+    unsigned int nbins_pt = h_data_etapt_eff->GetNbinsY();
+    for(unsigned int nbin_eta = 1; nbin_eta<=nbins_eta; nbin_eta++) {
+      TGraphAsymmErrors *g_data_pt_etaslice = new TGraphAsymmErrors(nbins_pt);
+      TGraphAsymmErrors *g_mc_pt_etaslice = new TGraphAsymmErrors(nbins_pt);
+      TGraphAsymmErrors *g_ratio_pt_etaslice = new TGraphAsymmErrors(nbins_pt);
+      for(unsigned int nbin_pt=1; nbin_pt<=nbins_pt; nbin_pt++) {
+        unsigned int nbin_2d = h_data_etapt_eff->GetBin(nbin_eta, nbin_pt);
+        double data_eff      = h_data_etapt_eff->GetBinContent(nbin_2d),
+               data_error_hi = h_data_etapt_error_hi->GetBinContent(nbin_2d),
+               data_error_lo = h_data_etapt_error_lo->GetBinContent(nbin_2d),
+               mc_eff      = h_mc_etapt_eff->GetBinContent(nbin_2d),
+               mc_error_hi = h_mc_etapt_error_hi->GetBinContent(nbin_2d),
+               mc_error_lo = h_mc_etapt_error_lo->GetBinContent(nbin_2d);
+        double x_data, y_data;
+        g_data_pt->GetPoint(nbin_pt-1, x_data, y_data);
+        g_data_pt_etaslice->SetPoint(nbin_pt-1, x_data, data_eff);
+        g_data_pt_etaslice->SetPointError(nbin_pt-1,
+          g_data_pt->GetErrorXlow(nbin_pt-1),
+          g_data_pt->GetErrorXhigh(nbin_pt-1),
+          data_error_lo,
+          data_error_hi
+        );
+        g_mc_pt_etaslice->SetPoint(nbin_pt-1, x_data, mc_eff);
+        g_mc_pt_etaslice->SetPointError(nbin_pt-1,
+          g_data_pt->GetErrorXlow(nbin_pt-1),
+          g_data_pt->GetErrorXhigh(nbin_pt-1),
+          mc_error_lo,
+          mc_error_hi
+        );
+        g_ratio_pt_etaslice->SetPoint(nbin_pt-1, x_data, data_eff/mc_eff);
+        g_ratio_pt_etaslice->SetPointError(nbin_pt-1,
+          g_data_pt->GetErrorXlow(nbin_pt-1),
+          g_data_pt->GetErrorXhigh(nbin_pt-1),
+          sqrt(pow(data_error_hi/mc_eff,2) + pow(mc_error_lo*data_eff/(mc_eff*mc_eff),2)),
+          sqrt(pow(data_error_lo/mc_eff,2) + pow(mc_error_hi*data_eff/(mc_eff*mc_eff),2))
+        );
+      }
+      char title[512];
+      sprintf(title, "#varepsilon as p_{T} for |#eta| [%4.3f, %4.3f]", h_data_etapt_eff->GetXaxis()->GetBinLowEdge(nbin_eta), h_data_etapt_eff->GetXaxis()->GetBinUpEdge(nbin_eta));
+      g_data_pt_etaslice->SetTitle(title);
+      logx=false;
+      TCanvas *canvas_pt_etaslice = new TCanvas("canvas_pt_etaslice", "canvas_pt_etaslice", 640,480);
+      canvas_pt_etaslice->SetMargin(0,0,0,0);
+      TPad *pad1_pt_etaslice = new TPad("pad1_pt_etaslice", "pad1_pt_etaslice", 0, .3, 1, 1);
+      pad1_pt_etaslice->SetGrid(0,1);
+      pad1_pt_etaslice->SetMargin(0.1,0.04,0,.1);
+      pad1_pt_etaslice->Draw();
+      pad1_pt_etaslice->cd();
+      if(logx) pad1_pt_etaslice->SetLogx();
+      g_mc_pt_etaslice->GetYaxis()->SetTitleSize(15);
+      g_mc_pt_etaslice->GetYaxis()->SetTitleFont(43);
+      g_mc_pt_etaslice->GetYaxis()->SetTitleOffset(1.55);
+      g_mc_pt_etaslice->SetMarkerColor(mit_red);
+      g_mc_pt_etaslice->SetMarkerStyle(20);
+      g_mc_pt_etaslice->SetLineColor(mit_red);
+      g_data_pt_etaslice->GetYaxis()->SetTitle("#varepsilon");
+      g_data_pt_etaslice->SetMarkerStyle(20);
+      g_data_pt_etaslice->Draw("ap");
+      g_data_pt_etaslice->SetMaximum(1.1);
+      g_data_pt_etaslice->SetMinimum(0.15);
+      g_mc_pt_etaslice->Draw("p same");
+      TPad *pad2_pt_etaslice = new TPad("pad2_pt_etaslice", "pad2_pt_etaslice", 0, 0.05, 1, 0.3);
+      canvas_pt_etaslice->cd();
+      pad2_pt_etaslice->SetMargin(0.1,0.04,0.3,0);
+      pad2_pt_etaslice->Draw();
+      pad2_pt_etaslice->cd();
+      if(logx) pad2_pt_etaslice->SetLogx();
+      g_ratio_pt_etaslice->SetMaximum(1.2);
+      g_ratio_pt_etaslice->SetMinimum(0.8);
+      if(logx) g_ratio_pt_etaslice->GetXaxis()->SetMoreLogLabels();
+      g_ratio_pt_etaslice->SetMarkerStyle(20);
+      g_ratio_pt_etaslice->SetTitle("");
+      g_ratio_pt_etaslice->GetXaxis()->SetTitle("p_{T} [GeV]");
+      g_ratio_pt_etaslice->GetYaxis()->SetTitle("Data/MC");
+      g_ratio_pt_etaslice->GetYaxis()->SetNdivisions(5);
+      g_ratio_pt_etaslice->GetYaxis()->SetTitleSize(15);
+      g_ratio_pt_etaslice->GetYaxis()->SetTitleFont(43);
+      g_ratio_pt_etaslice->GetYaxis()->SetTitleOffset(1.55);
+      g_ratio_pt_etaslice->GetYaxis()->SetLabelFont(43); 
+      g_ratio_pt_etaslice->GetYaxis()->SetLabelSize(15);
+      g_ratio_pt_etaslice->GetXaxis()->SetTitleSize(15);
+      g_ratio_pt_etaslice->GetXaxis()->SetTitleFont(43);
+      g_ratio_pt_etaslice->GetXaxis()->SetTitleOffset(5.);
+      g_ratio_pt_etaslice->GetXaxis()->SetLabelFont(43);
+      g_ratio_pt_etaslice->GetXaxis()->SetLabelSize(15);
+      TLine *oneline_pt_etaslice = new TLine(g_ratio_pt_etaslice->GetXaxis()->GetXmin(),1,g_ratio_pt_etaslice->GetXaxis()->GetXmax(),1);
+      oneline_pt_etaslice->SetLineColor(mit_gray);
+      oneline_pt_etaslice->SetLineWidth(1);
+      oneline_pt_etaslice->SetLineStyle(3);
+      g_ratio_pt_etaslice->Draw("ap");
+      oneline_pt_etaslice->Draw("SAME");
+      g_ratio_pt_etaslice->Draw("p same");
+      char filename[512];
+      sprintf(filename, "%seff_ratio_pt_etaslice_%d.png", data_dir.c_str(), nbin_eta-1);
+      canvas_pt_etaslice->Print(filename);
+      delete canvas_pt_etaslice;
+    }
+  }
+
+}
+
+void make_some_ratio_plots_80x() {
+  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleElectron_BaselineToTight_electronTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToTight_electronTnP/");
+  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleElectron_BaselineToMedium_electronTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToMedium_electronTnP/");
+  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleElectron_BaselineToLoose_electronTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToLoose_electronTnP/");
+  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleElectron_BaselineToVeto_electronTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToVeto_electronTnP/");
+  
+  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleElectron_BaselineToTight_signEta_electronTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToTight_signEta_electronTnP/",false,true,false,false,false);
+  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleElectron_BaselineToMedium_signEta_electronTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToMedium_signEta_electronTnP/",false,true,false,false,false);
+  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleElectron_BaselineToLoose_signEta_electronTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToLoose_signEta_electronTnP/",false,true,false,false,false);
+  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleElectron_BaselineToVeto_signEta_electronTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToVeto_signEta_electronTnP/",false,true,false,false,false);
+
+  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleMuon_BaselineToTight_coarseEta_muonTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToTight_coarseEta_muonTnP/");
+  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleMuon_BaselineToMedium_coarseEta_muonTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToMedium_coarseEta_muonTnP/");
+  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleMuon_BaselineToLoose_coarseEta_muonTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToLoose_coarseEta_muonTnP/");
+  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleMuon_BaselineToTight_fineEta_muonTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToTight_fineEta_muonTnP/",false,true,false,false,false);
+  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleMuon_BaselineToMedium_fineEta_muonTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToMedium_fineEta_muonTnP/",false,true,false,false,false);
+  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleMuon_BaselineToLoose_fineEta_muonTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToLoose_fineEta_muonTnP/",false,true,false,false,false);
+
+}
+void make_some_ratio_plots_76x() {
+  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/SingleElectron_BaselineToTight_electronTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/DYJetsToLL_BaselineToTight_electronTnP/");
+  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/SingleElectron_BaselineToMedium_electronTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/DYJetsToLL_BaselineToMedium_electronTnP/");
+  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/SingleElectron_BaselineToLoose_electronTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/DYJetsToLL_BaselineToLoose_electronTnP/");
+  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/SingleElectron_BaselineToVeto_electronTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/DYJetsToLL_BaselineToVeto_electronTnP/");
+  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/SingleElectron_BaselineToTight_signEta_electronTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/DYJetsToLL_BaselineToTight_signEta_electronTnP/",false,true,false,false,false);
+  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/SingleElectron_BaselineToMedium_signEta_electronTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/DYJetsToLL_BaselineToMedium_signEta_electronTnP/",false,true,false,false,false);
+  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/SingleElectron_BaselineToLoose_signEta_electronTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/DYJetsToLL_BaselineToLoose_signEta_electronTnP/",false,true,false,false,false);
+  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/SingleElectron_BaselineToVeto_signEta_electronTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/DYJetsToLL_BaselineToVeto_signEta_electronTnP/",false,true,false,false,false);
+
+  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_muons_coarseEta/template_erfcexp/SingleMuon_BaselineToTight_muonTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_muons_coarseEta/template_erfcexp/DYJetsToLL_BaselineToTight_muonTnP/");
+  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_muons_coarseEta/template_erfcexp/SingleMuon_BaselineToMedium_muonTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_muons_coarseEta/template_erfcexp/DYJetsToLL_BaselineToMedium_muonTnP/");
+  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_muons_coarseEta/template_erfcexp/SingleMuon_BaselineToLoose_muonTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_muons_coarseEta/template_erfcexp/DYJetsToLL_BaselineToLoose_muonTnP/");
+  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_muons_fineEta/template_erfcexp/SingleMuon_BaselineToTight_muonTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_muons_fineEta/template_erfcexp/DYJetsToLL_BaselineToTight_muonTnP/",false,true,false,false,false);
+  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_muons_fineEta/template_erfcexp/SingleMuon_BaselineToMedium_muonTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_muons_fineEta/template_erfcexp/DYJetsToLL_BaselineToMedium_muonTnP/",false,true,false,false,false);
+  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_muons_fineEta/template_erfcexp/SingleMuon_BaselineToLoose_muonTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_muons_fineEta/template_erfcexp/DYJetsToLL_BaselineToLoose_muonTnP/",false,true,false,false,false);
 
 }

@@ -61,7 +61,9 @@ fDoEta        (false),
 fDoPhi        (false),
 fDoEtaPt      (false),
 fDoEtaPhi     (false),
-fDoNPV        (false)
+fDoNPV        (false),
+fDoJets       (false),
+fDoMET        (false)
 {}
 
 //--------------------------------------------------------------------------------------------------
@@ -73,12 +75,17 @@ CEffZFitter::~CEffZFitter()
   for(unsigned int i=0; i<fPassTreeEtaPtv.size(); i++)  { delete fPassTreeEtaPtv[i];  fPassTreeEtaPtv[i]=0; }
   for(unsigned int i=0; i<fPassTreeEtaPhiv.size(); i++) { delete fPassTreeEtaPhiv[i]; fPassTreeEtaPhiv[i]=0; }
   for(unsigned int i=0; i<fPassTreeNPVv.size(); i++)    { delete fPassTreeNPVv[i];    fPassTreeNPVv[i]=0; }
+  for(unsigned int i=0; i<fPassTreeJetsv.size(); i++)   { delete fPassTreeJetsv[i];   fPassTreeJetsv[i]=0; }
+  for(unsigned int i=0; i<fPassTreeMETv.size(); i++)    { delete fPassTreeMETv[i];    fPassTreeMETv[i]=0; }
+
   for(unsigned int i=0; i<fFailTreePtv.size(); i++)     { delete fFailTreePtv[i];     fFailTreePtv[i]=0; }
   for(unsigned int i=0; i<fFailTreeEtav.size(); i++)    { delete fFailTreeEtav[i];    fFailTreeEtav[i]=0; }
   for(unsigned int i=0; i<fFailTreePhiv.size(); i++)    { delete fFailTreePhiv[i];    fFailTreePhiv[i]=0; }
   for(unsigned int i=0; i<fFailTreeEtaPtv.size(); i++)  { delete fFailTreeEtaPtv[i];  fFailTreeEtaPtv[i]=0; }
   for(unsigned int i=0; i<fFailTreeEtaPhiv.size(); i++) { delete fFailTreeEtaPhiv[i]; fFailTreeEtaPhiv[i]=0; }
   for(unsigned int i=0; i<fFailTreeNPVv.size(); i++)    { delete fFailTreeNPVv[i];    fFailTreeNPVv[i]=0; }
+  for(unsigned int i=0; i<fFailTreeJetsv.size(); i++)   { delete fFailTreeJetsv[i];   fFailTreeJetsv[i]=0; }
+  for(unsigned int i=0; i<fFailTreeMETv.size(); i++)    { delete fFailTreeMETv[i];    fFailTreeMETv[i]=0; }
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -208,6 +215,8 @@ void CEffZFitter::prepareTrees(
   float        scale1fb;                  // event weight per 1/fb
   float        mass;                      // tag-probe mass
   int          qtag, qprobe;              // tag, probe charge
+  float        met;
+  int          njets;
   TLorentzVector *tag=0, *probe=0;        // tag, probe 4-vector
   
   TFile *infile = new TFile(infname.c_str());    assert(infile);
@@ -225,6 +234,8 @@ void CEffZFitter::prepareTrees(
   intree->SetBranchAddress("qprobe",   &qprobe);
   intree->SetBranchAddress("tag",      &tag);
   intree->SetBranchAddress("probe",    &probe);
+  intree->SetBranchAddress("met",      &met);
+  intree->SetBranchAddress("njets",    &njets);
 
   //
   // set up output trees
@@ -236,6 +247,8 @@ void CEffZFitter::prepareTrees(
   const unsigned int NBINS_ETAPT  = NBINS_ETA*NBINS_PT;
   const unsigned int NBINS_ETAPHI = NBINS_ETA*NBINS_PHI;
   const unsigned int NBINS_NPV    = fNPVBinEdgesv.size()-1;
+  const unsigned int NBINS_NJETS   = fJetsBinEdgesv.size()-1;
+  const unsigned int NBINS_MET    = fMETBinEdgesv.size()-1;
   
   char tname[500];
   float wgt;
@@ -318,6 +331,32 @@ void CEffZFitter::prepareTrees(
     fFailTreeNPVv[ibin]->SetDirectory(0);
   }
 
+  for(unsigned int ibin=0; ibin<NBINS_NJETS; ibin++) {
+    sprintf(tname,"passJets_%i",ibin);
+    fPassTreeJetsv.push_back(new TTree(tname,""));
+    fPassTreeJetsv[ibin]->Branch("m",&mass,"m/F");
+    fPassTreeJetsv[ibin]->Branch("w",&wgt, "w/F");
+    fPassTreeJetsv[ibin]->SetDirectory(0);
+    sprintf(tname,"failJets_%i",ibin);
+    fFailTreeJetsv.push_back(new TTree(tname,""));
+    fFailTreeJetsv[ibin]->Branch("m",&mass,"m/F");
+    fFailTreeJetsv[ibin]->Branch("w",&wgt, "w/F");
+    fFailTreeJetsv[ibin]->SetDirectory(0);
+  }
+
+  for(unsigned int ibin=0; ibin<NBINS_MET; ibin++) {
+    sprintf(tname,"passMET_%i",ibin);
+    fPassTreeMETv.push_back(new TTree(tname,""));
+    fPassTreeMETv[ibin]->Branch("m",&mass,"m/F");
+    fPassTreeMETv[ibin]->Branch("w",&wgt, "w/F");
+    fPassTreeMETv[ibin]->SetDirectory(0);
+    sprintf(tname,"failMET_%i",ibin);
+    fFailTreeMETv.push_back(new TTree(tname,""));
+    fFailTreeMETv[ibin]->Branch("m",&mass,"m/F");
+    fFailTreeMETv[ibin]->Branch("w",&wgt, "w/F");
+    fFailTreeMETv[ibin]->SetDirectory(0);
+  }
+
   std::cout << "   [CEffZFitter] Filling output trees " << std::endl;
 
   //
@@ -378,6 +417,18 @@ void CEffZFitter::prepareTrees(
         inpv = ibin; 
     if(inpv<0) continue;
 
+    int ijets=-1;
+    for(unsigned int ibin=0; ibin<NBINS_NJETS; ibin++)
+      if((njets >= fJetsBinEdgesv[ibin]) && (njets < fJetsBinEdgesv[ibin+1]))
+        ijets = ibin; 
+    if(ijets<0) continue;
+    
+    int imet=-1;
+    for(unsigned int ibin=0; ibin<NBINS_MET; ibin++)
+      if((met >= fMETBinEdgesv[ibin]) && (met < fMETBinEdgesv[ibin+1]))
+        imet = ibin; 
+    if(imet<0) continue;
+
     //
     // Fill trees
     //
@@ -388,6 +439,8 @@ void CEffZFitter::prepareTrees(
       fPassTreeEtaPtv[ipt*NBINS_ETA + ieta]->Fill();
       fPassTreeEtaPhiv[iphi*NBINS_ETA + ieta]->Fill();
       fPassTreeNPVv[inpv]->Fill();
+      fPassTreeJetsv[ijets]->Fill();
+      fPassTreeMETv[imet]->Fill();
     
     } else {
       fFailTreePtv[ipt]->Fill();
@@ -395,7 +448,8 @@ void CEffZFitter::prepareTrees(
       fFailTreePhiv[iphi]->Fill();
       fFailTreeEtaPtv[ipt*NBINS_ETA + ieta]->Fill();
       fFailTreeEtaPhiv[iphi*NBINS_ETA + ieta]->Fill();
-      fFailTreeNPVv[inpv]->Fill();
+      fFailTreeJetsv[ijets]->Fill();
+      fFailTreeMETv[imet]->Fill();
     }
   }
   delete infile;
@@ -424,6 +478,8 @@ void CEffZFitter::computeEff()
   const unsigned int NBINS_ETAPT  = NBINS_ETA*NBINS_PT;
   const unsigned int NBINS_ETAPHI = NBINS_ETA*NBINS_PHI;
   const unsigned int NBINS_NPV    = fNPVBinEdgesv.size()-1;
+  const unsigned int NBINS_NJETS  = fJetsBinEdgesv.size()-1;
+  const unsigned int NBINS_MET    = fMETBinEdgesv.size()-1;
   double ptBinEdges[fPtBinEdgesv.size()];   for(unsigned int i=0; i<fPtBinEdgesv.size();  i++) { ptBinEdges[i]  = fPtBinEdgesv[i];  }
   double etaBinEdges[fEtaBinEdgesv.size()]; for(unsigned int i=0; i<fEtaBinEdgesv.size(); i++) { etaBinEdges[i] = fEtaBinEdgesv[i]; }
   double phiBinEdges[fPhiBinEdgesv.size()]; for(unsigned int i=0; i<fPhiBinEdgesv.size(); i++) { phiBinEdges[i] = fPhiBinEdgesv[i]; }
@@ -432,6 +488,8 @@ void CEffZFitter::computeEff()
   TGraphAsymmErrors *grEffEta=0;
   TGraphAsymmErrors *grEffPhi=0;
   TGraphAsymmErrors *grEffNPV=0;
+  TGraphAsymmErrors *grEffJets=0;
+  TGraphAsymmErrors *grEffMET=0;
   TH2D *hEffEtaPt   = new TH2D("hEffEtaPt","",NBINS_ETA,etaBinEdges,NBINS_PT,ptBinEdges);
   TH2D *hErrlEtaPt  = (TH2D*)hEffEtaPt->Clone("hErrlEtaPt");
   TH2D *hErrhEtaPt  = (TH2D*)hEffEtaPt->Clone("hErrhEtaPt");
@@ -443,6 +501,8 @@ void CEffZFitter::computeEff()
   if(fDoEta)    { grEffEta = makeEffGraph(fEtaBinEdgesv, fPassTreeEtav, fFailTreeEtav, "eta"); grEffEta->SetName("grEffEta"); }
   if(fDoPhi)    { grEffPhi = makeEffGraph(fPhiBinEdgesv, fPassTreePhiv, fFailTreePhiv, "phi"); grEffPhi->SetName("grEffPhi"); }
   if(fDoNPV)    { grEffNPV = makeEffGraph(fNPVBinEdgesv, fPassTreeNPVv, fFailTreeNPVv, "npv"); grEffNPV->SetName("grEffNPV"); }
+  if(fDoJets)    { grEffJets = makeEffGraph(fJetsBinEdgesv, fPassTreeJetsv, fFailTreeJetsv, "jets"); grEffJets->SetName("grEffJets"); }
+  if(fDoMET)    { grEffMET = makeEffGraph(fMETBinEdgesv, fPassTreeMETv, fFailTreeMETv, "met"); grEffMET->SetName("grEffMET"); }
   if(fDoEtaPt)  { makeEffHist2D(hEffEtaPt, hErrlEtaPt, hErrhEtaPt, fPassTreeEtaPtv, fFailTreeEtaPtv, "etapt"); }
   if(fDoEtaPhi) { makeEffHist2D(hEffEtaPhi, hErrlEtaPhi, hErrhEtaPhi, fPassTreeEtaPhiv, fFailTreeEtaPhiv, "etaphi"); }
   
@@ -455,10 +515,12 @@ void CEffZFitter::computeEff()
   //
   std::string outfname = fOutputDir + std::string("/eff.root");
   TFile *outfile = new TFile(outfname.c_str(), "RECREATE");
-  if(grEffPt)  grEffPt->Write();
-  if(grEffEta) grEffEta->Write();
-  if(grEffPhi) grEffPhi->Write();
-  if(grEffNPV) grEffNPV->Write();
+  if(grEffPt)   grEffPt->Write();
+  if(grEffEta)  grEffEta->Write();
+  if(grEffPhi)  grEffPhi->Write();
+  if(grEffNPV)  grEffNPV->Write();
+  if(grEffJets) grEffJets->Write();
+  if(grEffMET)  grEffMET->Write();
   hEffEtaPt->Write();
   hErrlEtaPt->Write();
   hErrhEtaPt->Write();
@@ -564,6 +626,38 @@ void CEffZFitter::computeEff()
     plotEffNPV.Draw(c,true,"pdf"); 
   }
 
+  if(grEffJets) {
+    effnpv.loadEff(grEffJets);
+    effnpv.printEff(txtfile);
+    txtfile << endl;
+    effnpv.printErrLow(txtfile);
+    txtfile << endl;
+    effnpv.printErrHigh(txtfile);
+
+    CPlot plotEffJets("effjets","","n_{jets}","#varepsilon");
+    plotEffJets.AddGraph(grEffJets,"",kBlack);
+    plotEffJets.SetYRange(0.6, 1.03);
+    plotEffJets.SetXRange(0.9*(fJetsBinEdgesv[0]),1.1*(fJetsBinEdgesv[NBINS_NJETS]));
+    plotEffJets.Draw(c,true,"png"); 
+    plotEffJets.Draw(c,true,"pdf"); 
+  }
+
+  if(grEffMET) {
+    effnpv.loadEff(grEffMET);
+    effnpv.printEff(txtfile);
+    txtfile << endl;
+    effnpv.printErrLow(txtfile);
+    txtfile << endl;
+    effnpv.printErrHigh(txtfile);
+
+    CPlot plotEffMET("effnpv","","N_{PV}","#varepsilon");
+    plotEffMET.AddGraph(grEffMET,"",kBlack);
+    plotEffMET.SetYRange(0.6, 1.03);
+    plotEffMET.SetXRange(0.9*(fMETBinEdgesv[0]),1.1*(fMETBinEdgesv[NBINS_MET]));
+    plotEffMET.Draw(c,true,"png"); 
+    plotEffMET.Draw(c,true,"pdf"); 
+  }
+
 
   gStyle->SetPaintTextFormat("3.2f");
   bool use_mit_palette=true; 
@@ -658,6 +752,8 @@ void CEffZFitter::computeEff()
   makeHTML("eta",    NBINS_ETA);
   makeHTML("phi",    NBINS_PHI);
   makeHTML("npv",    NBINS_NPV);  
+  makeHTML("jets",   NBINS_NJETS);  
+  makeHTML("MET",    NBINS_MET);  
   makeHTML("etapt",  NBINS_ETAPT);
   makeHTML("etaphi", NBINS_ETAPHI);
   
@@ -665,7 +761,9 @@ void CEffZFitter::computeEff()
   delete grEffEta;
   delete grEffPhi;
   delete grEffNPV;
-  grEffPt=0, grEffEta=0, grEffPhi=0, grEffNPV=0;
+  delete grEffJets;
+  delete grEffMET;
+  grEffPt=0, grEffEta=0, grEffPhi=0, grEffNPV=0, grEffJets=0, grEffMET=0;
   
   delete hEffEtaPt;
   delete hErrlEtaPt;
@@ -694,7 +792,7 @@ void CEffZFitter::parseConf(const std::string conf)
   assert(ifs.is_open());
   std::string line;
   int state=0;
-  int opts[6];
+  int opts[8];
   while(getline(ifs,line)) {
     if(line[0]=='#') continue;
     if(line[0]=='%') { 
@@ -705,13 +803,15 @@ void CEffZFitter::parseConf(const std::string conf)
     double edge;
     std::stringstream ss(line);
     if(state==0) {
-      ss >> opts[0] >> opts[1] >> opts[2] >> opts[3] >> opts[4] >> opts[5];
+      ss >> opts[0] >> opts[1] >> opts[2] >> opts[3] >> opts[4] >> opts[5] >> opts[6] >> opts[7];
       fDoPt     = (opts[0]==1);
       fDoEta    = (opts[1]==1);
       fDoPhi    = (opts[2]==1);
       fDoNPV    = (opts[3]==1);
-      fDoEtaPt  = (opts[4]==1);
-      fDoEtaPhi = (opts[5]==1);
+      fDoJets   = (opts[4]==1);
+      fDoMET    = (opts[5]==1);
+      fDoEtaPt  = (opts[6]==1);
+      fDoEtaPhi = (opts[7]==1);
     
     } else {
       ss >> edge;
@@ -721,6 +821,8 @@ void CEffZFitter::parseConf(const std::string conf)
       else if(state==4) { fDoAbsPhi = (int(edge)==1); state++; }
       else if(state==5) { fPhiBinEdgesv.push_back(edge); }
       else if(state==6) { fNPVBinEdgesv.push_back(edge); }
+      else if(state==7) { fJetsBinEdgesv.push_back(edge); }
+      else if(state==8) { fMETBinEdgesv.push_back(edge); }
     }
   }
   ifs.close();
@@ -804,7 +906,28 @@ void CEffZFitter::makeBinnedTemplates(const std::string temfname, const int char
     failNPV[ibin]->SetDirectory(0);
   }
     
-  
+  TH1D* passJets[NBINS_NJETS];  
+  TH1D* failJets[NBINS_NJETS];
+  for(unsigned int ibin=0; ibin<NBINS_NJETS; ibin++) {
+    sprintf(hname,"passjets_%i",ibin);
+    passJets[ibin] = new TH1D(hname,"",int(fFitMassHi-fFitMassLo)/BIN_SIZE_PASS,fFitMassLo,fFitMassHi);
+    passJets[ibin]->SetDirectory(0);
+    sprintf(hname,"failjets_%i",ibin);
+    failJets[ibin] = new TH1D(hname,"",int(fFitMassHi-fFitMassLo)/BIN_SIZE_FAIL,fFitMassLo,fFitMassHi);
+    failJets[ibin]->SetDirectory(0);
+  }
+    
+  TH1D* passMET[NBINS_MET];  
+  TH1D* failMET[NBINS_MET];
+  for(unsigned int ibin=0; ibin<NBINS_MET; ibin++) {
+    sprintf(hname,"passmet_%i",ibin);
+    passMET[ibin] = new TH1D(hname,"",int(fFitMassHi-fFitMassLo)/BIN_SIZE_PASS,fFitMassLo,fFitMassHi);
+    passMET[ibin]->SetDirectory(0);
+    sprintf(hname,"failmet_%i",ibin);
+    failMET[ibin] = new TH1D(hname,"",int(fFitMassHi-fFitMassLo)/BIN_SIZE_FAIL,fFitMassLo,fFitMassHi);
+    failMET[ibin]->SetDirectory(0);
+  }
+    
   unsigned int runNum, lumiSec, evtNum;   // event ID
   unsigned int npv;                       // number of primary vertices
   unsigned int pass;                      // whether probe passes requirements
@@ -812,22 +935,27 @@ void CEffZFitter::makeBinnedTemplates(const std::string temfname, const int char
   float        scale1fb;                  // event weight per 1/fb
   float        mass;                      // tag-probe mass
   int          qtag, qprobe;              // tag, probe charge
+  float        met;
+  int          njets;
   TLorentzVector *tag=0, *probe=0;        // tag, probe 4-vector
   
-  TFile *infile = new TFile(temfname.c_str());   assert(infile);
-  TTree *intree = (TTree*)infile->Get("Events"); assert(intree);
+  TFile *infile = new TFile(infname.c_str());    assert(infile);
+  //TTree *intree = (TTree*)infile->Get("Events"); assert(intree);
+  TTree *intree = (TTree*)infile->FindObjectAny("Events"); assert(intree);
   intree->SetBranchAddress("runNum",   &runNum);
   intree->SetBranchAddress("lumiSec",  &lumiSec);
   intree->SetBranchAddress("evtNum",   &evtNum);
   intree->SetBranchAddress("npv",      &npv);
-  intree->SetBranchAddress("npu",      &npu);
   intree->SetBranchAddress("pass",     &pass);
+  intree->SetBranchAddress("npu",      &npu);
   intree->SetBranchAddress("scale1fb", &scale1fb);
   intree->SetBranchAddress("mass",     &mass);
   intree->SetBranchAddress("qtag",     &qtag);
   intree->SetBranchAddress("qprobe",   &qprobe);
   intree->SetBranchAddress("tag",      &tag);
   intree->SetBranchAddress("probe",    &probe);
+  intree->SetBranchAddress("met",      &met);
+  intree->SetBranchAddress("njets",    &njets);
   
   for(unsigned int ientry=0; ientry<intree->GetEntries(); ientry++) {
     intree->GetEntry(ientry);
@@ -880,7 +1008,21 @@ void CEffZFitter::makeBinnedTemplates(const std::string temfname, const int char
     }
     if(inpv<0) continue;
         
-        
+    int ijets=-1;
+    for(unsigned int ibin=0; ibin<NBINS_NJETS; ibin++)
+      if((njets >= fJetsBinEdgesv[ibin]) && (njets < fJetsBinEdgesv[ibin+1]))
+        ijets = ibin; 
+    if(ijets<0) continue;
+    
+    int imet=-1;
+    for(unsigned int ibin=0; ibin<NBINS_MET; ibin++)
+      if((met >= fMETBinEdgesv[ibin]) && (met < fMETBinEdgesv[ibin+1]))
+        imet = ibin; 
+    if(imet<0) continue;
+
+    //
+    // Fill trees
+    //
     if(pass) {
       passPt[ipt]->Fill(mass,puWgt);
       passEta[ieta]->Fill(mass,puWgt);
@@ -888,14 +1030,19 @@ void CEffZFitter::makeBinnedTemplates(const std::string temfname, const int char
       passEtaPt[ipt*NBINS_ETA + ieta]->Fill(mass,puWgt);
       passEtaPhi[iphi*NBINS_ETA + ieta]->Fill(mass,puWgt);
       passNPV[inpv]->Fill(mass,puWgt);
+      passJets[ijets]->Fill(mass,puWgt);
+      passMET[imet]->Fill(mass,puWgt);
+    
     } else {
       failPt[ipt]->Fill(mass,puWgt);
       failEta[ieta]->Fill(mass,puWgt);
       failPhi[iphi]->Fill(mass,puWgt);
       failEtaPt[ipt*NBINS_ETA + ieta]->Fill(mass,puWgt);
       failEtaPhi[iphi*NBINS_ETA + ieta]->Fill(mass,puWgt);
-      failNPV[inpv]->Fill(mass,puWgt);
-    }    
+      failJets[ijets]->Fill(mass,puWgt);
+      failMET[imet]->Fill(mass,puWgt);
+    }
+        
   }
   infile->Close();
   gSystem->mkdir(("templates/"+fOutputDir).c_str(),true);
@@ -937,6 +1084,18 @@ void CEffZFitter::makeBinnedTemplates(const std::string temfname, const int char
     delete passNPV[ibin];
     delete failNPV[ibin];
   }
+  for(unsigned int ibin=0; ibin<NBINS_NJETS; ibin++) {
+    passJets[ibin]->Write();
+    failJets[ibin]->Write();
+    delete passJets[ibin];
+    delete failJets[ibin];
+  }
+  for(unsigned int ibin=0; ibin<NBINS_MET; ibin++) {
+    passMET[ibin]->Write();
+    failMET[ibin]->Write();
+    delete passMET[ibin];
+    delete failMET[ibin];
+  }
   outfile.Write();
   outfile.Close(); 
 
@@ -955,14 +1114,18 @@ void CEffZFitter::makeUnbinnedTemplates(const std::string temfname, const int ch
   float        scale1fb;                  // event weight per 1/fb
   float        mass;                      // tag-probe mass
   int          qtag, qprobe;              // tag, probe charge
+  float        met;
+  int          njets;
   TLorentzVector *tag=0, *probe=0;        // tag, probe 4-vector
   
   char tname[500];
   
-  const unsigned int NBINS_PT  = fPtBinEdgesv.size()-1;
-  const unsigned int NBINS_ETA = fEtaBinEdgesv.size()-1;
-  const unsigned int NBINS_PHI = fPhiBinEdgesv.size()-1;
-  const unsigned int NBINS_NPV = fNPVBinEdgesv.size()-1;
+  const unsigned int NBINS_PT    = fPtBinEdgesv.size()-1;
+  const unsigned int NBINS_ETA   = fEtaBinEdgesv.size()-1;
+  const unsigned int NBINS_PHI   = fPhiBinEdgesv.size()-1;
+  const unsigned int NBINS_NPV   = fNPVBinEdgesv.size()-1;
+  const unsigned int NBINS_NJETS = fJetsBinEdgesv.size()-1;
+  const unsigned int NBINS_MET   = fMETBinEdgesv.size()-1;
   
   TTree* passPt[NBINS_PT];
   TTree* failPt[NBINS_PT];
@@ -1041,21 +1204,50 @@ void CEffZFitter::makeUnbinnedTemplates(const std::string temfname, const int ch
     failNPV[ibin]->Branch("m",&mass,"m/F");
     failNPV[ibin]->SetDirectory(0);
   }    
+
+  TTree* passJets[NBINS_NJETS];  
+  TTree* failJets[NBINS_NJETS];
+  for(unsigned int ibin=0; ibin<NBINS_Jets; ibin++) {
+    sprintf(tname,"passjets_%i",ibin);
+    passJets[ibin] = new TTree(tname,"");
+    passJets[ibin]->Branch("m",&mass,"m/F");
+    passJets[ibin]->SetDirectory(0); 
+    sprintf(tname,"failjets_%i",ibin);
+    failJets[ibin] = new TTree(tname,"");
+    failJets[ibin]->Branch("m",&mass,"m/F");
+    failJets[ibin]->SetDirectory(0);
+  }    
   
-  TFile *infile = new TFile(temfname.c_str());   assert(infile);
-  TTree *intree = (TTree*)infile->Get("Events"); assert(intree);
+  TTree* passMET[NBINS_MET];  
+  TTree* failMET[NBINS_MET];
+  for(unsigned int ibin=0; ibin<NBINS_MET; ibin++) {
+    sprintf(tname,"passmet_%i",ibin);
+    passMET[ibin] = new TTree(tname,"");
+    passMET[ibin]->Branch("m",&mass,"m/F");
+    passMET[ibin]->SetDirectory(0); 
+    sprintf(tname,"failmet_%i",ibin);
+    failMET[ibin] = new TTree(tname,"");
+    failMET[ibin]->Branch("m",&mass,"m/F");
+    failMET[ibin]->SetDirectory(0);
+  }    
+  
+  TFile *infile = new TFile(infname.c_str());    assert(infile);
+  //TTree *intree = (TTree*)infile->Get("Events"); assert(intree);
+  TTree *intree = (TTree*)infile->FindObjectAny("Events"); assert(intree);
   intree->SetBranchAddress("runNum",   &runNum);
   intree->SetBranchAddress("lumiSec",  &lumiSec);
   intree->SetBranchAddress("evtNum",   &evtNum);
   intree->SetBranchAddress("npv",      &npv);
-  intree->SetBranchAddress("npu",      &npu);
   intree->SetBranchAddress("pass",     &pass);
+  intree->SetBranchAddress("npu",      &npu);
   intree->SetBranchAddress("scale1fb", &scale1fb);
   intree->SetBranchAddress("mass",     &mass);
   intree->SetBranchAddress("qtag",     &qtag);
   intree->SetBranchAddress("qprobe",   &qprobe);
   intree->SetBranchAddress("tag",      &tag);
-  intree->SetBranchAddress("probe",    &probe);  
+  intree->SetBranchAddress("probe",    &probe);
+  intree->SetBranchAddress("met",      &met);
+  intree->SetBranchAddress("njets",    &njets);
   
   for(unsigned int ientry=0; ientry<intree->GetEntries(); ientry++) {
     intree->GetEntry(ientry);
@@ -1104,6 +1296,18 @@ void CEffZFitter::makeUnbinnedTemplates(const std::string temfname, const int ch
       if((npv >= fNPVBinEdgesv[ibin]) && (npv < fNPVBinEdgesv[ibin+1]))
         inpv = ibin; 
     if(inpv<0) continue;
+
+    int ijets=-1;
+    for(unsigned int ibin=0; ibin<NBINS_NJETS; ibin++)
+      if((njets >= fJetsBinEdgesv[ibin]) && (njets < fJetsBinEdgesv[ibin+1]))
+        ijets = ibin; 
+    if(ijets<0) continue;
+    
+    int imet=-1;
+    for(unsigned int ibin=0; ibin<NBINS_MET; ibin++)
+      if((met >= fMETBinEdgesv[ibin]) && (met < fMETBinEdgesv[ibin+1]))
+        imet = ibin; 
+    if(imet<0) continue;
         
     if(pass) {
       passPt[ipt]->Fill();
@@ -1112,6 +1316,8 @@ void CEffZFitter::makeUnbinnedTemplates(const std::string temfname, const int ch
       passEtaPt[ipt*NBINS_ETA + ieta]->Fill();
       passEtaPhi[iphi*NBINS_ETA + ieta]->Fill();
       passNPV[inpv]->Fill();
+      passJets[ijets]->Fill();
+      passMET[imet]->Fill();
     } else {
       failPt[ipt]->Fill();
       failEta[ieta]->Fill();
@@ -1119,6 +1325,8 @@ void CEffZFitter::makeUnbinnedTemplates(const std::string temfname, const int ch
       failEtaPt[ipt*NBINS_ETA + ieta]->Fill();
       failEtaPhi[iphi*NBINS_ETA + ieta]->Fill();
       failNPV[inpv]->Fill();
+      failJets[ijets]->Fill();
+      failMET[imet]->Fill();
     }    
   }
   infile->Close();
@@ -1160,6 +1368,18 @@ void CEffZFitter::makeUnbinnedTemplates(const std::string temfname, const int ch
     failNPV[ibin]->Write();
     delete passNPV[ibin];
     delete failNPV[ibin];
+  }
+  for(unsigned int ibin=0; ibin<NBINS_NJETS; ibin++) {
+    passJets[ibin]->Write();
+    failJets[ibin]->Write();
+    delete passJets[ibin];
+    delete failJets[ibin];
+  }
+  for(unsigned int ibin=0; ibin<NBINS_MET; ibin++) {
+    passMET[ibin]->Write();
+    failMET[ibin]->Write();
+    delete passMET[ibin];
+    delete failMET[ibin];
   }
   outfile.Write();
   outfile.Close(); 

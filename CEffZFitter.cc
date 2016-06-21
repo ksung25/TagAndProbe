@@ -5,6 +5,7 @@
 #include <TGraphAsymmErrors.h>
 #include <TH2D.h>
 #include <TColor.h>
+#include <TROOT.h>
 #include <TEfficiency.h>
 #include <TLorentzVector.h>
 
@@ -1813,6 +1814,7 @@ void CEffZFitter::generateToys(
   const int numtoys
 ) {
   std::cout << "   [CEffZFitter] Generating toys " << std::endl;
+  gROOT->ProcessLine( "gErrorIgnoreLevel = 1001;");
   assert(fIsInitialized);
   // set up output directory
   gSystem->mkdir(("toys/"+fOutputDir).c_str(),true);

@@ -154,6 +154,7 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     palette_axis->SetLabelSize(0.02);
     canvas->Update();
     canvas->Print((plots_dir + string(h_eff_data->GetName()) + ".png").c_str());
+    canvas->Print((plots_dir + string(h_eff_data->GetName()) + ".pdf").c_str());
 
     h_eff_mc->Draw("TEXTE COLZ");
     canvas->Update();
@@ -173,6 +174,7 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     palette_axis->SetLabelSize(0.02);
     canvas->Update();
     canvas->Print((plots_dir + string(h_eff_mc->GetName()) + ".png").c_str());
+    canvas->Print((plots_dir + string(h_eff_mc->GetName()) + ".pdf").c_str());
 
     mitPalette2();
     h_sf->Draw("TEXTE COLZ");
@@ -193,6 +195,7 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     palette_axis->SetLabelSize(0.02);
     canvas->Update();
     canvas->Print((plots_dir + string(h_sf->GetName()) + ".png").c_str());
+    canvas->Print((plots_dir + string(h_sf->GetName()) + ".pdf").c_str());
 
     mitPalette();
     h_sf_error_lo->Draw("TEXTE COLZ");
@@ -213,6 +216,7 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     palette_axis->SetLabelSize(0.02);
     canvas->Update();
     canvas->Print((plots_dir + string(h_sf_error_lo->GetName()) + ".png").c_str());
+    canvas->Print((plots_dir + string(h_sf_error_lo->GetName()) + ".pdf").c_str());
     h_sf_error_hi->Draw("TEXTE COLZ");
     canvas->Update();
     h_sf_error_hi->GetXaxis()->SetTitle("| #eta |");
@@ -231,6 +235,7 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     palette_axis->SetLabelSize(0.02);
     canvas->Update();
     canvas->Print((plots_dir + string(h_sf_error_hi->GetName()) + ".png").c_str());
+    canvas->Print((plots_dir + string(h_sf_error_hi->GetName()) + ".pdf").c_str());
 
     // Write to file
     output_rootfile->cd();

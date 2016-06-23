@@ -542,6 +542,8 @@ void CEffZFitter::computeEff()
   CEffUser1D effeta;
   CEffUser1D effphi;
   CEffUser1D effnpv;
+  CEffUser1D effjets;
+  CEffUser1D effmet;
 
   CEffUser2D effetapt;
   CEffUser2D effetaphi;
@@ -627,12 +629,12 @@ void CEffZFitter::computeEff()
   }
 
   if(grEffJets) {
-    effnpv.loadEff(grEffJets);
-    effnpv.printEff(txtfile);
+    effjets.loadEff(grEffJets);
+    effjets.printEff(txtfile);
     txtfile << endl;
-    effnpv.printErrLow(txtfile);
+    effjets.printErrLow(txtfile);
     txtfile << endl;
-    effnpv.printErrHigh(txtfile);
+    effjets.printErrHigh(txtfile);
 
     CPlot plotEffJets("effjets","","n_{jets}","#varepsilon");
     plotEffJets.AddGraph(grEffJets,"",kBlack);
@@ -643,17 +645,18 @@ void CEffZFitter::computeEff()
   }
 
   if(grEffMET) {
-    effnpv.loadEff(grEffMET);
-    effnpv.printEff(txtfile);
+    effmet.loadEff(grEffMET);
+    effmet.printEff(txtfile);
     txtfile << endl;
-    effnpv.printErrLow(txtfile);
+    effmet.printErrLow(txtfile);
     txtfile << endl;
-    effnpv.printErrHigh(txtfile);
+    effmet.printErrHigh(txtfile);
 
-    CPlot plotEffMET("effnpv","","N_{PV}","#varepsilon");
+    CPlot plotEffMET("effmet","","E_{T}^{miss}","#varepsilon");
     plotEffMET.AddGraph(grEffMET,"",kBlack);
-    plotEffMET.SetYRange(0.6, 1.03);
+    plotEffMET.SetYRange(-0.03, 1.03);
     plotEffMET.SetXRange(0.9*(fMETBinEdgesv[0]),1.1*(fMETBinEdgesv[NBINS_MET]));
+    plotEffMET.SetLogx();
     plotEffMET.Draw(c,true,"png"); 
     plotEffMET.Draw(c,true,"pdf"); 
   }
@@ -835,10 +838,12 @@ void CEffZFitter::makeBinnedTemplates(const std::string temfname, const int char
 
   char hname[500];
   
-  const unsigned int NBINS_PT  = fPtBinEdgesv.size()-1;
-  const unsigned int NBINS_ETA = fEtaBinEdgesv.size()-1;
-  const unsigned int NBINS_PHI = fPhiBinEdgesv.size()-1;
-  const unsigned int NBINS_NPV = fNPVBinEdgesv.size()-1;
+  const unsigned int NBINS_PT    = fPtBinEdgesv.size()-1;
+  const unsigned int NBINS_ETA   = fEtaBinEdgesv.size()-1;
+  const unsigned int NBINS_PHI   = fPhiBinEdgesv.size()-1;
+  const unsigned int NBINS_NPV   = fNPVBinEdgesv.size()-1;
+  const unsigned int NBINS_NJETS = fJetsBinEdgesv.size()-1;
+  const unsigned int NBINS_MET   = fMETBinEdgesv.size()-1;
   
   TH1D* passPt[NBINS_PT];
   TH1D* failPt[NBINS_PT];
@@ -939,7 +944,7 @@ void CEffZFitter::makeBinnedTemplates(const std::string temfname, const int char
   int          njets;
   TLorentzVector *tag=0, *probe=0;        // tag, probe 4-vector
   
-  TFile *infile = new TFile(infname.c_str());    assert(infile);
+  TFile *infile = new TFile(temfname.c_str());    assert(infile);
   //TTree *intree = (TTree*)infile->Get("Events"); assert(intree);
   TTree *intree = (TTree*)infile->FindObjectAny("Events"); assert(intree);
   intree->SetBranchAddress("runNum",   &runNum);
@@ -1207,7 +1212,7 @@ void CEffZFitter::makeUnbinnedTemplates(const std::string temfname, const int ch
 
   TTree* passJets[NBINS_NJETS];  
   TTree* failJets[NBINS_NJETS];
-  for(unsigned int ibin=0; ibin<NBINS_Jets; ibin++) {
+  for(unsigned int ibin=0; ibin<NBINS_NJETS; ibin++) {
     sprintf(tname,"passjets_%i",ibin);
     passJets[ibin] = new TTree(tname,"");
     passJets[ibin]->Branch("m",&mass,"m/F");
@@ -1231,7 +1236,7 @@ void CEffZFitter::makeUnbinnedTemplates(const std::string temfname, const int ch
     failMET[ibin]->SetDirectory(0);
   }    
   
-  TFile *infile = new TFile(infname.c_str());    assert(infile);
+  TFile *infile = new TFile(temfname.c_str());    assert(infile);
   //TTree *intree = (TTree*)infile->Get("Events"); assert(intree);
   TTree *intree = (TTree*)infile->FindObjectAny("Events"); assert(intree);
   intree->SetBranchAddress("runNum",   &runNum);
@@ -1577,6 +1582,10 @@ void CEffZFitter::performCount(double &resEff, double &resErrl, double &resErrh,
   
   } else if(name.compare("npv")==0) { 
     sprintf(binlabelx,"%i #leq N_{PV} < %i",(int)xbinLo,(int)xbinHi);   
+  } else if(name.compare("jets")==0) { 
+    sprintf(binlabelx,"%i #leq n_{jets} < %i",(int)xbinLo,(int)xbinHi);   
+  } else if(name.compare("met")==0) { 
+    sprintf(binlabelx,"%i GeV #leq E_{T}^{miss} < %i GeV",(int)xbinLo,(int)xbinHi);   
   }
   sprintf(effstr,"#varepsilon = %.4f_{ -%.4f}^{ +%.4f}",resEff,resErrl,resErrh);
 
@@ -1788,7 +1797,10 @@ void CEffZFitter::performFit(
   
   } else if(name.compare("npv")==0) { 
     sprintf(binlabelx,"%i #leq N_{PV} < %i",(int)xbinLo,(int)xbinHi); 
-  
+  } else if(name.compare("jets")==0) { 
+    sprintf(binlabelx,"%i #leq n_{jets} < %i",(int)xbinLo,(int)xbinHi);   
+  } else if(name.compare("met")==0) { 
+    sprintf(binlabelx,"%i GeV #leq E_{T}^{miss} < %i GeV",(int)xbinLo,(int)xbinHi);   
   } 
   sprintf(effstr,"#varepsilon = %.4f_{ -%.4f}^{ +%.4f}",eff.getVal(),fabs(eff.getErrorLo()),eff.getErrorHi());
 
@@ -1985,6 +1997,30 @@ void CEffZFitter::makeHTML()
   htmlfile << "</tr>" << endl;
   htmlfile << "<tr>" << endl;
   htmlfile << "<td width=\"25%\"><a target=\"_blank\" href=\"npv.html\">N_PV bins</a></td>" << endl;
+  htmlfile << "<td width=\"25%\"></td>" << endl;
+  htmlfile << "<td width=\"25%\"></td>" << endl;
+  htmlfile << "<td width=\"25%\"></td>" << endl;
+  htmlfile << "</tr>" << endl;
+  htmlfile << "<tr>" << endl;
+  htmlfile << "<td width=\"25%\"><a target=\"_blank\" href=\"plots/effjets.png\"><img src=\"plots/effjets.png\" alt=\"plots/effjets.png\" width=\"100%\"></a></td>" << endl;
+  htmlfile << "<td width=\"25%\"></td>" << endl;
+  htmlfile << "<td width=\"25%\"></td>" << endl;
+  htmlfile << "<td width=\"25%\"></td>" << endl;
+  htmlfile << "</tr>" << endl;
+  htmlfile << "<tr>" << endl;
+  htmlfile << "<td width=\"25%\"><a target=\"_blank\" href=\"jets.html\">njets bins</a></td>" << endl;
+  htmlfile << "<td width=\"25%\"></td>" << endl;
+  htmlfile << "<td width=\"25%\"></td>" << endl;
+  htmlfile << "<td width=\"25%\"></td>" << endl;
+  htmlfile << "</tr>" << endl;
+  htmlfile << "<tr>" << endl;
+  htmlfile << "<td width=\"25%\"><a target=\"_blank\" href=\"plots/effmet.png\"><img src=\"plots/effmet.png\" alt=\"plots/effmet.png\" width=\"100%\"></a></td>" << endl;
+  htmlfile << "<td width=\"25%\"></td>" << endl;
+  htmlfile << "<td width=\"25%\"></td>" << endl;
+  htmlfile << "<td width=\"25%\"></td>" << endl;
+  htmlfile << "</tr>" << endl;
+  htmlfile << "<tr>" << endl;
+  htmlfile << "<td width=\"25%\"><a target=\"_blank\" href=\"MET.html\">MET bins</a></td>" << endl;
   htmlfile << "<td width=\"25%\"></td>" << endl;
   htmlfile << "<td width=\"25%\"></td>" << endl;
   htmlfile << "<td width=\"25%\"></td>" << endl;

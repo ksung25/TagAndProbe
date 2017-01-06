@@ -60,10 +60,36 @@ bool selector(
   int iso_bit
 ) {
   if(id_bit < 0) return true;
-  if(
-    (sel_bits & (0x1 << id_bit)) != 0 &&
-    iso < selectIsoCut(iso_bit, pdgId, eta)
-  ) return true;
+  else if(id_bit==100) { // Global or Tracker Muon hack
+    if(
+      (sel_bits & (0x1 << 12)) != 0 && // global
+      (sel_bits & (0x1 << 13)) != 0 && // tracker
+      iso < selectIsoCut(iso_bit, pdgId, eta)
+    ) return true;
+  } else if(id_bit==101) { // Medium ID + Tight IP Cut
+    if(
+      (sel_bits & (0x1 << 5)) != 0 && // POG Medium cut based ID
+      (sel_bits & (0x1 << 9)) != 0 && // Tight IP Cut
+      iso < selectIsoCut(iso_bit, pdgId, eta)
+    ) return true;
+  } else if(id_bit==102) { // Tight ID + Tight IP Cut
+    if(
+      (sel_bits & (0x1 << 6)) != 0 && // POG Tight cut based ID 
+      (sel_bits & (0x1 << 9)) != 0 && // Tight IP Cut
+      iso < selectIsoCut(iso_bit, pdgId, eta)
+    ) return true;
+  } else if(id_bit==103) { // Medium ID + Medium IP Cut
+    if(
+      (sel_bits & (0x1 << 5)) != 0 && // POG medium cut based ID
+      (sel_bits & (0x1 << 8)) != 0 && // Medium IP Cut
+      iso < selectIsoCut(iso_bit, pdgId, eta)
+    ) return true;
+  } else {
+    if(
+      (sel_bits & (0x1 << id_bit)) != 0 &&
+      iso < selectIsoCut(iso_bit, pdgId, eta)
+    ) return true;
+  }
   return false;
 }
 
@@ -133,6 +159,23 @@ void mitPalette2()
   Double_t Green[3]  = { 139/255., 1., 31/255.};
   Double_t Blue[3]   = { 140/255., 1., 52/255.};
   Double_t Length[3] = { 0.00, 0.5, 1.00 };
+  if(!initialized){
+    Int_t FI = TColor::CreateGradientColorTable(3,Length,Red,Green,Blue,100);
+    for (int i=0; i<100; i++) colors[i] = FI+i;
+    initialized = kTRUE;
+    return;
+  }
+  gStyle->SetPalette(100,colors);
+
+}
+void mitPalette3()
+{
+  static Int_t  colors[100];
+  static Bool_t initialized = kFALSE;
+  Double_t Red[3]    = { 163/255., 138./255., 1   };
+  Double_t Green[3]  = { 31/255. , 139./255., 1   };
+  Double_t Blue[3]   = { 52/255. , 140./255., 1   };
+  Double_t Length[3] = { 0.00    , 0.65,      1.00};
   if(!initialized){
     Int_t FI = TColor::CreateGradientColorTable(3,Length,Red,Green,Blue,100);
     for (int i=0; i<100; i++) colors[i] = FI+i;

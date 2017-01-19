@@ -84,6 +84,13 @@ bool selector(
       (sel_bits & (0x1 << 8)) != 0 && // Medium IP Cut
       iso < selectIsoCut(iso_bit, pdgId, eta)
     ) return true;
+  } else if(id_bit==200) { // Guillelmo's super tight Electron ID
+    if(
+      (sel_bits & (0x1 << 6)) != 0 && // POG Tight cut based ID
+      (sel_bits & (0x1 << 15)) != 0 && // Triple charge requirement
+      (sel_bits & (0x1 << 16)) != 0 && // No Missing Hits
+      iso < selectIsoCut(iso_bit, pdgId, eta)
+    ) return true;
   } else {
     if(
       (sel_bits & (0x1 << id_bit)) != 0 &&

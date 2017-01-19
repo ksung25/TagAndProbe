@@ -20,17 +20,17 @@
 #include <TLegend.h>
 #include <TFile.h>
 #include <TCut.h>
-#include <leptons.h>
+#include "leptons.h"
 #include <TColor.h>
 #include <TPaletteAxis.h>
 #include <iostream>
 Int_t mit_red  = 1861; 
 Int_t mit_gray = 1862; 
-Float_t ele_pt_bins[] = {10,20,30,40,50,200};
+Float_t ele_pt_bins[] = {10,12,14,16,18,20,22,24,26,28,30,35,40,50,100,200,1000};
 Float_t ele_eta_bins[] = {0., 0.8, 1.4442, 1.566, 2.0, 2.5};
 Int_t n_ele_pt_bins=5;
 Int_t n_ele_eta_bins=5;
-Float_t mu_pt_bins[] = {10,20,30,40,50,200,8000};
+Float_t mu_pt_bins[] = {10,12,14,16,18,20,22,24,26,28,30,35,40,50,100,200,1000};
 Float_t mu_eta_bins[] = {0, 0.2, 0.3, 0.9, 1.2, 2.1, 2.4};
 Int_t n_mu_pt_bins=6;
 Int_t n_mu_eta_bins=6;
@@ -72,16 +72,16 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     else                    output_basename = selection+"_"+flavor;
     
     TFile *f_data = TFile::Open( ( plots_dir + data_basename   + "/eff.root").c_str(), "READ");
-    TH2D *h_eff_data = (TH2D*) f_data->Get("hEffEtaPt");
-    TH2D *h_error_lo_data = (TH2D*) f_data->Get("hErrlEtaPt");
-    TH2D *h_error_hi_data = (TH2D*) f_data->Get("hErrhEtaPt");
+    TH2D *h_eff_data      = (TH2D*) f_data->Get("hEffEtaPt");  h_eff_data     ->SetDirectory(0); 
+    TH2D *h_error_lo_data = (TH2D*) f_data->Get("hErrlEtaPt"); h_error_lo_data->SetDirectory(0); 
+    TH2D *h_error_hi_data = (TH2D*) f_data->Get("hErrhEtaPt"); h_error_hi_data->SetDirectory(0); 
     h_eff_data->SetName(("eff_data_"+output_basename).c_str());
     h_eff_data->SetTitle(("Efficiency for "+selection+" "+flavor+" selection (Data)").c_str());
     
     TFile *f_mc   = TFile::Open( ( plots_dir + mc_basename + "/eff.root").c_str(), "READ");
-    TH2D *h_eff_mc   = (TH2D*) f_mc->Get("hEffEtaPt");
-    TH2D *h_error_lo_mc = (TH2D*) f_mc->Get("hErrlEtaPt");
-    TH2D *h_error_hi_mc = (TH2D*) f_mc->Get("hErrhEtaPt");
+    TH2D *h_eff_mc      = (TH2D*) f_mc->Get("hEffEtaPt");  h_eff_mc     ->SetDirectory(0); 
+    TH2D *h_error_lo_mc = (TH2D*) f_mc->Get("hErrlEtaPt"); h_error_lo_mc->SetDirectory(0); 
+    TH2D *h_error_hi_mc = (TH2D*) f_mc->Get("hErrhEtaPt"); h_error_hi_mc->SetDirectory(0); 
     h_eff_mc->SetName(("eff_mc_"+output_basename).c_str());
     h_eff_mc->SetTitle(("Efficiency for "+selection+" "+flavor+" selection (MC)").c_str());
     
@@ -95,8 +95,8 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     TH2D *h_sf_error_hi = (TH2D*) h_sf->Clone();
     h_sf_error_lo->SetName(("scalefactors_"+output_basename+"_stat_error_lo").c_str());
     h_sf_error_hi->SetName(("scalefactors_"+output_basename+"_stat_error_hi").c_str());
-    h_sf_error_lo->SetTitle(("scalefactors_"+output_basename+"_stat_error_lo").c_str());
-    h_sf_error_hi->SetTitle(("scalefactors_"+output_basename+"_stat_error_hi").c_str());
+    h_sf_error_lo->SetTitle(("-1#sigma quantile stat. unc. for "+selection+" "+flavor+" scale factors").c_str());
+    h_sf_error_hi->SetTitle(("+1#sigma quantile stat. unc. for "+selection+" "+flavor+" scale factors").c_str());
 
     for(int i = 1; i <= h_eff_mc->GetNbinsX(); i++) { for(int j = 1; j <= h_eff_mc->GetNbinsY(); j++) {
       unsigned int nbin = h_eff_mc->GetBin(i,j);
@@ -135,8 +135,9 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     TPaletteAxis *palette_axis;
 
     mitPalette();
-    TCanvas *canvas = new TCanvas("canvas", "canvas", 800,600);
-    h_eff_data->Draw("TEXTE COLZ");
+    TCanvas *canvas = new TCanvas("canvas", "canvas", 800,1200);
+    h_eff_data->Draw("TEXT COLZ");
+    canvas->SetLogy();
     canvas->Update();
     h_eff_data->GetXaxis()->SetTitle("| #eta |");
     h_eff_data->GetXaxis()->SetTitleOffset(0.9);
@@ -147,16 +148,18 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     h_eff_data->GetYaxis()->SetTitleSize(0.04);
     h_eff_data->GetYaxis()->SetLabelSize(0.02);
     h_eff_data->GetYaxis()->SetRangeUser(10, TMath::Min(h_eff_data->GetYaxis()->GetBinUpEdge(h_eff_data->GetNbinsY()), 200.));
+    h_eff_data->GetYaxis()->SetMoreLogLabels();
     h_eff_data->SetMinimum(0);
     h_eff_data->SetMaximum(1.);
-    h_eff_data->SetMarkerSize(.9);
+    h_eff_data->SetMarkerSize(1.4);
     palette_axis = (TPaletteAxis*) h_eff_data->GetListOfFunctions()->FindObject("palette"); 
     palette_axis->SetLabelSize(0.02);
     canvas->Update();
     canvas->Print((plots_dir + string(h_eff_data->GetName()) + ".png").c_str());
     canvas->Print((plots_dir + string(h_eff_data->GetName()) + ".pdf").c_str());
 
-    h_eff_mc->Draw("TEXTE COLZ");
+    h_eff_mc->Draw("TEXT COLZ");
+    canvas->SetLogy();
     canvas->Update();
     h_eff_mc->GetXaxis()->SetTitle("| #eta |");
     h_eff_mc->GetXaxis()->SetTitleOffset(0.9);
@@ -167,9 +170,10 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     h_eff_mc->GetYaxis()->SetTitleSize(0.04);
     h_eff_mc->GetYaxis()->SetLabelSize(0.02);
     h_eff_mc->GetYaxis()->SetRangeUser(10, TMath::Min(h_eff_mc->GetYaxis()->GetBinUpEdge(h_eff_mc->GetNbinsY()), 200.));
+    h_eff_mc->GetYaxis()->SetMoreLogLabels();
     h_eff_mc->SetMinimum(0);
     h_eff_mc->SetMaximum(1.);
-    h_eff_mc->SetMarkerSize(.9);
+    h_eff_mc->SetMarkerSize(1.4);
     palette_axis = (TPaletteAxis*) h_eff_mc->GetListOfFunctions()->FindObject("palette"); 
     palette_axis->SetLabelSize(0.02);
     canvas->Update();
@@ -177,7 +181,8 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     canvas->Print((plots_dir + string(h_eff_mc->GetName()) + ".pdf").c_str());
 
     mitPalette2();
-    h_sf->Draw("TEXTE COLZ");
+    h_sf->Draw("TEXT COLZ");
+    canvas->SetLogy();
     canvas->Update();
     h_sf->GetXaxis()->SetTitle("| #eta |");
     h_sf->GetXaxis()->SetTitleOffset(0.9);
@@ -188,9 +193,21 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     h_sf->GetYaxis()->SetTitleSize(0.04);
     h_sf->GetYaxis()->SetLabelSize(0.02);
     h_sf->GetYaxis()->SetRangeUser(10, TMath::Min(h_sf->GetYaxis()->GetBinUpEdge(h_sf->GetNbinsY()), 200.));
-    h_sf->SetMinimum(.5);
-    h_sf->SetMaximum(1.5);
-    h_sf->SetMarkerSize(.9);
+    h_sf->GetYaxis()->SetMoreLogLabels();
+    h_sf->SetMinimum(.7);
+    h_sf->SetMaximum(1.3);
+    if(flavor == "Electron") {
+      h_sf->SetMinimum(.5);
+      h_sf->SetMaximum(1.5);
+    }
+    if(flavor == "Muon") {
+      h_sf->SetMinimum(.8);
+      h_sf->SetMaximum(1.2);
+    }
+    h_sf->SetMarkerSize(1.4);
+    //h_sf->SetLineColor(1);
+    //h_sf->SetLineWidth(1);
+    //h_sf->SetLineStyle(3);
     palette_axis = (TPaletteAxis*) h_sf->GetListOfFunctions()->FindObject("palette"); 
     palette_axis->SetLabelSize(0.02);
     canvas->Update();
@@ -198,7 +215,8 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     canvas->Print((plots_dir + string(h_sf->GetName()) + ".pdf").c_str());
 
     mitPalette();
-    h_sf_error_lo->Draw("TEXTE COLZ");
+    h_sf_error_lo->Draw("TEXT COLZ");
+    canvas->SetLogy();
     canvas->Update();
     h_sf_error_lo->GetXaxis()->SetTitle("| #eta |");
     h_sf_error_lo->GetXaxis()->SetTitleOffset(0.9);
@@ -211,13 +229,15 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     h_sf_error_lo->GetYaxis()->SetRangeUser(10, TMath::Min(h_sf_error_lo->GetYaxis()->GetBinUpEdge(h_sf_error_lo->GetNbinsY()), 200.));
     h_sf_error_lo->SetMinimum(0);
     h_sf_error_lo->SetMaximum(0.5);
-    h_sf_error_lo->SetMarkerSize(.9);
+    h_sf_error_lo->SetMarkerSize(1.4);
+    h_sf_error_lo->GetYaxis()->SetMoreLogLabels();
     palette_axis = (TPaletteAxis*) h_sf_error_lo->GetListOfFunctions()->FindObject("palette"); 
     palette_axis->SetLabelSize(0.02);
     canvas->Update();
     canvas->Print((plots_dir + string(h_sf_error_lo->GetName()) + ".png").c_str());
     canvas->Print((plots_dir + string(h_sf_error_lo->GetName()) + ".pdf").c_str());
-    h_sf_error_hi->Draw("TEXTE COLZ");
+    h_sf_error_hi->Draw("TEXT COLZ");
+    canvas->SetLogy();
     canvas->Update();
     h_sf_error_hi->GetXaxis()->SetTitle("| #eta |");
     h_sf_error_hi->GetXaxis()->SetTitleOffset(0.9);
@@ -228,9 +248,10 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     h_sf_error_hi->GetYaxis()->SetTitleSize(0.04);
     h_sf_error_hi->GetYaxis()->SetLabelSize(0.02);
     h_sf_error_hi->GetYaxis()->SetRangeUser(10, TMath::Min(h_sf_error_hi->GetYaxis()->GetBinUpEdge(h_sf_error_hi->GetNbinsY()), 200.));
+    h_sf_error_hi->GetYaxis()->SetMoreLogLabels();
     h_sf_error_hi->SetMinimum(0);
     h_sf_error_hi->SetMaximum(0.5);
-    h_sf_error_hi->SetMarkerSize(.9);
+    h_sf_error_hi->SetMarkerSize(1.4);
     palette_axis = (TPaletteAxis*) h_sf_error_hi->GetListOfFunctions()->FindObject("palette"); 
     palette_axis->SetLabelSize(0.02);
     canvas->Update();
@@ -993,12 +1014,12 @@ void plot_sf_1d(string data_dir, string mc_dir, bool do_pt=true, bool do_eta=tru
     g_data_pt->Draw("p same");
     TPad *pad2_pt = new TPad("pad2_pt", "pad2_pt", 0, 0.05, 1, 0.3);
     canvas_pt->cd();
-    pad2_pt->SetMargin(0.1,0.04,0.3,0);
+    pad2_pt->SetMargin(0.1,0.04,0.3,0.08);
     pad2_pt->Draw();
     pad2_pt->cd();
     if(logx) pad2_pt->SetLogx();
-    g_ratio_pt->SetMaximum(1.2);
-    g_ratio_pt->SetMinimum(0.8);
+    g_ratio_pt->SetMaximum(1.4);
+    g_ratio_pt->SetMinimum(0.6);
     if(logx) g_ratio_pt->GetXaxis()->SetMoreLogLabels();
     g_ratio_pt->GetXaxis()->SetTitle("p_{T} [GeV]");
     g_ratio_pt->GetYaxis()->SetTitle("Data/MC");
@@ -1010,7 +1031,7 @@ void plot_sf_1d(string data_dir, string mc_dir, bool do_pt=true, bool do_eta=tru
     g_ratio_pt->GetYaxis()->SetLabelSize(15);
     g_ratio_pt->GetXaxis()->SetTitleSize(15);
     g_ratio_pt->GetXaxis()->SetTitleFont(43);
-    g_ratio_pt->GetXaxis()->SetTitleOffset(5.);
+    g_ratio_pt->GetXaxis()->SetTitleOffset(3.6);
     g_ratio_pt->GetXaxis()->SetLabelFont(43);
     g_ratio_pt->GetXaxis()->SetLabelSize(15);
     TLine *oneline_pt = new TLine(g_ratio_pt->GetXaxis()->GetXmin(),1,g_ratio_pt->GetXaxis()->GetXmax(),1);
@@ -1021,6 +1042,7 @@ void plot_sf_1d(string data_dir, string mc_dir, bool do_pt=true, bool do_eta=tru
     oneline_pt->Draw("SAME");
     g_ratio_pt->Draw("p same");
     canvas_pt->Print((data_dir+"eff_ratio_pt.png").c_str());
+    canvas_pt->Print((data_dir+"eff_ratio_pt.pdf").c_str());
   }
   if(do_eta) {
     TGraphAsymmErrors *g_data_eta = (TGraphAsymmErrors*) f_data->Get("grEffEta");
@@ -1063,12 +1085,12 @@ void plot_sf_1d(string data_dir, string mc_dir, bool do_pt=true, bool do_eta=tru
     g_mc_eta->Draw("p same");
     TPad *pad2_eta = new TPad("pad2_eta", "pad2_eta", 0, 0.05, 1, 0.3);
     canvas_eta->cd();
-    pad2_eta->SetMargin(0.1,0.04,0.3,0);
+    pad2_eta->SetMargin(0.1,0.04,0.3,0.08);
     pad2_eta->Draw();
     pad2_eta->cd();
     if(logx) pad2_eta->SetLogx();
-    g_ratio_eta->SetMaximum(1.2);
-    g_ratio_eta->SetMinimum(0.8);
+    g_ratio_eta->SetMaximum(1.4);
+    g_ratio_eta->SetMinimum(0.6);
     if(logx) g_ratio_eta->GetXaxis()->SetMoreLogLabels();
     g_ratio_eta->GetXaxis()->SetTitle("#eta");
     g_ratio_eta->GetYaxis()->SetTitle("Data/MC");
@@ -1080,7 +1102,7 @@ void plot_sf_1d(string data_dir, string mc_dir, bool do_pt=true, bool do_eta=tru
     g_ratio_eta->GetYaxis()->SetLabelSize(15);
     g_ratio_eta->GetXaxis()->SetTitleSize(15);
     g_ratio_eta->GetXaxis()->SetTitleFont(43);
-    g_ratio_eta->GetXaxis()->SetTitleOffset(5.);
+    g_ratio_eta->GetXaxis()->SetTitleOffset(3.6);
     g_ratio_eta->GetXaxis()->SetLabelFont(43);
     g_ratio_eta->GetXaxis()->SetLabelSize(15);
     TLine *oneline_eta = new TLine(g_ratio_eta->GetXaxis()->GetXmin(),1,g_ratio_eta->GetXaxis()->GetXmax(),1);
@@ -1091,6 +1113,7 @@ void plot_sf_1d(string data_dir, string mc_dir, bool do_pt=true, bool do_eta=tru
     oneline_eta->Draw("SAME");
     g_ratio_eta->Draw("p same");
     canvas_eta->Print((data_dir+"eff_ratio_eta.png").c_str());
+    canvas_eta->Print((data_dir+"eff_ratio_pdf.png").c_str());
   }
   if(do_phi) {
     TGraphAsymmErrors *g_data_phi = (TGraphAsymmErrors*) f_data->Get("grEffPhi");
@@ -1133,12 +1156,12 @@ void plot_sf_1d(string data_dir, string mc_dir, bool do_pt=true, bool do_eta=tru
     g_mc_phi->Draw("p same");
     TPad *pad2_phi = new TPad("pad2_phi", "pad2_phi", 0, 0.05, 1, 0.3);
     canvas_phi->cd();
-    pad2_phi->SetMargin(0.1,0.04,0.3,0);
+    pad2_phi->SetMargin(0.1,0.04,0.3,0.08);
     pad2_phi->Draw();
     pad2_phi->cd();
     if(logx) pad2_phi->SetLogx();
-    g_ratio_phi->SetMaximum(1.2);
-    g_ratio_phi->SetMinimum(0.8);
+    g_ratio_phi->SetMaximum(1.4);
+    g_ratio_phi->SetMinimum(0.6);
     if(logx) g_ratio_phi->GetXaxis()->SetMoreLogLabels();
     g_ratio_phi->GetXaxis()->SetTitle("#phi");
     g_ratio_phi->GetYaxis()->SetTitle("Data/MC");
@@ -1150,7 +1173,7 @@ void plot_sf_1d(string data_dir, string mc_dir, bool do_pt=true, bool do_eta=tru
     g_ratio_phi->GetYaxis()->SetLabelSize(15);
     g_ratio_phi->GetXaxis()->SetTitleSize(15);
     g_ratio_phi->GetXaxis()->SetTitleFont(43);
-    g_ratio_phi->GetXaxis()->SetTitleOffset(5.);
+    g_ratio_phi->GetXaxis()->SetTitleOffset(3.6);
     g_ratio_phi->GetXaxis()->SetLabelFont(43);
     g_ratio_phi->GetXaxis()->SetLabelSize(15);
     TLine *oneline_phi = new TLine(g_ratio_phi->GetXaxis()->GetXmin(),1,g_ratio_phi->GetXaxis()->GetXmax(),1);
@@ -1161,6 +1184,7 @@ void plot_sf_1d(string data_dir, string mc_dir, bool do_pt=true, bool do_eta=tru
     oneline_phi->Draw("SAME");
     g_ratio_phi->Draw("p same");
     canvas_phi->Print((data_dir+"eff_ratio_phi.png").c_str());
+    canvas_phi->Print((data_dir+"eff_ratio_phi.pdf").c_str());
   }
   if(do_npv) {
     TGraphAsymmErrors *g_data_npv = (TGraphAsymmErrors*) f_data->Get("grEffNPV");
@@ -1203,12 +1227,12 @@ void plot_sf_1d(string data_dir, string mc_dir, bool do_pt=true, bool do_eta=tru
     g_mc_npv->Draw("p same");
     TPad *pad2_npv = new TPad("pad2_npv", "pad2_npv", 0, 0.05, 1, 0.3);
     canvas_npv->cd();
-    pad2_npv->SetMargin(0.1,0.04,0.3,0);
+    pad2_npv->SetMargin(0.1,0.04,0.3,0.08);
     pad2_npv->Draw();
     pad2_npv->cd();
     if(logx) pad2_npv->SetLogx();
-    g_ratio_npv->SetMaximum(1.2);
-    g_ratio_npv->SetMinimum(0.8);
+    g_ratio_npv->SetMaximum(1.4);
+    g_ratio_npv->SetMinimum(0.6);
     if(logx) g_ratio_npv->GetXaxis()->SetMoreLogLabels();
     g_ratio_npv->GetXaxis()->SetTitle("Number of primary vertices");
     g_ratio_npv->GetYaxis()->SetTitle("Data/MC");
@@ -1220,7 +1244,7 @@ void plot_sf_1d(string data_dir, string mc_dir, bool do_pt=true, bool do_eta=tru
     g_ratio_npv->GetYaxis()->SetLabelSize(15);
     g_ratio_npv->GetXaxis()->SetTitleSize(15);
     g_ratio_npv->GetXaxis()->SetTitleFont(43);
-    g_ratio_npv->GetXaxis()->SetTitleOffset(5.);
+    g_ratio_npv->GetXaxis()->SetTitleOffset(3.6);
     g_ratio_npv->GetXaxis()->SetLabelFont(43);
     g_ratio_npv->GetXaxis()->SetLabelSize(15);
     TLine *oneline_npv = new TLine(g_ratio_npv->GetXaxis()->GetXmin(),1,g_ratio_npv->GetXaxis()->GetXmax(),1);
@@ -1231,6 +1255,7 @@ void plot_sf_1d(string data_dir, string mc_dir, bool do_pt=true, bool do_eta=tru
     oneline_npv->Draw("SAME");
     g_ratio_npv->Draw("p same");
     canvas_npv->Print((data_dir+"eff_ratio_npv.png").c_str());
+    canvas_npv->Print((data_dir+"eff_ratio_npv.pdf").c_str());
   }
   TH2D *h_data_etapt_eff, *h_data_etapt_error_hi, *h_data_etapt_error_lo,
        *h_mc_etapt_eff, *h_mc_etapt_error_hi, *h_mc_etapt_error_lo;
@@ -1306,12 +1331,12 @@ void plot_sf_1d(string data_dir, string mc_dir, bool do_pt=true, bool do_eta=tru
       g_mc_pt_etaslice->Draw("p same");
       TPad *pad2_pt_etaslice = new TPad("pad2_pt_etaslice", "pad2_pt_etaslice", 0, 0.05, 1, 0.3);
       canvas_pt_etaslice->cd();
-      pad2_pt_etaslice->SetMargin(0.1,0.04,0.3,0);
+      pad2_pt_etaslice->SetMargin(0.1,0.04,0.3,0.08);
       pad2_pt_etaslice->Draw();
       pad2_pt_etaslice->cd();
       if(logx) pad2_pt_etaslice->SetLogx();
-      g_ratio_pt_etaslice->SetMaximum(1.2);
-      g_ratio_pt_etaslice->SetMinimum(0.8);
+      g_ratio_pt_etaslice->SetMaximum(1.4);
+      g_ratio_pt_etaslice->SetMinimum(0.6);
       if(logx) g_ratio_pt_etaslice->GetXaxis()->SetMoreLogLabels();
       g_ratio_pt_etaslice->SetMarkerStyle(20);
       g_ratio_pt_etaslice->SetTitle("");
@@ -1325,7 +1350,7 @@ void plot_sf_1d(string data_dir, string mc_dir, bool do_pt=true, bool do_eta=tru
       g_ratio_pt_etaslice->GetYaxis()->SetLabelSize(15);
       g_ratio_pt_etaslice->GetXaxis()->SetTitleSize(15);
       g_ratio_pt_etaslice->GetXaxis()->SetTitleFont(43);
-      g_ratio_pt_etaslice->GetXaxis()->SetTitleOffset(5.);
+      g_ratio_pt_etaslice->GetXaxis()->SetTitleOffset(3.6);
       g_ratio_pt_etaslice->GetXaxis()->SetLabelFont(43);
       g_ratio_pt_etaslice->GetXaxis()->SetLabelSize(15);
       TLine *oneline_pt_etaslice = new TLine(g_ratio_pt_etaslice->GetXaxis()->GetXmin(),1,g_ratio_pt_etaslice->GetXaxis()->GetXmax(),1);
@@ -1337,6 +1362,8 @@ void plot_sf_1d(string data_dir, string mc_dir, bool do_pt=true, bool do_eta=tru
       g_ratio_pt_etaslice->Draw("p same");
       char filename[512];
       sprintf(filename, "%seff_ratio_pt_etaslice_%d.png", data_dir.c_str(), nbin_eta-1);
+      canvas_pt_etaslice->Print(filename);
+      sprintf(filename, "%seff_ratio_pt_etaslice_%d.pdf", data_dir.c_str(), nbin_eta-1);
       canvas_pt_etaslice->Print(filename);
       delete canvas_pt_etaslice;
     }

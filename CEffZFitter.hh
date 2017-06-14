@@ -162,12 +162,14 @@ protected:
   std::vector<double> fEtaBinEdgesv;
   std::vector<double> fPhiBinEdgesv;
   std::vector<double> fNPVBinEdgesv;
+  std::vector<double> fJetsBinEdgesv;
+  std::vector<double> fMETBinEdgesv;
   
   // flags for |eta| and |phi| binning
   bool fDoAbsEta, fDoAbsPhi;
   
   // flags for binnings to compute efficiencies for
-  bool fDoPt, fDoEta, fDoPhi, fDoEtaPt, fDoEtaPhi, fDoNPV;
+  bool fDoPt, fDoEta, fDoPhi, fDoEtaPt, fDoEtaPhi, fDoNPV, fDoJets, fDoMET;
   
   // trees for pass/fail samples
   std::vector<TTree*> fPassTreePtv,     fFailTreePtv;
@@ -176,6 +178,8 @@ protected:
   std::vector<TTree*> fPassTreeEtaPtv,  fFailTreeEtaPtv;
   std::vector<TTree*> fPassTreeEtaPhiv, fFailTreeEtaPhiv;
   std::vector<TTree*> fPassTreeNPVv,    fFailTreeNPVv;
+  std::vector<TTree*> fPassTreeJetsv,   fFailTreeJetsv;
+  std::vector<TTree*> fPassTreeMETv,    fFailTreeMETv;
 
   //weights
   TFile *pufile=0;

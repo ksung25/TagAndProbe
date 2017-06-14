@@ -1760,8 +1760,9 @@ void CEffZFitter::performFit(
   if(numThreads<1) numThreads=1;
   fitResult = totalPdf.fitTo(*dataCombined,
                              RooFit::Extended(),
-                             RooFit::Strategy(2),
-                             RooFit::Minos(RooArgSet(eff)),
+                             RooFit::Strategy(1),
+                             //RooFit::Strategy(2),
+                             //RooFit::Minos(RooArgSet(eff)),
                              RooFit::NumCPU(numThreads),
                              RooFit::Save());
  

@@ -221,7 +221,7 @@ void CEffZFitter::prepareTrees(
   
   TFile *infile = new TFile(infname.c_str());    assert(infile);
   //TTree *intree = (TTree*)infile->Get("Events"); assert(intree);
-  TTree *intree = (TTree*)infile->FindObjectAny("Events"); assert(intree);
+  TTree *intree = (TTree*)infile->FindObjectAny("events"); assert(intree);
   intree->SetBranchAddress("runNum",   &runNum);
   intree->SetBranchAddress("lumiSec",  &lumiSec);
   intree->SetBranchAddress("evtNum",   &evtNum);
@@ -946,7 +946,7 @@ void CEffZFitter::makeBinnedTemplates(const std::string temfname, const int char
   
   TFile *infile = new TFile(temfname.c_str());    assert(infile);
   //TTree *intree = (TTree*)infile->Get("Events"); assert(intree);
-  TTree *intree = (TTree*)infile->FindObjectAny("Events"); assert(intree);
+  TTree *intree = (TTree*)infile->FindObjectAny("events"); assert(intree);
   intree->SetBranchAddress("runNum",   &runNum);
   intree->SetBranchAddress("lumiSec",  &lumiSec);
   intree->SetBranchAddress("evtNum",   &evtNum);
@@ -1238,7 +1238,7 @@ void CEffZFitter::makeUnbinnedTemplates(const std::string temfname, const int ch
   
   TFile *infile = new TFile(temfname.c_str());    assert(infile);
   //TTree *intree = (TTree*)infile->Get("Events"); assert(intree);
-  TTree *intree = (TTree*)infile->FindObjectAny("Events"); assert(intree);
+  TTree *intree = (TTree*)infile->FindObjectAny("events"); assert(intree);
   intree->SetBranchAddress("runNum",   &runNum);
   intree->SetBranchAddress("lumiSec",  &lumiSec);
   intree->SetBranchAddress("evtNum",   &evtNum);
@@ -1808,14 +1808,14 @@ void CEffZFitter::performFit(
   RooPlot *mframePass = m.frame(Bins(int(fFitMassHi-fFitMassLo)/BIN_SIZE_PASS));
   dataPass->plotOn(mframePass,MarkerStyle(kFullCircle),MarkerSize(0.8),DrawOption("ZP"));    
   modelPass->plotOn(mframePass);
-  if(fBkgPass>0)   
+  if(fBkgPass!=CBackgroundModel::kNone)
     modelPass->plotOn(mframePass,Components("backgroundPass"),LineStyle(kDashed),LineColor(kRed));
 
-  
   RooPlot *mframeFail = m.frame(Bins(int(fFitMassHi-fFitMassLo)/BIN_SIZE_FAIL));
   dataFail->plotOn(mframeFail,MarkerStyle(kFullCircle),MarkerSize(0.8),DrawOption("ZP"));
   modelFail->plotOn(mframeFail);
-  modelFail->plotOn(mframeFail,Components("backgroundFail"),LineStyle(kDashed),LineColor(kRed));
+  if(fBkgFail!=CBackgroundModel::kNone)
+    modelFail->plotOn(mframeFail,Components("backgroundFail"),LineStyle(kDashed),LineColor(kRed));
   
   if(fFitResDir=="") {
     //

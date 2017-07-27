@@ -26,28 +26,30 @@
 #include <iostream>
 Int_t mit_red  = 1861; 
 Int_t mit_gray = 1862; 
-Float_t ele_pt_bins[] = {10,12,14,16,18,20,22,24,26,28,30,35,40,50,100,200,1000};
-Float_t ele_eta_bins[] = {0., 0.8, 1.4442, 1.566, 2.0, 2.5};
-Int_t n_ele_pt_bins=5;
-Int_t n_ele_eta_bins=5;
-Float_t mu_pt_bins[] = {10,12,14,16,18,20,22,24,26,28,30,35,40,50,100,200,1000};
-Float_t mu_eta_bins[] = {0, 0.2, 0.3, 0.9, 1.2, 2.1, 2.4};
-Int_t n_mu_pt_bins=6;
-Int_t n_mu_eta_bins=6;
-int marker_colors[] = {1, mit_gray, mit_red, 97, 91, 8, 60};
-int marker_styles[] = {20, 21, 22, 23, 33, 34, 20};
+Float_t ele_pt_bins[] = {10,12,14,16,18,20,25,30,35,40,50,100,200,300,10000};
+Float_t ele_eta_bins[] = {-2.5,-2.0,-1.566,-1.4442,-0.8,0,0.8,1.4442,1.566,2.0,2.5}
+Int_t n_ele_pt_bins=14;
+Int_t n_ele_eta_bins=10;
+Float_t mu_pt_bins[] = {10,15,20,25,30,40,50,100,200,1000};
+Float_t mu_eta_bins[] = {-2.4,-2.1,-1.2,-0.9,0,0.9,1.2,2.1,2.4};
+Int_t n_mu_pt_bins=9;
+Int_t n_mu_eta_bins=8;
+int marker_colors[] = {kBlack, kRed, kOrange+10, kOrange, kSpring+9, kGreen+3, kCyan-2, kBlue, kViolet+8, kMagenta+3};
+int marker_styles[] = {20, 21, 22, 23, 20, 21, 22, 23, 20, 21};
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void scale_factors(string plots_dir, string root_dir, string basename_config) {
+void scale_factors(string plots_dir, string root_dir, string basename_config, int width=800, int height=1200) {
   // This function calculates the efficiencies based on output from MIT TNP saved in subdirectories of plots_dir
   // The base names of the subdirectories are recorded in the config file
   // The efficiencies are plotted in plots_dir
   // The efficiencies and scale factors are recorded in root_dir in a 
   // rootfile whose filename is taken from basename_config
 
+
   // Pad directories with a slash at the end if it's not there
   if( plots_dir[plots_dir.size()-1]  != '/' ) plots_dir = plots_dir + "/";
   if( root_dir[root_dir.size()-1]  != '/' )  root_dir  = root_dir + "/";
+  system( Form("mkdir -p %s", root_dir.c_str()) );
 
   // Open the output rootfile
   string output_rootfile_name;
@@ -135,11 +137,11 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     TPaletteAxis *palette_axis;
 
     mitPalette();
-    TCanvas *canvas = new TCanvas("canvas", "canvas", 800,1200);
+    TCanvas *canvas = new TCanvas("canvas", "canvas", width,height);
     h_eff_data->Draw("TEXT COLZ");
     canvas->SetLogy();
     canvas->Update();
-    h_eff_data->GetXaxis()->SetTitle("| #eta |");
+    h_eff_data->GetXaxis()->SetTitle("#eta");
     h_eff_data->GetXaxis()->SetTitleOffset(0.9);
     h_eff_data->GetXaxis()->SetTitleSize(0.04);
     h_eff_data->GetXaxis()->SetLabelSize(0.02);
@@ -147,11 +149,11 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     h_eff_data->GetYaxis()->SetTitleOffset(0.9);
     h_eff_data->GetYaxis()->SetTitleSize(0.04);
     h_eff_data->GetYaxis()->SetLabelSize(0.02);
-    h_eff_data->GetYaxis()->SetRangeUser(10, TMath::Min(h_eff_data->GetYaxis()->GetBinUpEdge(h_eff_data->GetNbinsY()), 200.));
+    h_eff_data->GetYaxis()->SetRangeUser(10, TMath::Min(h_eff_data->GetYaxis()->GetBinUpEdge(h_eff_data->GetNbinsY()), 1000.));
     h_eff_data->GetYaxis()->SetMoreLogLabels();
     h_eff_data->SetMinimum(0);
     h_eff_data->SetMaximum(1.);
-    h_eff_data->SetMarkerSize(1.4);
+    h_eff_data->SetMarkerSize(1.1);
     palette_axis = (TPaletteAxis*) h_eff_data->GetListOfFunctions()->FindObject("palette"); 
     palette_axis->SetLabelSize(0.02);
     canvas->Update();
@@ -161,7 +163,7 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     h_eff_mc->Draw("TEXT COLZ");
     canvas->SetLogy();
     canvas->Update();
-    h_eff_mc->GetXaxis()->SetTitle("| #eta |");
+    h_eff_mc->GetXaxis()->SetTitle("#eta");
     h_eff_mc->GetXaxis()->SetTitleOffset(0.9);
     h_eff_mc->GetXaxis()->SetTitleSize(0.04);
     h_eff_mc->GetXaxis()->SetLabelSize(0.02);
@@ -169,11 +171,11 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     h_eff_mc->GetYaxis()->SetTitleOffset(0.9);
     h_eff_mc->GetYaxis()->SetTitleSize(0.04);
     h_eff_mc->GetYaxis()->SetLabelSize(0.02);
-    h_eff_mc->GetYaxis()->SetRangeUser(10, TMath::Min(h_eff_mc->GetYaxis()->GetBinUpEdge(h_eff_mc->GetNbinsY()), 200.));
+    h_eff_mc->GetYaxis()->SetRangeUser(10, TMath::Min(h_eff_mc->GetYaxis()->GetBinUpEdge(h_eff_mc->GetNbinsY()), 1000.));
     h_eff_mc->GetYaxis()->SetMoreLogLabels();
     h_eff_mc->SetMinimum(0);
     h_eff_mc->SetMaximum(1.);
-    h_eff_mc->SetMarkerSize(1.4);
+    h_eff_mc->SetMarkerSize(1.1);
     palette_axis = (TPaletteAxis*) h_eff_mc->GetListOfFunctions()->FindObject("palette"); 
     palette_axis->SetLabelSize(0.02);
     canvas->Update();
@@ -184,7 +186,7 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     h_sf->Draw("TEXT COLZ");
     canvas->SetLogy();
     canvas->Update();
-    h_sf->GetXaxis()->SetTitle("| #eta |");
+    h_sf->GetXaxis()->SetTitle("#eta");
     h_sf->GetXaxis()->SetTitleOffset(0.9);
     h_sf->GetXaxis()->SetTitleSize(0.04);
     h_sf->GetXaxis()->SetLabelSize(0.02);
@@ -192,7 +194,7 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     h_sf->GetYaxis()->SetTitleOffset(0.9);
     h_sf->GetYaxis()->SetTitleSize(0.04);
     h_sf->GetYaxis()->SetLabelSize(0.02);
-    h_sf->GetYaxis()->SetRangeUser(10, TMath::Min(h_sf->GetYaxis()->GetBinUpEdge(h_sf->GetNbinsY()), 200.));
+    h_sf->GetYaxis()->SetRangeUser(10, TMath::Min(h_sf->GetYaxis()->GetBinUpEdge(h_sf->GetNbinsY()), 1000.));
     h_sf->GetYaxis()->SetMoreLogLabels();
     h_sf->SetMinimum(.7);
     h_sf->SetMaximum(1.3);
@@ -204,7 +206,7 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
       h_sf->SetMinimum(.8);
       h_sf->SetMaximum(1.2);
     }
-    h_sf->SetMarkerSize(1.4);
+    h_sf->SetMarkerSize(1.1);
     //h_sf->SetLineColor(1);
     //h_sf->SetLineWidth(1);
     //h_sf->SetLineStyle(3);
@@ -218,7 +220,7 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     h_sf_error_lo->Draw("TEXT COLZ");
     canvas->SetLogy();
     canvas->Update();
-    h_sf_error_lo->GetXaxis()->SetTitle("| #eta |");
+    h_sf_error_lo->GetXaxis()->SetTitle("#eta");
     h_sf_error_lo->GetXaxis()->SetTitleOffset(0.9);
     h_sf_error_lo->GetXaxis()->SetTitleSize(0.04);
     h_sf_error_lo->GetXaxis()->SetLabelSize(0.02);
@@ -226,10 +228,10 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     h_sf_error_lo->GetYaxis()->SetTitleOffset(0.9);
     h_sf_error_lo->GetYaxis()->SetTitleSize(0.04);
     h_sf_error_lo->GetYaxis()->SetLabelSize(0.02);
-    h_sf_error_lo->GetYaxis()->SetRangeUser(10, TMath::Min(h_sf_error_lo->GetYaxis()->GetBinUpEdge(h_sf_error_lo->GetNbinsY()), 200.));
+    h_sf_error_lo->GetYaxis()->SetRangeUser(10, TMath::Min(h_sf_error_lo->GetYaxis()->GetBinUpEdge(h_sf_error_lo->GetNbinsY()), 1000.));
     h_sf_error_lo->SetMinimum(0);
     h_sf_error_lo->SetMaximum(0.5);
-    h_sf_error_lo->SetMarkerSize(1.4);
+    h_sf_error_lo->SetMarkerSize(1.1);
     h_sf_error_lo->GetYaxis()->SetMoreLogLabels();
     palette_axis = (TPaletteAxis*) h_sf_error_lo->GetListOfFunctions()->FindObject("palette"); 
     palette_axis->SetLabelSize(0.02);
@@ -239,7 +241,7 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     h_sf_error_hi->Draw("TEXT COLZ");
     canvas->SetLogy();
     canvas->Update();
-    h_sf_error_hi->GetXaxis()->SetTitle("| #eta |");
+    h_sf_error_hi->GetXaxis()->SetTitle("#eta");
     h_sf_error_hi->GetXaxis()->SetTitleOffset(0.9);
     h_sf_error_hi->GetXaxis()->SetTitleSize(0.04);
     h_sf_error_hi->GetXaxis()->SetLabelSize(0.02);
@@ -247,11 +249,11 @@ void scale_factors(string plots_dir, string root_dir, string basename_config) {
     h_sf_error_hi->GetYaxis()->SetTitleOffset(0.9);
     h_sf_error_hi->GetYaxis()->SetTitleSize(0.04);
     h_sf_error_hi->GetYaxis()->SetLabelSize(0.02);
-    h_sf_error_hi->GetYaxis()->SetRangeUser(10, TMath::Min(h_sf_error_hi->GetYaxis()->GetBinUpEdge(h_sf_error_hi->GetNbinsY()), 200.));
+    h_sf_error_hi->GetYaxis()->SetRangeUser(10, TMath::Min(h_sf_error_hi->GetYaxis()->GetBinUpEdge(h_sf_error_hi->GetNbinsY()), 1000.));
     h_sf_error_hi->GetYaxis()->SetMoreLogLabels();
     h_sf_error_hi->SetMinimum(0);
     h_sf_error_hi->SetMaximum(0.5);
-    h_sf_error_hi->SetMarkerSize(1.4);
+    h_sf_error_hi->SetMarkerSize(1.1);
     palette_axis = (TPaletteAxis*) h_sf_error_hi->GetListOfFunctions()->FindObject("palette"); 
     palette_axis->SetLabelSize(0.02);
     canvas->Update();
@@ -471,7 +473,7 @@ void systematics(string methods_config, string basename_config) {
     
     // Now draw 1D histograms of scale factors in eta and pT slices with full errors
 
-    int maxslices=7; 
+    int maxslices=10; 
      
     // do pt slices
     TObjArray *ptslices = new TObjArray( h_nominal_sf->GetNbinsY() );
@@ -1368,43 +1370,6 @@ void plot_sf_1d(string data_dir, string mc_dir, bool do_pt=true, bool do_eta=tru
       delete canvas_pt_etaslice;
     }
   }
-
 }
 
-void make_some_ratio_plots_80x() {
-  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleElectron_BaselineToTight_electronTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToTight_electronTnP/");
-  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleElectron_BaselineToMedium_electronTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToMedium_electronTnP/");
-  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleElectron_BaselineToLoose_electronTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToLoose_electronTnP/");
-  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleElectron_BaselineToVeto_electronTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToVeto_electronTnP/");
-  
-  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleElectron_BaselineToTight_signEta_electronTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToTight_signEta_electronTnP/",false,true,false,false,false);
-  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleElectron_BaselineToMedium_signEta_electronTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToMedium_signEta_electronTnP/",false,true,false,false,false);
-  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleElectron_BaselineToLoose_signEta_electronTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToLoose_signEta_electronTnP/",false,true,false,false,false);
-  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleElectron_BaselineToVeto_signEta_electronTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToVeto_signEta_electronTnP/",false,true,false,false,false);
 
-  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleMuon_BaselineToTight_coarseEta_muonTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToTight_coarseEta_muonTnP/");
-  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleMuon_BaselineToMedium_coarseEta_muonTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToMedium_coarseEta_muonTnP/");
-  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleMuon_BaselineToLoose_coarseEta_muonTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToLoose_coarseEta_muonTnP/");
-  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleMuon_BaselineToTight_fineEta_muonTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToTight_fineEta_muonTnP/",false,true,false,false,false);
-  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleMuon_BaselineToMedium_fineEta_muonTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToMedium_fineEta_muonTnP/",false,true,false,false,false);
-  plot_sf_1d("~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/SingleMuon_BaselineToLoose_fineEta_muonTnP/", "~dhsu/TagAndProbe/2016-06-08_80x_500pb/template_erfcexp/DYJetsToLL_BaselineToLoose_fineEta_muonTnP/",false,true,false,false,false);
-
-}
-void make_some_ratio_plots_76x() {
-  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/SingleElectron_BaselineToTight_electronTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/DYJetsToLL_BaselineToTight_electronTnP/");
-  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/SingleElectron_BaselineToMedium_electronTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/DYJetsToLL_BaselineToMedium_electronTnP/");
-  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/SingleElectron_BaselineToLoose_electronTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/DYJetsToLL_BaselineToLoose_electronTnP/");
-  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/SingleElectron_BaselineToVeto_electronTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/DYJetsToLL_BaselineToVeto_electronTnP/");
-  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/SingleElectron_BaselineToTight_signEta_electronTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/DYJetsToLL_BaselineToTight_signEta_electronTnP/",false,true,false,false,false);
-  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/SingleElectron_BaselineToMedium_signEta_electronTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/DYJetsToLL_BaselineToMedium_signEta_electronTnP/",false,true,false,false,false);
-  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/SingleElectron_BaselineToLoose_signEta_electronTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/DYJetsToLL_BaselineToLoose_signEta_electronTnP/",false,true,false,false,false);
-  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/SingleElectron_BaselineToVeto_signEta_electronTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_electrons/template_erfcexp/DYJetsToLL_BaselineToVeto_signEta_electronTnP/",false,true,false,false,false);
-
-  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_muons_coarseEta/template_erfcexp/SingleMuon_BaselineToTight_muonTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_muons_coarseEta/template_erfcexp/DYJetsToLL_BaselineToTight_muonTnP/");
-  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_muons_coarseEta/template_erfcexp/SingleMuon_BaselineToMedium_muonTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_muons_coarseEta/template_erfcexp/DYJetsToLL_BaselineToMedium_muonTnP/");
-  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_muons_coarseEta/template_erfcexp/SingleMuon_BaselineToLoose_muonTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_muons_coarseEta/template_erfcexp/DYJetsToLL_BaselineToLoose_muonTnP/");
-  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_muons_fineEta/template_erfcexp/SingleMuon_BaselineToTight_muonTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_muons_fineEta/template_erfcexp/DYJetsToLL_BaselineToTight_muonTnP/",false,true,false,false,false);
-  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_muons_fineEta/template_erfcexp/SingleMuon_BaselineToMedium_muonTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_muons_fineEta/template_erfcexp/DYJetsToLL_BaselineToMedium_muonTnP/",false,true,false,false,false);
-  plot_sf_1d("~dhsu/TagAndProbe/2016-05-02_76x_muons_fineEta/template_erfcexp/SingleMuon_BaselineToLoose_muonTnP/", "~dhsu/TagAndProbe/2016-05-02_76x_muons_fineEta/template_erfcexp/DYJetsToLL_BaselineToLoose_muonTnP/",false,true,false,false,false);
-
-}

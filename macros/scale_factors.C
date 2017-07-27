@@ -27,7 +27,7 @@
 Int_t mit_red  = 1861; 
 Int_t mit_gray = 1862; 
 Float_t ele_pt_bins[] = {10,12,14,16,18,20,25,30,35,40,50,100,200,300,10000};
-Float_t ele_eta_bins[] = {-2.5,-2.0,-1.566,-1.4442,-0.8,0,0.8,1.4442,1.566,2.0,2.5}
+Float_t ele_eta_bins[] = {-2.5,-2.0,-1.566,-1.4442,-0.8,0,0.8,1.4442,1.566,2.0,2.5};
 Int_t n_ele_pt_bins=14;
 Int_t n_ele_eta_bins=10;
 Float_t mu_pt_bins[] = {10,15,20,25,30,40,50,100,200,1000};
@@ -379,9 +379,9 @@ void systematics(string methods_config, string basename_config) {
       TCanvas *canvas = new TCanvas("canvas", "canvas", 800,600);
       h_syst_method->SetMinimum(0);
       h_syst_method->SetMaximum(.2);
-      h_syst_method->Draw("TEXTE COLZ");
+      h_syst_method->Draw("TEXT COLZ");
       canvas->Update();
-      h_syst_method->GetXaxis()->SetTitle("| #eta |");
+      h_syst_method->GetXaxis()->SetTitle("#eta");
       h_syst_method->GetXaxis()->SetTitleOffset(0.9);
       h_syst_method->GetXaxis()->SetTitleSize(0.04);
       h_syst_method->GetXaxis()->SetLabelSize(0.02);
@@ -428,9 +428,9 @@ void systematics(string methods_config, string basename_config) {
     TCanvas *c_sf = new TCanvas("c_sf", "c_sf", 800,600);
     h_sf->SetMinimum(.8);
     h_sf->SetMaximum(1.2);
-    h_sf->Draw("TEXTE COLZ");
+    h_sf->Draw("TEXT COLZ");
     c_sf->Update();
-    h_sf->GetXaxis()->SetTitle("| #eta |");
+    h_sf->GetXaxis()->SetTitle("#eta");
     h_sf->GetXaxis()->SetTitleOffset(0.9);
     h_sf->GetXaxis()->SetTitleSize(0.04);
     h_sf->GetXaxis()->SetLabelSize(0.02);
@@ -452,9 +452,9 @@ void systematics(string methods_config, string basename_config) {
     TCanvas *c_syst_combined = new TCanvas("c_syst_combined", "c_syst_combined", 800,600);
     h_syst_combined->SetMinimum(0);
     h_syst_combined->SetMaximum(.2);
-    h_syst_combined->Draw("TEXTE COLZ");
+    h_syst_combined->Draw("TEXT COLZ");
     c_syst_combined->Update();
-    h_syst_combined->GetXaxis()->SetTitle("| #eta |");
+    h_syst_combined->GetXaxis()->SetTitle("#eta");
     h_syst_combined->GetXaxis()->SetTitleOffset(0.9);
     h_syst_combined->GetXaxis()->SetTitleSize(0.04);
     h_syst_combined->GetXaxis()->SetLabelSize(0.02);
@@ -525,7 +525,7 @@ void systematics(string methods_config, string basename_config) {
       h_nominal_sf->GetXaxis()->GetBinLowEdge(1),
       h_nominal_sf->GetXaxis()->GetBinUpEdge( h_nominal_sf->GetNbinsX() )
     );
-    ( (TGraphAsymmErrors*) ptslices->At(0))->GetXaxis()->SetTitle("|#eta|");
+    ( (TGraphAsymmErrors*) ptslices->At(0))->GetXaxis()->SetTitle("#eta");
     ( (TGraphAsymmErrors*) ptslices->At(0))->GetXaxis()->SetTitleOffset(1.3);
     TLine *oneline_ptslices = new TLine(
       h_nominal_sf->GetXaxis()->GetBinLowEdge(1),
@@ -561,7 +561,7 @@ void systematics(string methods_config, string basename_config) {
       char name[128];
       sprintf(name, "etaslice%d", i); 
       etaslice->SetName(name);
-      etaslice->SetTitle((selection+" "+flavor+" scalefactors ( |#eta| slices )").c_str() );
+      etaslice->SetTitle((selection+" "+flavor+" scalefactors ( #eta slices )").c_str() );
       etaslice->SetMarkerColor(marker_colors[i-1]);
       etaslice->SetMarkerStyle(marker_styles[i-1]);
       etaslice->SetLineColor(marker_colors[i-1]);
@@ -580,7 +580,7 @@ void systematics(string methods_config, string basename_config) {
       if(i==1)   ( (TGraphAsymmErrors*) etaslices->At(i-1)) ->Draw("AP");
       else       ( (TGraphAsymmErrors*) etaslices->At(i-1)) ->Draw("P SAME");
       char legend_label[128];
-      sprintf(legend_label, "%.4f < |#eta| < %.4f", h_nominal_sf->GetXaxis()->GetBinLowEdge(i), h_nominal_sf->GetXaxis()->GetBinUpEdge(i)); 
+      sprintf(legend_label, "%.4f < #eta < %.4f", h_nominal_sf->GetXaxis()->GetBinLowEdge(i), h_nominal_sf->GetXaxis()->GetBinUpEdge(i)); 
       legend_etaslices->AddEntry(( (TGraphAsymmErrors*) etaslices->At(i-1)), legend_label, "lp");
     }
     ( (TGraphAsymmErrors*) etaslices->At(0))->GetXaxis()->SetRangeUser(
